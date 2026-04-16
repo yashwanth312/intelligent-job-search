@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<style>
+  @page { margin: 0.5in; size: letter; }
+  body { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 10pt; color: #222; margin: 0; line-height: 1.4; }
+  h1 { font-size: 18pt; margin: 0 0 4px 0; text-align: center; }
+  .contact { text-align: center; font-size: 9pt; color: #444; margin-bottom: 12px; }
+  h2 { font-size: 11pt; border-bottom: 1.5px solid #222; padding-bottom: 2px; margin: 14px 0 6px 0; text-transform: uppercase; letter-spacing: 0.5px; }
+  .summary { font-size: 10pt; margin-bottom: 8px; }
+  .job-header { display: flex; justify-content: space-between; margin-bottom: 2px; }
+  .job-title { font-weight: bold; font-size: 10pt; }
+  .dates { font-size: 9pt; color: #555; white-space: nowrap; }
+  ul { margin: 2px 0 8px 0; padding-left: 18px; }
+  li { margin-bottom: 2px; font-size: 9.5pt; }
+  .project strong { font-size: 10pt; }
+  .skills li { margin-bottom: 1px; }
+</style></head><body>
+
+<h1>{{name}}</h1>
+<div class="contact">{{email}} | {{phone}}</div>
+
+<h2>Summary</h2>
+<div class="summary">{{summary}}</div>
+
+<h2>Work Experience</h2>
+{{experience}}
+
+<h2>Projects</h2>
+{{projects}}
+
+<h2>Skills</h2>
+<ul class="skills">{{skills}}</ul>
+
+<h2>Certifications</h2>
+<ul>{{certifications}}</ul>
+
+</body></html>
