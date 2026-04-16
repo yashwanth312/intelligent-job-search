@@ -1,0 +1,26 @@
+# Core
+pydantic>=2.0
+pyyaml>=6.0
+python-dotenv>=1.0
+
+# Scraping
+python-jobspy>=1.1
+aiohttp>=3.9
+beautifulsoup4>=4.12
+
+# Google integrations
+gspread>=6.0
+google-api-python-client>=2.100
+google-auth-httplib2>=0.2
+google-auth-oauthlib>=1.2
+oauth2client>=4.1
+
+# PDF generation
+weasyprint>=60.0
+
+# CLI & UX
+rich>=13.0
+
+# Testing
+pytest>=8.0
+pytest-asyncio>=0.23

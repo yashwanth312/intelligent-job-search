@@ -1,0 +1,29 @@
+# Secrets
+.env
+credentials.json
+*.json.bak
+
+# Database
+*.db
+
+# Output
+output/
+logs/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude
+.claude/
