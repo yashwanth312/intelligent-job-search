@@ -1,0 +1,75 @@
+# target_companies.yaml
+# Greenhouse/Lever/Ashby company board tokens for direct API scraping.
+# Add/remove companies as needed. Token is the URL slug used in the API.
+
+greenhouse:
+  # AI companies
+  - token: anthropic
+    name: Anthropic
+  - token: openai
+    name: OpenAI
+  - token: huggingface
+    name: Hugging Face
+  - token: scale
+    name: Scale AI
+  - token: cohere
+    name: Cohere
+  - token: databricks
+    name: Databricks
+  - token: anyscale
+    name: Anyscale
+  # Cloud / Infrastructure
+  - token: cloudflare
+    name: Cloudflare
+  - token: datadog
+    name: Datadog
+  - token: hashicorp
+    name: HashiCorp
+  - token: elastic
+    name: Elastic
+  - token: grafanalabs
+    name: Grafana Labs
+  - token: confluent
+    name: Confluent
+  # Security
+  - token: crowdstrike
+    name: CrowdStrike
+  - token: paloaltonetworks
+    name: Palo Alto Networks
+  - token: snyk
+    name: Snyk
+  - token: lacework
+    name: Lacework
+  - token: sentinelone
+    name: SentinelOne
+  # Big Tech
+  - token: stripe
+    name: Stripe
+  - token: figma
+    name: Figma
+  - token: notion
+    name: Notion
+  - token: discord
+    name: Discord
+  - token: reddit
+    name: Reddit
+  - token: airbnb
+    name: Airbnb
+  - token: doordash
+    name: DoorDash
+  - token: lyft
+    name: Lyft
+  - token: plaid
+    name: Plaid
+  - token: brex
+    name: Brex
+  - token: ramp
+    name: Ramp
+
+lever:
+  # Add Lever companies as discovered
+  []
+
+ashby:
+  # Add Ashby companies as discovered
+  []
