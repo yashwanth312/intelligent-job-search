@@ -25,6 +25,7 @@ GOOGLE_DRIVE_FOLDER_ID = os.getenv("GOOGLE_DRIVE_FOLDER_ID", "")
 DB_FILE = "jobs.db"
 
 # ── TARGET JOB TITLES ─────────────────────────────────────
+# Full list used for title matching / Stage 1 filtering
 TARGET_TITLES = [
     # Cloud / Infrastructure
     "Cloud Engineer",
@@ -57,6 +58,20 @@ TARGET_TITLES = [
     "AI Security Engineer",
     "ML Platform Engineer",
     "AI DevOps Engineer",
+]
+
+# ── SEARCH QUERIES ────────────────────────────────────────
+# Grouped search terms for LinkedIn/Indeed — each one is a separate search.
+# Keep this short: fewer broad queries > many narrow ones.
+SEARCH_QUERIES = [
+    "Cloud Engineer",
+    "DevOps Engineer",
+    "SRE Site Reliability Engineer",
+    "Platform Engineer",
+    "Security Engineer",
+    "DevSecOps Engineer",
+    "MLOps Engineer",
+    "AI Infrastructure Engineer",
 ]
 
 # ── LOCATIONS ─────────────────────────────────────────────

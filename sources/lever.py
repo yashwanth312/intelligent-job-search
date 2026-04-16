@@ -1,4 +1,8 @@
-"""Lever public postings API adapter — no auth required."""
+"""Lever public postings API adapter — no auth required.
+
+Lever APIs return ALL jobs for a company. This adapter filters
+results to only return jobs with relevant titles.
+"""
 from __future__ import annotations
 
 import logging
@@ -8,6 +12,7 @@ import aiohttp
 
 from models.job import RawJob
 from sources.base import SourceAdapter, SourceResult
+from sources.greenhouse import _title_is_relevant
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +41,7 @@ class LeverAdapter(SourceAdapter):
                     logger.warning(msg)
                     errors.append(msg)
 
-        logger.info(f"Lever: scraped {len(jobs)} jobs from {len(self.companies)} companies")
+        logger.info(f"Lever: scraped {len(jobs)} relevant jobs from {len(self.companies)} companies")
         return SourceResult(jobs=jobs, errors=errors)
 
     async def _scrape_company(
@@ -54,6 +59,10 @@ class LeverAdapter(SourceAdapter):
 
         jobs: list[RawJob] = []
         for item in data:
+            title = item.get("text", "")
+            if not _title_is_relevant(title):
+                continue
+
             location = ""
             categories = item.get("categories", {})
             if isinstance(categories, dict):
@@ -61,7 +70,7 @@ class LeverAdapter(SourceAdapter):
 
             jobs.append(
                 RawJob(
-                    title=item.get("text", ""),
+                    title=title,
                     company=name,
                     location=location,
                     description=item.get("descriptionPlain", ""),

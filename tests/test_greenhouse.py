@@ -39,7 +39,7 @@ class AsyncContextManager:
 
 class TestGreenhouseAdapter:
     @pytest.mark.asyncio
-    async def test_scrape_returns_jobs(self):
+    async def test_scrape_returns_only_relevant_jobs(self):
         adapter = GreenhouseAdapter(
             companies=[{"token": "testco", "name": "TestCo"}]
         )
@@ -51,11 +51,12 @@ class TestGreenhouseAdapter:
         mock_session = AsyncMock()
         mock_session.get = MagicMock(return_value=AsyncContextManager(mock_response))
 
-        result = await adapter._scrape_company(mock_session, "testco", "TestCo")
-        assert len(result) == 2
-        assert result[0].company == "TestCo"
-        assert result[0].source == "greenhouse-testco"
-        assert "Cloud Engineer" in [j.title for j in result]
+        total_raw, jobs = await adapter._scrape_company(mock_session, "testco", "TestCo")
+        assert total_raw == 2  # 2 jobs in response
+        assert len(jobs) == 1  # Only "Cloud Engineer" passes title filter
+        assert jobs[0].company == "TestCo"
+        assert jobs[0].source == "greenhouse-testco"
+        assert jobs[0].title == "Cloud Engineer"
 
     @pytest.mark.asyncio
     async def test_handles_404_gracefully(self):
@@ -69,5 +70,6 @@ class TestGreenhouseAdapter:
         mock_session = AsyncMock()
         mock_session.get = MagicMock(return_value=AsyncContextManager(mock_response))
 
-        result = await adapter._scrape_company(mock_session, "nonexistent", "Gone")
-        assert len(result) == 0
+        total_raw, jobs = await adapter._scrape_company(mock_session, "nonexistent", "Gone")
+        assert total_raw == 0
+        assert len(jobs) == 0

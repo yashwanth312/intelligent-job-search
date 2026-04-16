@@ -1,4 +1,8 @@
-"""Ashby Job Board API adapter — no auth required."""
+"""Ashby Job Board API adapter — no auth required.
+
+Ashby APIs return ALL jobs for a company. This adapter filters
+results to only return jobs with relevant titles.
+"""
 from __future__ import annotations
 
 import logging
@@ -7,6 +11,7 @@ import aiohttp
 
 from models.job import RawJob
 from sources.base import SourceAdapter, SourceResult
+from sources.greenhouse import _title_is_relevant
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +40,7 @@ class AshbyAdapter(SourceAdapter):
                     logger.warning(msg)
                     errors.append(msg)
 
-        logger.info(f"Ashby: scraped {len(jobs)} jobs from {len(self.companies)} companies")
+        logger.info(f"Ashby: scraped {len(jobs)} relevant jobs from {len(self.companies)} companies")
         return SourceResult(jobs=jobs, errors=errors)
 
     async def _scrape_company(
@@ -50,13 +55,17 @@ class AshbyAdapter(SourceAdapter):
 
         jobs: list[RawJob] = []
         for item in data.get("jobs", []):
+            title = item.get("title", "")
+            if not _title_is_relevant(title):
+                continue
+
             location = item.get("location", "")
             if isinstance(location, dict):
                 location = location.get("name", "")
 
             jobs.append(
                 RawJob(
-                    title=item.get("title", ""),
+                    title=title,
                     company=name,
                     location=location,
                     description=item.get("descriptionPlain", item.get("description", "")),

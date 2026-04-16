@@ -30,12 +30,18 @@ def _safe_int(val) -> int | None:
 class LinkedInIndeedAdapter(SourceAdapter):
     name = "linkedin_indeed"
 
-    def __init__(self, sites: list[str] | None = None, results_per_search: int = 20, hours_old: int = 24):
+    def __init__(self, sites: list[str] | None = None, results_per_search: int = 25, hours_old: int = 24):
         self.sites = sites or ["linkedin", "indeed"]
         self.results_per_search = results_per_search
         self.hours_old = hours_old
 
     async def scrape(self, titles: list[str], locations: list[str]) -> SourceResult:
+        """Scrape LinkedIn/Indeed using search queries x locations.
+
+        `titles` here should be SEARCH_QUERIES (grouped broad terms),
+        not the full TARGET_TITLES list. Each query is searched across
+        all locations on all sites.
+        """
         jobs: list[RawJob] = []
         errors: list[str] = []
 

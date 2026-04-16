@@ -24,7 +24,7 @@ from pathlib import Path
 import yaml
 
 from config import (
-    TARGET_TITLES, LOCATIONS, DB_FILE,
+    TARGET_TITLES, SEARCH_QUERIES, LOCATIONS, DB_FILE,
     SCREENING_CONFIDENCE_THRESHOLD,
 )
 from db.database import Database
@@ -138,8 +138,11 @@ async def run_pipeline():
     orchestrator = ScraperOrchestrator(adapters)
 
     known_fps = db.get_known_fingerprints(set())
+    # Pass SEARCH_QUERIES (grouped broad terms) to LinkedIn/Indeed,
+    # not the full TARGET_TITLES list. ATS adapters (Greenhouse/Lever/Ashby)
+    # ignore the titles param anyway — they scrape all and filter by title internally.
     scrape_result = await orchestrator.scrape_all(
-        TARGET_TITLES, LOCATIONS, known_fingerprints=known_fps,
+        SEARCH_QUERIES, LOCATIONS, known_fingerprints=known_fps,
     )
 
     unique_jobs = scrape_result.jobs
