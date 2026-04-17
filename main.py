@@ -36,6 +36,7 @@ from sheets import daily as daily_ops, audit as audit_ops
 from sources.orchestrator import ScraperOrchestrator
 from sources.greenhouse import GreenhouseAdapter
 from sources.lever import LeverAdapter
+from sources.ashby import AshbyAdapter
 from sources.linkedin_indeed import LinkedInIndeedAdapter
 from sources.hackernews import HackerNewsAdapter
 from sources.remoteok import RemoteOKAdapter
@@ -77,6 +78,10 @@ def build_adapters(companies: dict) -> list:
     lv = companies.get("lever", [])
     if lv:
         adapters.append(LeverAdapter(companies=lv))
+
+    ab = companies.get("ashby", [])
+    if ab:
+        adapters.append(AshbyAdapter(companies=ab))
 
     adapters.append(LinkedInIndeedAdapter())
     adapters.append(HackerNewsAdapter())

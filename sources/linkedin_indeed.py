@@ -31,7 +31,7 @@ class LinkedInIndeedAdapter(SourceAdapter):
     name = "linkedin_indeed"
 
     def __init__(self, sites: list[str] | None = None, results_per_search: int = 25, hours_old: int = 24):
-        self.sites = sites or ["linkedin", "indeed"]
+        self.sites = sites or ["linkedin", "indeed", "glassdoor", "zip_recruiter", "google"]
         self.results_per_search = results_per_search
         self.hours_old = hours_old
 

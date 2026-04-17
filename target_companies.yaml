@@ -174,9 +174,61 @@ greenhouse:
     name: MasterClass
 
 lever:
-  # Add Lever companies as discovered
-  []
+  # Verified 2026-04-17 — 7 valid boards from 132 tested
+  - token: palantir
+    name: Palantir
+  - token: spotify
+    name: Spotify
+  - token: mistral
+    name: Mistral AI
+  - token: plaid
+    name: Plaid
+  - token: sysdig
+    name: Sysdig
+  - token: neon
+    name: Neon
+  - token: anyscale
+    name: Anyscale
 
 ashby:
-  # Add Ashby companies as discovered
-  []
+  # Verified 2026-04-17 — 20 valid boards from 57 tested
+  - token: openai
+    name: OpenAI
+  - token: vanta
+    name: Vanta
+  - token: notion
+    name: Notion
+  - token: ramp
+    name: Ramp
+  - token: cohere
+    name: Cohere
+  - token: perplexity
+    name: Perplexity
+  - token: benchling
+    name: Benchling
+  - token: supabase
+    name: Supabase
+  - token: watershed
+    name: Watershed
+  - token: semgrep
+    name: Semgrep
+  - token: lambda
+    name: Lambda
+  - token: modal
+    name: Modal
+  - token: drata
+    name: Drata
+  - token: linear
+    name: Linear
+  - token: render
+    name: Render
+  - token: anyscale
+    name: Anyscale
+  - token: airbyte
+    name: Airbyte
+  - token: neon
+    name: Neon
+  - token: runway
+    name: Runway
+  - token: prefect
+    name: Prefect
