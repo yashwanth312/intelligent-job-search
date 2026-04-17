@@ -44,16 +44,11 @@ class TestStage1Filter:
         result = f.filter_job(make_job(description="Requires 5+ years of experience"))
         assert result.passed is False
 
-    def test_passes_empty_description_if_title_matches(self):
+    def test_rejects_empty_description(self):
         f = Stage1Filter()
         result = f.filter_job(make_job(description=None))
-        assert result.passed is True
-        assert "no description" in result.reason.lower()
-
-    def test_rejects_empty_description_with_bad_title(self):
-        f = Stage1Filter()
-        result = f.filter_job(make_job(title="Marketing Coordinator", description=None))
         assert result.passed is False
+        assert "no description" in result.reason.lower()
 
     def test_rejects_below_salary_floor(self):
         f = Stage1Filter()

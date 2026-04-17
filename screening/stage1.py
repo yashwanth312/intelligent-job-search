@@ -53,12 +53,11 @@ class Stage1Filter:
                                 reason=f"Salary max ${job.salary_max:,} below floor ${SALARY_FLOOR:,}",
                                 stage="stage1_salary")
 
-        # --- Checks below require a description. If no description,
-        # skip them and pass the job through for manual/Claude review. ---
+        # No description = can't screen or generate tailored resume. Reject.
         if not has_description:
-            return FilterResult(job=job, passed=True,
-                                reason="No description available — passed on title match, needs manual review",
-                                stage="stage1_pass_no_desc")
+            return FilterResult(job=job, passed=False,
+                                reason="No description — cannot screen or generate tailored resume",
+                                stage="stage1_no_desc")
 
         # 4. Description hard-stops
         for pattern in EXCLUDE_DESC_PATTERNS:
