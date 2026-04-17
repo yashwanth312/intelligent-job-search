@@ -70,42 +70,41 @@ def format_daily(spreadsheet: Spreadsheet, ws: Worksheet) -> None:
     requests.append(_freeze_rows(sheet_id, 1))
 
     # Header style: dark navy bg, white bold text
-    requests.append(_header_format(sheet_id, 14))  # 14 columns
+    requests.append(_header_format(sheet_id, 13))  # 13 columns
 
-    # Column widths
+    # Column widths — Status is right after Confidence for quick access
     widths = [
-        (0, 100),   # Date Scraped
-        (1, 160),   # Company
-        (2, 200),   # Job Title
-        (3, 150),   # Location
-        (4, 130),   # Source
-        (5, 80),    # Confidence
+        (0, 160),   # Company
+        (1, 220),   # Job Title
+        (2, 150),   # Location
+        (3, 90),    # Confidence
+        (4, 90),    # Status
+        (5, 130),   # Source
         (6, 300),   # AI Reasoning
         (7, 140),   # Suggested Angle
-        (8, 180),   # Risk Flags
-        (9, 180),   # Match Signals
+        (8, 180),   # Match Signals
+        (9, 180),   # Risk Flags
         (10, 120),  # Salary Range
         (11, 250),  # Apply Link
-        (12, 90),   # Status
-        (13, 150),  # Notes
+        (12, 150),  # Notes
     ]
     for col, width in widths:
         requests.append(_col_width(sheet_id, col, width))
 
-    # Status dropdown: Apply, Skip, Maybe, Bookmark
+    # Status dropdown (col 4): Apply, Skip, Maybe, Bookmark
     requests.append(_data_validation(
-        sheet_id, col=12, values=["Apply", "Skip", "Maybe", "Bookmark"]
+        sheet_id, col=4, values=["Apply", "Skip", "Maybe", "Bookmark"]
     ))
 
-    # Conditional formatting on Status column (M = col 12)
-    requests.append(_cond_format_text(sheet_id, col=12, text="Apply", bg=APPLY_GREEN))
-    requests.append(_cond_format_text(sheet_id, col=12, text="Skip", bg=SKIP_RED))
-    requests.append(_cond_format_text(sheet_id, col=12, text="Maybe", bg=MAYBE_YELLOW))
+    # Conditional formatting on Status column (col 4)
+    requests.append(_cond_format_text(sheet_id, col=4, text="Apply", bg=APPLY_GREEN))
+    requests.append(_cond_format_text(sheet_id, col=4, text="Skip", bg=SKIP_RED))
+    requests.append(_cond_format_text(sheet_id, col=4, text="Maybe", bg=MAYBE_YELLOW))
 
-    # Conditional formatting on Confidence column (F = col 5): green for 4-5, yellow 3, red 1-2
-    requests.append(_cond_format_number(sheet_id, col=5, op="NUMBER_GREATER_THAN_EQ", value="4", bg=APPLY_GREEN))
-    requests.append(_cond_format_number(sheet_id, col=5, op="NUMBER_EQ", value="3", bg=MAYBE_YELLOW))
-    requests.append(_cond_format_number(sheet_id, col=5, op="NUMBER_LESS_THAN_EQ", value="2", bg=SKIP_RED))
+    # Conditional formatting on Confidence column (col 3): green for 4-5, yellow 3, red 1-2
+    requests.append(_cond_format_number(sheet_id, col=3, op="NUMBER_GREATER_THAN_EQ", value="4", bg=APPLY_GREEN))
+    requests.append(_cond_format_number(sheet_id, col=3, op="NUMBER_EQ", value="3", bg=MAYBE_YELLOW))
+    requests.append(_cond_format_number(sheet_id, col=3, op="NUMBER_LESS_THAN_EQ", value="2", bg=SKIP_RED))
 
     # Alternating row colors
     requests.append(_banding(sheet_id))

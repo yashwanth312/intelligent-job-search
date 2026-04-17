@@ -151,10 +151,11 @@ SCREENING_CONFIDENCE_THRESHOLD = 3  # Minimum confidence for APPLY verdict
 SCREENING_BATCH_SIZE = 10           # JDs per Claude CLI invocation
 
 # ── DAILY TAB COLUMNS ─────────────────────────────────────
+# Status is right after Confidence so you don't have to scroll
 DAILY_HEADERS = [
-    "Date Scraped", "Company", "Job Title", "Location", "Source",
-    "Confidence", "AI Reasoning", "Suggested Angle", "Risk Flags",
-    "Match Signals", "Salary Range", "Apply Link", "Status", "Notes",
+    "Company", "Job Title", "Location", "Confidence", "Status",
+    "Source", "AI Reasoning", "Suggested Angle", "Match Signals",
+    "Risk Flags", "Salary Range", "Apply Link", "Notes",
 ]
 
 # ── AUDIT TAB COLUMNS ─────────────────────────────────────

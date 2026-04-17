@@ -18,10 +18,11 @@ def clear_and_write_headers(ws: gspread.Worksheet) -> None:
 
 
 def write_screened_jobs(ws: gspread.Worksheet, jobs: list[ScreenedJob]) -> None:
-    rows = []
-    today = date.today().isoformat()
+    # Sort by confidence descending so best matches are at the top
+    sorted_jobs = sorted(jobs, key=lambda j: j.confidence, reverse=True)
 
-    for job in jobs:
+    rows = []
+    for job in sorted_jobs:
         salary = ""
         if job.salary_min and job.salary_max:
             salary = f"${job.salary_min:,} - ${job.salary_max:,}"
@@ -29,25 +30,24 @@ def write_screened_jobs(ws: gspread.Worksheet, jobs: list[ScreenedJob]) -> None:
             salary = f"${job.salary_min:,}+"
 
         rows.append([
-            today,
-            job.company,
-            job.title,
-            job.location,
-            job.source,
-            job.confidence,
-            job.reasoning,
-            job.suggested_angle,
-            ", ".join(job.risk_flags),
-            ", ".join(job.match_signals),
-            salary,
-            job.url,
-            "",
-            "",
+            job.company,                          # Company
+            job.title,                            # Job Title
+            job.location,                         # Location
+            job.confidence,                       # Confidence
+            "",                                   # Status (user fills — right next to Confidence)
+            job.source,                           # Source
+            job.reasoning,                        # AI Reasoning
+            job.suggested_angle,                  # Suggested Angle
+            ", ".join(job.match_signals),         # Match Signals
+            ", ".join(job.risk_flags),            # Risk Flags
+            salary,                               # Salary Range
+            job.url,                              # Apply Link
+            "",                                   # Notes
         ])
 
     if rows:
         ws.append_rows(rows, value_input_option="USER_ENTERED")
-        logger.info(f"Daily tab: wrote {len(rows)} jobs")
+        logger.info(f"Daily tab: wrote {len(rows)} jobs (sorted by confidence desc)")
 
 
 def get_apply_jobs(ws: gspread.Worksheet) -> list[dict]:
