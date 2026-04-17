@@ -9,7 +9,7 @@ import yaml
 from pathlib import Path
 
 from models.job import RawJob, ScreenedJob, ScreeningVerdict
-from config import SCREENING_BATCH_SIZE
+from config import SCREENING_BATCH_SIZE, CLAUDE_CLI
 
 logger = logging.getLogger(__name__)
 
@@ -100,7 +100,7 @@ class Stage2Screen:
 
         try:
             result = subprocess.run(
-                ["claude", "-p", prompt, "--output-format", "text"],
+                [CLAUDE_CLI, "-p", prompt, "--output-format", "text"],
                 capture_output=True, text=True, timeout=120,
             )
             if result.returncode != 0:

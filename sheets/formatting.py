@@ -46,9 +46,24 @@ def format_all_sheets(spreadsheet: Spreadsheet) -> None:
     logger.info("Sheet formatting applied")
 
 
+def _clear_banding(spreadsheet: Spreadsheet, sheet_id: int) -> None:
+    """Remove existing banding before re-applying."""
+    try:
+        meta = spreadsheet.fetch_sheet_metadata()
+        for sheet in meta.get("sheets", []):
+            if sheet["properties"]["sheetId"] == sheet_id:
+                for banding in sheet.get("bandedRanges", []):
+                    spreadsheet.batch_update({"requests": [{
+                        "deleteBanding": {"bandedRangeId": banding["bandedRangeId"]}
+                    }]})
+    except Exception:
+        pass  # No banding to clear
+
+
 def format_daily(spreadsheet: Spreadsheet, ws: Worksheet) -> None:
     """Format the Daily tab."""
     sheet_id = ws.id
+    _clear_banding(spreadsheet, sheet_id)
     requests = []
 
     # Freeze header row
@@ -101,6 +116,7 @@ def format_daily(spreadsheet: Spreadsheet, ws: Worksheet) -> None:
 def format_audit(spreadsheet: Spreadsheet, ws: Worksheet) -> None:
     """Format the Audit tab."""
     sheet_id = ws.id
+    _clear_banding(spreadsheet, sheet_id)
     requests = []
 
     requests.append(_freeze_rows(sheet_id, 1))
@@ -125,6 +141,7 @@ def format_audit(spreadsheet: Spreadsheet, ws: Worksheet) -> None:
 def format_applied(spreadsheet: Spreadsheet, ws: Worksheet) -> None:
     """Format the Applied tab."""
     sheet_id = ws.id
+    _clear_banding(spreadsheet, sheet_id)
     requests = []
 
     requests.append(_freeze_rows(sheet_id, 1))

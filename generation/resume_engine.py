@@ -9,7 +9,7 @@ from pathlib import Path
 
 import yaml
 
-from config import YOUR_NAME, YOUR_EMAIL, YOUR_PHONE
+from config import YOUR_NAME, YOUR_EMAIL, YOUR_PHONE, CLAUDE_CLI
 
 logger = logging.getLogger(__name__)
 
@@ -83,7 +83,7 @@ class ResumeEngine:
     def _invoke_claude(self, prompt: str) -> str | None:
         try:
             result = subprocess.run(
-                ["claude", "-p", prompt, "--output-format", "text"],
+                [CLAUDE_CLI, "-p", prompt, "--output-format", "text"],
                 capture_output=True, text=True, timeout=180,
             )
             if result.returncode != 0:

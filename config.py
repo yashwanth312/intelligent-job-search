@@ -7,6 +7,7 @@
 """
 
 import os
+import shutil
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -86,6 +87,15 @@ LOCATIONS = [
     "Washington, DC",
     "Remote",
 ]
+
+# ── CLAUDE CLI ────────────────────────────────────────────
+# Auto-detect Claude CLI path. Falls back to common install locations.
+CLAUDE_CLI = (
+    shutil.which("claude")
+    or os.path.expanduser("~/.local/bin/claude.exe")
+    or os.path.expanduser("~/.local/bin/claude")
+    or "claude"
+)
 
 # ── SCRAPER SETTINGS ──────────────────────────────────────
 RESULTS_PER_SEARCH = 20
