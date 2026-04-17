@@ -182,9 +182,28 @@ async def run_pipeline():
     if audit_entries:
         db.save_audit_entries_bulk(audit_entries)
 
-    # -- Stage 2: Claude CLI screen --
+    # -- Split: jobs with descriptions go to Claude, others auto-MAYBE --
+    jobs_with_desc = [j for j in passed_jobs if j.description and j.description.strip()]
+    jobs_no_desc = [j for j in passed_jobs if not j.description or not j.description.strip()]
+
+    logger.info(
+        f"Stage 2 split: {len(jobs_with_desc)} with description -> Claude, "
+        f"{len(jobs_no_desc)} without description -> auto-MAYBE"
+    )
+
+    # Stage 2: Claude CLI screen (only jobs with descriptions)
     stage2 = Stage2Screen(profile_path="profile.yaml")
-    screened_jobs = stage2.screen_batch(passed_jobs)
+    screened_jobs = stage2.screen_batch(jobs_with_desc) if jobs_with_desc else []
+
+    # Auto-MAYBE for jobs without descriptions (no Claude tokens wasted)
+    for job in jobs_no_desc:
+        screened_jobs.append(ScreenedJob(
+            **job.model_dump(),
+            verdict=ScreeningVerdict.MAYBE,
+            confidence=2,
+            reasoning="No description available — review manually via link",
+            suggested_angle="",
+        ))
 
     # Save stage 2 audit entries
     stage2_audit = [
