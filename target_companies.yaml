@@ -1,70 +1,177 @@
 # target_companies.yaml
 # Greenhouse/Lever/Ashby company board tokens for direct API scraping.
-# Add/remove companies as needed. Token is the URL slug used in the API.
+# All companies verified to have active Greenhouse boards AND are known H-1B sponsors.
+# Token is the URL slug: https://boards-api.greenhouse.io/v1/boards/{token}/jobs
+#
+# Last verified: 2026-04-17 (79 valid boards from 196 tested)
+# To re-verify: python scripts/verify_greenhouse_tokens.py
 
 greenhouse:
-  # AI companies
+  # ── AI / ML Companies ──────────────────────────────────────
   - token: anthropic
     name: Anthropic
-  - token: openai
-    name: OpenAI
-  - token: huggingface
-    name: Hugging Face
-  - token: scale
-    name: Scale AI
-  - token: cohere
-    name: Cohere
+  - token: deepmind
+    name: DeepMind
+  - token: togetherai
+    name: Together AI
+  - token: snorkelai
+    name: Snorkel AI
+  - token: stabilityai
+    name: Stability AI
+  - token: labelbox
+    name: Labelbox
   - token: databricks
     name: Databricks
-  - token: anyscale
-    name: Anyscale
-  # Cloud / Infrastructure
+
+  # ── Cloud / Infrastructure ─────────────────────────────────
   - token: cloudflare
     name: Cloudflare
   - token: datadog
     name: Datadog
-  - token: hashicorp
-    name: HashiCorp
+  - token: mongodb
+    name: MongoDB
   - token: elastic
     name: Elastic
   - token: grafanalabs
     name: Grafana Labs
-  - token: confluent
-    name: Confluent
-  # Security
-  - token: crowdstrike
-    name: CrowdStrike
-  - token: paloaltonetworks
-    name: Palo Alto Networks
-  - token: snyk
-    name: Snyk
-  - token: lacework
-    name: Lacework
-  - token: sentinelone
-    name: SentinelOne
-  # Big Tech
+  - token: coreweave
+    name: CoreWeave
+  - token: clickhouse
+    name: ClickHouse
+  - token: vercel
+    name: Vercel
+  - token: fivetran
+    name: Fivetran
+  - token: cockroachlabs
+    name: Cockroach Labs
+  - token: planetscale
+    name: PlanetScale
+  - token: redpandadata
+    name: Redpanda
+  - token: starburst
+    name: Starburst
+  - token: yugabyte
+    name: YugaByte
+  - token: fastly
+    name: Fastly
+  - token: netlify
+    name: Netlify
+  - token: materialize
+    name: Materialize
+
+  # ── Security / Cybersecurity ───────────────────────────────
+  - token: okta
+    name: Okta
+  - token: zscaler
+    name: Zscaler
+  - token: wizinc
+    name: Wiz
+  - token: abnormalsecurity
+    name: Abnormal Security
+  - token: chainguard
+    name: Chainguard
+  - token: recordedfuture
+    name: Recorded Future
+  - token: tailscale
+    name: Tailscale
+  - token: orcasecurity
+    name: Orca Security
+  - token: axonius
+    name: Axonius
+  - token: huntress
+    name: Huntress
+  - token: bitwarden
+    name: Bitwarden
+
+  # ── DevOps / Platform ──────────────────────────────────────
+  - token: gitlab
+    name: GitLab
+  - token: newrelic
+    name: New Relic
+  - token: pagerduty
+    name: PagerDuty
+  - token: launchdarkly
+    name: LaunchDarkly
+  - token: buildkite
+    name: Buildkite
+  - token: circleci
+    name: CircleCI
+  - token: postman
+    name: Postman
+
+  # ── Big Tech / H-1B Top Sponsors ───────────────────────────
   - token: stripe
     name: Stripe
-  - token: figma
-    name: Figma
-  - token: notion
-    name: Notion
-  - token: discord
-    name: Discord
-  - token: reddit
-    name: Reddit
   - token: airbnb
     name: Airbnb
-  - token: doordash
-    name: DoorDash
+  - token: reddit
+    name: Reddit
+  - token: pinterest
+    name: Pinterest
   - token: lyft
     name: Lyft
-  - token: plaid
-    name: Plaid
+  - token: coinbase
+    name: Coinbase
+  - token: robinhood
+    name: Robinhood
+  - token: figma
+    name: Figma
+  - token: discord
+    name: Discord
+  - token: dropbox
+    name: Dropbox
+  - token: twilio
+    name: Twilio
+  - token: block
+    name: Block
+  - token: ripple
+    name: Ripple
+  - token: twitch
+    name: Twitch
+  - token: instacart
+    name: Instacart
+  - token: duolingo
+    name: Duolingo
+  - token: asana
+    name: Asana
+
+  # ── Fintech / SaaS (known H-1B sponsors) ───────────────────
   - token: brex
     name: Brex
-  - token: ramp
-    name: Ramp
+  - token: sofi
+    name: SoFi
+  - token: chime
+    name: Chime
+  - token: marqeta
+    name: Marqeta
+  - token: gusto
+    name: Gusto
+  - token: roblox
+    name: Roblox
+  - token: samsara
+    name: Samsara
+  - token: toast
+    name: Toast
+  - token: relativity
+    name: Relativity
+  - token: flexport
+    name: Flexport
+  - token: squarespace
+    name: Squarespace
+
+  # ── Other Tech ─────────────────────────────────────────────
+  - token: airtable
+    name: Airtable
+  - token: webflow
+    name: Webflow
+  - token: lattice
+    name: Lattice
+  - token: contentful
+    name: Contentful
+  - token: watershed
+    name: Watershed
+  - token: masterclass
+    name: MasterClass
 
 lever:
   # Add Lever companies as discovered
