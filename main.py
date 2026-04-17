@@ -33,6 +33,7 @@ from screening.stage1 import Stage1Filter
 from screening.stage2 import Stage2Screen
 from sheets.client import SheetsClient
 from sheets import daily as daily_ops, audit as audit_ops
+from sheets.formatting import format_all_sheets
 from sources.orchestrator import ScraperOrchestrator
 from sources.greenhouse import GreenhouseAdapter
 from sources.lever import LeverAdapter
@@ -136,6 +137,9 @@ async def run_pipeline():
     # -- Save yesterday's data to SQLite, then clear --
     daily_ops.clear_and_write_headers(daily_ws)
     audit_ops.clear_and_write_headers(audit_ws)
+
+    # -- Apply formatting (colors, dropdowns, column widths) --
+    format_all_sheets(sheets.spreadsheet)
 
     # -- Scrape --
     companies = load_target_companies()

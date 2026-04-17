@@ -134,7 +134,7 @@ REQUIRE_ONE_OF = [
 ]
 
 # ── SALARY FLOOR ──────────────────────────────────────────
-SALARY_FLOOR = 70_000
+SALARY_FLOOR = 80_000
 
 # ── SCREENING SETTINGS ────────────────────────────────────
 SCREENING_CONFIDENCE_THRESHOLD = 3  # Minimum confidence for APPLY verdict
