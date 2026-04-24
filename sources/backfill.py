@@ -112,7 +112,7 @@ async def backfill_descriptions(
             if delay > 0:
                 await asyncio.sleep(delay)
 
-    logger.info(f"Backfill: {filled} filled, {failed} failed, {skipped} already had descriptions")
+    logger.info(f"Backfill: {filled} filled, {failed} failed, {skipped} skipped (has desc or no url)")
     return BackfillResult(filled=filled, failed=failed, skipped=skipped)
 
 

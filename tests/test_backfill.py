@@ -1,9 +1,8 @@
 # tests/test_backfill.py
 import pytest
-import aiohttp
 from unittest.mock import AsyncMock, patch, MagicMock
 from models.job import RawJob
-from sources.backfill import backfill_descriptions, extract_description_from_html
+from sources.backfill import backfill_descriptions, extract_description_from_html, fetch_description_from_url
 
 
 def make_job(**kwargs) -> RawJob:
@@ -135,3 +134,24 @@ class TestBackfillDescriptions:
 
         assert result.filled == 1
         assert len(jobs[0].description) <= 5000
+
+
+class TestFetchDescriptionFromUrl:
+    @pytest.mark.asyncio
+    async def test_returns_extracted_text(self):
+        mock_resp = AsyncMock()
+        mock_resp.status = 200
+        mock_resp.text = AsyncMock(return_value=SAMPLE_HTML)
+        mock_resp.__aenter__ = AsyncMock(return_value=mock_resp)
+        mock_resp.__aexit__ = AsyncMock(return_value=False)
+
+        mock_session = AsyncMock()
+        mock_session.get = MagicMock(return_value=mock_resp)
+        mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_session.__aexit__ = AsyncMock(return_value=False)
+
+        with patch("sources.backfill.aiohttp.ClientSession", return_value=mock_session):
+            text = await fetch_description_from_url("https://example.com/job")
+
+        assert text is not None
+        assert "cloud engineer" in text.lower()
