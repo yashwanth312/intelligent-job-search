@@ -120,7 +120,7 @@ def print_summary(
     print(f"  APPLY:  {apply_count}")
     print(f"  MAYBE:  {maybe_count}")
     print(f"  SKIP:   {skip_count}")
-    print(f"\n  -> {apply_count + maybe_count} jobs written to Daily tab")
+    print(f"\n  -> {apply_count + maybe_count + no_desc_surfaced} jobs written to Daily tab")
     if errors:
         print(f"\n  Warning: {len(errors)} source errors (check logs)")
     print("=" * 55 + "\n")
