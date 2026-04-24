@@ -9,6 +9,7 @@
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import sys
@@ -17,6 +18,7 @@ from pathlib import Path
 
 from config import DB_FILE, YOUR_NAME
 from db.database import Database
+from sources.backfill import fetch_description_from_url
 from generation.resume_engine import ResumeEngine
 from generation.pdf_renderer import render_resume_pdf, render_cover_letter_pdf
 from generation.drive_uploader import DriveUploader
@@ -72,6 +74,17 @@ def main():
 
         fingerprint = f"{company.strip().lower()}||{title.strip().lower()}"
         description = db.get_description_by_fingerprint(fingerprint) or ""
+
+        # Fallback: if no description in DB, try fetching from the job URL
+        if not description.strip() and apply_link.strip():
+            logger.info(f"  No description in DB — attempting URL fetch for {company}")
+            fetched = asyncio.run(fetch_description_from_url(apply_link))
+            if fetched:
+                description = fetched
+                db.update_description(fingerprint, description)
+                logger.info(f"  Fetched description from URL ({len(description)} chars)")
+            else:
+                logger.warning(f"  Could not fetch description from URL — resume will be less tailored")
 
         result = engine.generate(
             company=company, title=title, location=location,
