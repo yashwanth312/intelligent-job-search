@@ -35,6 +35,7 @@ from sheets.client import SheetsClient
 from sheets import daily as daily_ops, audit as audit_ops
 from sheets.formatting import format_all_sheets
 from sources.orchestrator import ScraperOrchestrator
+from sources.backfill import backfill_descriptions
 from sources.greenhouse import GreenhouseAdapter
 from sources.lever import LeverAdapter
 from sources.ashby import AshbyAdapter
@@ -94,6 +95,8 @@ def build_adapters(companies: dict) -> list:
 def print_summary(
     total_scraped: int, dupes: int, stage1_passed: int, stage1_rejected: int,
     stage2_results: list[ScreenedJob], errors: list[str],
+    backfill_filled: int = 0, backfill_failed: int = 0,
+    no_desc_surfaced: int = 0,
 ) -> None:
     apply_count = sum(1 for j in stage2_results if j.verdict == ScreeningVerdict.APPLY)
     maybe_count = sum(1 for j in stage2_results if j.verdict == ScreeningVerdict.MAYBE)
@@ -105,6 +108,11 @@ def print_summary(
     print("=" * 55)
     print(f"\n  Total scraped:      {total_scraped}")
     print(f"  Duplicates removed: {dupes}")
+    print(f"\n  DESCRIPTION BACKFILL")
+    print(f"  Filled from URL:  {backfill_filled}")
+    print(f"  Still missing:    {backfill_failed}")
+    if no_desc_surfaced:
+        print(f"  Surfaced in Daily (no JD): {no_desc_surfaced}")
     print(f"\n  STAGE 1 FILTER")
     print(f"  Passed:    {stage1_passed}")
     print(f"  Rejected:  {stage1_rejected}")
@@ -156,12 +164,28 @@ async def run_pipeline():
 
     unique_jobs = scrape_result.jobs
 
-    # -- Stage 1: Regex filter --
-    stage1 = Stage1Filter()
-    passed_jobs, rejected = stage1.filter_batch(unique_jobs)
+    # -- Backfill missing descriptions from URLs --
+    backfill_result = await backfill_descriptions(unique_jobs)
 
-    # Save all jobs to SQLite
+    # Partition: jobs with descriptions go through screening pipeline,
+    # jobs still missing descriptions bypass screening and go to Daily at low confidence
+    desc_jobs = [j for j in unique_jobs if j.description and j.description.strip()]
+    no_desc_jobs = [j for j in unique_jobs if not (j.description and j.description.strip())]
+
+    # -- Stage 1: Regex filter (only jobs with descriptions) --
+    stage1 = Stage1Filter()
+    passed_jobs, rejected = stage1.filter_batch(desc_jobs)
+
+    # Save all jobs to SQLite (including backfilled descriptions)
     db.save_jobs(unique_jobs)
+
+    # Update descriptions in SQLite for jobs that were backfilled
+    # (save_jobs uses INSERT OR IGNORE, so if the job already existed
+    # from a prior run, the backfilled description won't be saved.
+    # Explicitly update those.)
+    for job in unique_jobs:
+        if job.description and job.description.strip():
+            db.update_description(job.fingerprint, job.description)
 
     # Save audit entries for rejected jobs
     today_str = date.today().isoformat()
@@ -205,11 +229,32 @@ async def run_pipeline():
     if stage2_audit:
         db.save_audit_entries_bulk(stage2_audit)
 
-    # -- Write to Sheets --
+    # -- Build Daily tab: screened APPLY/MAYBE + no-desc jobs for manual review --
     daily_jobs = [
         j for j in screened_jobs
         if j.verdict in (ScreeningVerdict.APPLY, ScreeningVerdict.MAYBE)
     ]
+
+    # No-desc jobs bypass screening — surface them for manual review
+    for job in no_desc_jobs:
+        daily_jobs.append(ScreenedJob(
+            title=job.title,
+            company=job.company,
+            location=job.location,
+            description=job.description,
+            salary_min=job.salary_min,
+            salary_max=job.salary_max,
+            url=job.url,
+            source=job.source,
+            scraped_at=job.scraped_at,
+            verdict=ScreeningVerdict.MAYBE,
+            confidence=1,
+            reasoning="No JD available — review link manually",
+            match_signals=[],
+            risk_flags=["no_description"],
+            suggested_angle="",
+        ))
+
     daily_ops.write_screened_jobs(daily_ws, daily_jobs)
 
     # Audit tab: Stage 1 rejections + Stage 2 SKIP jobs
@@ -232,6 +277,9 @@ async def run_pipeline():
         stage1_rejected=len(rejected),
         stage2_results=screened_jobs,
         errors=scrape_result.errors,
+        backfill_filled=backfill_result.filled,
+        backfill_failed=backfill_result.failed,
+        no_desc_surfaced=len(no_desc_jobs),
     )
 
     db.close()
