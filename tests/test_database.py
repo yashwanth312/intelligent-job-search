@@ -84,3 +84,26 @@ class TestDatabase:
         assert "meta||sre" in known
         assert "google||devops" in known
         assert "unknown||job" not in known
+
+    def test_update_description(self, db):
+        job = RawJob(
+            title="SRE", company="Meta", location="NYC",
+            description=None,
+            url="https://example.com/sre",
+            source="linkedin",
+        )
+        db.save_jobs([job])
+        assert db.get_description_by_fingerprint("meta||sre") is None
+
+        db.update_description("meta||sre", "Updated job description text")
+        assert db.get_description_by_fingerprint("meta||sre") == "Updated job description text"
+
+    def test_get_url_by_fingerprint(self, db):
+        job = RawJob(
+            title="DevOps", company="Google", location="SF",
+            url="https://example.com/devops",
+            source="indeed",
+        )
+        db.save_jobs([job])
+        assert db.get_url_by_fingerprint("google||devops") == "https://example.com/devops"
+        assert db.get_url_by_fingerprint("unknown||job") is None

@@ -184,3 +184,19 @@ class Database:
         )
         row = cursor.fetchone()
         return row["description"] if row else None
+
+    def update_description(self, fingerprint: str, description: str) -> None:
+        """Update the description for a job identified by fingerprint."""
+        self.conn.execute(
+            "UPDATE jobs SET description = ? WHERE fingerprint = ?",
+            (description, fingerprint),
+        )
+        self.conn.commit()
+
+    def get_url_by_fingerprint(self, fingerprint: str) -> str | None:
+        """Get the URL for a job identified by fingerprint."""
+        cursor = self.conn.execute(
+            "SELECT url FROM jobs WHERE fingerprint = ?", (fingerprint,)
+        )
+        row = cursor.fetchone()
+        return row["url"] if row else None
