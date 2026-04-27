@@ -34,6 +34,8 @@ class WorkdayAdapter(SourceAdapter):
         self.companies = companies
 
     async def scrape(self, titles: list[str], locations: list[str]) -> SourceResult:
+        # locations unused: Workday searches are title-scoped; location filtering
+        # applied post-scrape by Stage 1 and Stage 2 screening.
         all_jobs: list[RawJob] = []
         all_errors: list[str] = []
 
@@ -85,10 +87,6 @@ class WorkdayAdapter(SourceAdapter):
                 await asyncio.sleep(_REQUEST_DELAY)
 
             postings, err = await self._search(session, api_url, title, name)
-            if err:
-                errors.append(err)
-                continue
-
             for posting in postings:
                 external_path = posting.get("externalPath", "")
                 jobs.append(RawJob(
@@ -100,6 +98,9 @@ class WorkdayAdapter(SourceAdapter):
                     source=f"workday-{tenant}",
                     posted_at=parse_iso(posting.get("postedOn")),
                 ))
+            if err:
+                errors.append(err)
+                continue
 
         return jobs, errors
 
@@ -167,7 +168,10 @@ class WorkdayAdapter(SourceAdapter):
                 logger.warning(
                     f"Workday {company_name} '{title}': request error: {e}"
                 )
-                return {}, f"{company_name} '{title}': {e}"
+                if attempt == _MAX_RETRIES - 1:
+                    return {}, f"{company_name} '{title}': {e}"
+                await asyncio.sleep(5 * (2 ** attempt))
+                continue
 
         return {}, (
             f"Workday {company_name} '{title}': "

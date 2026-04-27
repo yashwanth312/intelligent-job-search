@@ -144,12 +144,35 @@ class TestWorkdayAdapter:
         assert data == {}
         assert err is None
 
-    def test_job_url_construction(self):
-        tenant, wd_server, site = "microsoft", "wd5", "External_Careers"
-        external_path = "job/Redmond-WA/Cloud-Engineer_JR12345"
-        expected = (
+    @pytest.mark.asyncio
+    async def test_job_url_contains_correct_components(self):
+        company = {
+            "tenant": "microsoft",
+            "wd_server": "wd5",
+            "site": "External_Careers",
+            "name": "Microsoft",
+        }
+        adapter = WorkdayAdapter(companies=[company])
+        resp = _mock_resp(200, {
+            "total": 1,
+            "jobPostings": [{
+                "title": "Cloud Engineer",
+                "externalPath": "job/Redmond-WA/Cloud-Engineer_JR12345",
+                "locationsText": "Redmond, Washington",
+                "postedOn": "2026-04-25",
+            }],
+        })
+        mock_session = MagicMock()
+        mock_session.post = MagicMock(return_value=AsyncCM(resp))
+
+        with patch("asyncio.sleep"):
+            jobs, _ = await adapter._scrape_company(
+                mock_session, company, ["Cloud Engineer"]
+            )
+
+        assert len(jobs) == 1
+        expected_url = (
             "https://microsoft.wd5.myworkdayjobs.com/en-US/"
             "External_Careers/job/Redmond-WA/Cloud-Engineer_JR12345"
         )
-        url = f"https://{tenant}.{wd_server}.myworkdayjobs.com/en-US/{site}/{external_path}"
-        assert url == expected
+        assert jobs[0].url == expected_url
