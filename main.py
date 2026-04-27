@@ -2,15 +2,15 @@
 ============================================================
   INTELLIGENT JOB SEARCH — Main Pipeline
 ============================================================
-  1. Validate config + credentials (fail-fast)
+  1. Init (creds + profile + DB)
   2. Clear Daily + Audit tabs
   3. Parallel scrape all sources
-  4. Dedup (cross-source + against SQLite)
-  5. Stage 1: Regex fast filter
-  6. Bulk save to SQLite
-  7. Stage 2: Claude CLI precision screen
-  8. Write to Daily + Audit tabs
-  9. Print run summary
+  4. Freshness filter (<= HOURS_OLD)
+  5. Backfill descriptions for no-desc jobs
+  6. Stage 1 regex filter
+  7. Persist to SQLite
+  8. Stage 2 Claude CLI precision screen
+  9. Write to Daily + Audit
 ============================================================
 """
 from __future__ import annotations
@@ -24,17 +24,18 @@ from pathlib import Path
 import yaml
 
 from config import (
-    TARGET_TITLES, SEARCH_QUERIES, LOCATIONS, DB_FILE,
-    SCREENING_CONFIDENCE_THRESHOLD,
+    TARGET_TITLES, LOCATIONS, DB_FILE,
+    SCREENING_CONFIDENCE_THRESHOLD, HOURS_OLD, STALE_JOB_DAYS,
 )
 from db.database import Database
 from models.job import ScreenedJob, ScreeningVerdict
+from output.ui import PipelineUI, install_rich_logging
 from screening.stage1 import Stage1Filter
 from screening.stage2 import Stage2Screen
 from sheets.client import SheetsClient
 from sheets import daily as daily_ops, audit as audit_ops
 from sheets.formatting import format_all_sheets
-from sources.orchestrator import ScraperOrchestrator
+from sources.orchestrator import ScraperOrchestrator, filter_fresh_jobs
 from sources.backfill import backfill_descriptions
 from sources.greenhouse import GreenhouseAdapter
 from sources.lever import LeverAdapter
@@ -42,23 +43,20 @@ from sources.ashby import AshbyAdapter
 from sources.linkedin_indeed import LinkedInIndeedAdapter
 from sources.hackernews import HackerNewsAdapter
 from sources.remoteok import RemoteOKAdapter
+from sources.workday import WorkdayAdapter
+from sources.workday_discovery import save_new_companies
 
 # Fix Windows console encoding
 if sys.platform == "win32" and hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    handlers=[
-        logging.StreamHandler(),
-        logging.FileHandler(
-            f"logs/run_{date.today().isoformat()}.log",
-            encoding="utf-8",
-        ),
-    ],
-)
+TOTAL_PHASES = 9
+
+# Initialize logging + rich console before anything else.
+Path("logs").mkdir(exist_ok=True)
+LOG_PATH = f"logs/run_{date.today().isoformat()}.log"
+console = install_rich_logging(file_log_path=LOG_PATH, level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
@@ -70,124 +68,150 @@ def load_target_companies() -> dict:
         return yaml.safe_load(f) or {}
 
 
-def build_adapters(companies: dict) -> list:
+def build_adapters(
+    companies: dict,
+) -> tuple[list, list[tuple[str, str]], LinkedInIndeedAdapter]:
+    """Returns (adapters, display_sources, li_adapter).
+
+    li_adapter is returned separately so run_pipeline can read
+    discovered_workday_companies from it after scraping completes.
+    """
     adapters = []
+    display: list[tuple[str, str]] = []
 
     gh = companies.get("greenhouse", [])
     if gh:
         adapters.append(GreenhouseAdapter(companies=gh))
+        display.append(("greenhouse", f"Greenhouse ({len(gh)} co)"))
 
     lv = companies.get("lever", [])
     if lv:
         adapters.append(LeverAdapter(companies=lv))
+        display.append(("lever", f"Lever ({len(lv)} co)"))
 
     ab = companies.get("ashby", [])
     if ab:
         adapters.append(AshbyAdapter(companies=ab))
+        display.append(("ashby", f"Ashby ({len(ab)} co)"))
 
-    adapters.append(LinkedInIndeedAdapter())
+    li_adapter = LinkedInIndeedAdapter()
+    adapters.append(li_adapter)
+    display.append(("linkedin_indeed", "LinkedIn + Indeed + Google"))
+
     adapters.append(HackerNewsAdapter())
+    display.append(("hackernews", "HackerNews (Who is Hiring)"))
+
     adapters.append(RemoteOKAdapter())
+    display.append(("remoteok", "RemoteOK"))
 
-    return adapters
+    wd = companies.get("workday", [])
+    if wd:
+        adapters.append(WorkdayAdapter(companies=wd))
+        display.append(("workday", f"Workday ({len(wd)} co)"))
 
-
-def print_summary(
-    total_scraped: int, dupes: int, stage1_passed: int, stage1_rejected: int,
-    stage2_results: list[ScreenedJob], errors: list[str],
-    backfill_filled: int = 0, backfill_failed: int = 0,
-    no_desc_surfaced: int = 0,
-) -> None:
-    apply_count = sum(1 for j in stage2_results if j.verdict == ScreeningVerdict.APPLY)
-    maybe_count = sum(1 for j in stage2_results if j.verdict == ScreeningVerdict.MAYBE)
-    skip_count = sum(1 for j in stage2_results if j.verdict == ScreeningVerdict.SKIP)
-
-    print("\n" + "=" * 55)
-    print("  INTELLIGENT JOB SEARCH — Run Summary")
-    print(f"  {date.today().isoformat()}")
-    print("=" * 55)
-    print(f"\n  Total scraped:      {total_scraped}")
-    print(f"  Duplicates removed: {dupes}")
-    print(f"\n  DESCRIPTION BACKFILL")
-    print(f"  Filled from URL:  {backfill_filled}")
-    print(f"  Still missing:    {backfill_failed}")
-    if no_desc_surfaced:
-        print(f"  Surfaced in Daily (no JD): {no_desc_surfaced}")
-    print(f"\n  STAGE 1 FILTER")
-    print(f"  Passed:    {stage1_passed}")
-    print(f"  Rejected:  {stage1_rejected}")
-    print(f"\n  STAGE 2 CLAUDE SCREEN")
-    print(f"  APPLY:  {apply_count}")
-    print(f"  MAYBE:  {maybe_count}")
-    print(f"  SKIP:   {skip_count}")
-    print(f"\n  -> {apply_count + maybe_count + no_desc_surfaced} jobs written to Daily tab")
-    if errors:
-        print(f"\n  Warning: {len(errors)} source errors (check logs)")
-    print("=" * 55 + "\n")
+    return adapters, display, li_adapter
 
 
-async def run_pipeline():
-    # -- Fail-fast validation --
-    Path("logs").mkdir(exist_ok=True)
+async def run_pipeline() -> None:
+    ui = PipelineUI(total_phases=TOTAL_PHASES, console=console)
+    ui.banner(subtitle=f"{date.today().isoformat()}  ·  freshness window: {HOURS_OLD}h")
 
+    # ── Phase 1: Init ─────────────────────────────────────────
+    ui.phase(1, "Initializing (profile, DB, Google creds)")
     if not Path("profile.yaml").exists():
-        logger.error("profile.yaml not found. Run update_profile.py first.")
+        ui.error("profile.yaml not found. Run `python update_profile.py` first.")
         sys.exit(1)
 
-    # -- Initialize --
     db = Database(DB_FILE)
     db.initialize()
-
     sheets = SheetsClient()
     daily_ws = sheets.get_daily_sheet()
     audit_ws = sheets.get_audit_sheet()
+    known_fps = db.get_recent_fingerprints(STALE_JOB_DAYS)
+    ui.phase_done(f"{len(known_fps)} known fingerprints from last {STALE_JOB_DAYS}d")
 
-    # -- Save yesterday's data to SQLite, then clear --
+    # ── Phase 2: Clear sheets ─────────────────────────────────
+    ui.phase(2, "Clearing Daily + Audit tabs")
     daily_ops.clear_and_write_headers(daily_ws)
     audit_ops.clear_and_write_headers(audit_ws)
-
-    # -- Apply formatting (colors, dropdowns, column widths) --
     format_all_sheets(sheets.spreadsheet)
+    ui.phase_done()
 
-    # -- Scrape --
+    # ── Phase 3: Scrape sources (parallel) ────────────────────
+    ui.phase(3, "Scraping sources in parallel")
     companies = load_target_companies()
-    adapters = build_adapters(companies)
+    adapters, display_sources, li_adapter = build_adapters(companies)
     orchestrator = ScraperOrchestrator(adapters)
 
-    known_fps = db.get_known_fingerprints(set())
-    # Pass SEARCH_QUERIES (grouped broad terms) to LinkedIn/Indeed,
-    # not the full TARGET_TITLES list. ATS adapters (Greenhouse/Lever/Ashby)
-    # ignore the titles param anyway — they scrape all and filter by title internally.
-    scrape_result = await orchestrator.scrape_all(
-        SEARCH_QUERIES, LOCATIONS, known_fingerprints=known_fps,
+    with ui.scrape_table(display_sources) as tracker:
+        scrape_result = await orchestrator.scrape_all(
+            TARGET_TITLES, LOCATIONS,
+            known_fingerprints=known_fps,
+            on_source_done=tracker.mark_done,
+        )
+    all_scraped = scrape_result.jobs
+    ui.phase_done(f"{len(all_scraped)} unique jobs after cross-source + DB dedup")
+
+    # Persist any newly discovered Workday companies for the next run
+    new_wd = save_new_companies(
+        li_adapter.discovered_workday_companies,
+        yaml_path="target_companies.yaml",
     )
+    if new_wd:
+        logger.info(
+            f"Discovered {new_wd} new Workday "
+            f"{'company' if new_wd == 1 else 'companies'} — "
+            f"added to target_companies.yaml for next run"
+        )
 
-    unique_jobs = scrape_result.jobs
+    # ── Phase 4: Freshness filter ─────────────────────────────
+    ui.phase(4, f"Freshness filter (<= {HOURS_OLD}h old)")
+    unique_jobs, stale_jobs = filter_fresh_jobs(all_scraped, HOURS_OLD)
+    ui.phase_done(f"kept {len(unique_jobs)}  ·  dropped {len(stale_jobs)} stale")
 
-    # -- Backfill missing descriptions from URLs --
-    backfill_result = await backfill_descriptions(unique_jobs)
+    # ── Phase 5: Backfill descriptions ────────────────────────
+    ui.phase(5, "Backfilling missing descriptions")
+    needs_backfill = sum(
+        1 for j in unique_jobs
+        if not (j.description and j.description.strip()) and j.url.strip()
+    )
+    if needs_backfill == 0:
+        backfill_result = await backfill_descriptions(unique_jobs)
+        ui.phase_done("nothing to backfill")
+    else:
+        with ui.progress("Fetching descriptions", total=needs_backfill) as advance:
+            backfill_result = await backfill_descriptions(
+                unique_jobs, on_progress=advance,
+            )
+        ui.phase_done(
+            f"{backfill_result.filled} filled  ·  {backfill_result.failed} failed"
+        )
 
-    # Partition: jobs with descriptions go through screening pipeline,
-    # jobs still missing descriptions bypass screening and go to Daily at low confidence
     desc_jobs = [j for j in unique_jobs if j.description and j.description.strip()]
     no_desc_jobs = [j for j in unique_jobs if not (j.description and j.description.strip())]
 
-    # -- Stage 1: Regex filter (only jobs with descriptions) --
+    # ── Phase 6: Stage 1 regex filter ─────────────────────────
+    ui.phase(6, "Stage 1 regex filter")
     stage1 = Stage1Filter()
     passed_jobs, rejected = stage1.filter_batch(desc_jobs)
 
-    # Save all jobs to SQLite (including backfilled descriptions)
-    db.save_jobs(unique_jobs)
+    # Apply title-only checks to no_desc_jobs so "Senior X" / unrelated titles
+    # are routed to Audit instead of cluttering the Daily tab.
+    no_desc_passed, no_desc_rejected = stage1.filter_titles_only(no_desc_jobs)
+    rejected.extend(no_desc_rejected)
 
-    # Update descriptions in SQLite for jobs that were backfilled
-    # (save_jobs uses INSERT OR IGNORE, so if the job already existed
-    # from a prior run, the backfilled description won't be saved.
-    # Explicitly update those.)
-    for job in unique_jobs:
+    ui.phase_done(f"{len(passed_jobs)} passed  ·  {len(rejected)} rejected")
+
+    # ── Phase 7: Persist to SQLite ────────────────────────────
+    ui.phase(7, "Persisting to SQLite")
+    # Only save jobs that have descriptions — no_desc_jobs are intentionally
+    # excluded so their fingerprints don't block re-scraping on future runs.
+    # If the listing gains a description tomorrow it will be picked up fresh.
+    db.save_jobs(desc_jobs)
+    for job in desc_jobs:
         if job.description and job.description.strip():
             db.update_description(job.fingerprint, job.description)
 
-    # Save audit entries for rejected jobs
     today_str = date.today().isoformat()
     audit_entries = [
         {
@@ -205,13 +229,25 @@ async def run_pipeline():
     ]
     if audit_entries:
         db.save_audit_entries_bulk(audit_entries)
+    ui.phase_done(f"{len(unique_jobs)} jobs + {len(audit_entries)} audit rows")
 
-    # -- Stage 2: Claude CLI screen --
-    # All jobs reaching here have descriptions (Stage 1 rejects description-less jobs)
+    # ── Phase 8: Stage 2 Claude screen ────────────────────────
+    ui.phase(8, "Stage 2 Claude CLI precision screen")
     stage2 = Stage2Screen(profile_path="profile.yaml")
-    screened_jobs = stage2.screen_batch(passed_jobs) if passed_jobs else []
+    if not passed_jobs:
+        screened_jobs: list[ScreenedJob] = []
+        ui.phase_done("nothing to screen")
+    else:
+        from config import SCREENING_BATCH_SIZE
+        num_batches = (len(passed_jobs) + SCREENING_BATCH_SIZE - 1) // SCREENING_BATCH_SIZE
+        with ui.progress(f"Screening {len(passed_jobs)} jobs", total=num_batches) as advance:
+            screened_jobs = stage2.screen_batch(passed_jobs, on_progress=advance)
 
-    # Save stage 2 audit entries
+        apply_n = sum(1 for j in screened_jobs if j.verdict == ScreeningVerdict.APPLY)
+        maybe_n = sum(1 for j in screened_jobs if j.verdict == ScreeningVerdict.MAYBE)
+        skip_n = sum(1 for j in screened_jobs if j.verdict == ScreeningVerdict.SKIP)
+        ui.phase_done(f"APPLY {apply_n}  ·  MAYBE {maybe_n}  ·  SKIP {skip_n}")
+
     stage2_audit = [
         {
             "job_fingerprint": j.fingerprint,
@@ -229,24 +265,15 @@ async def run_pipeline():
     if stage2_audit:
         db.save_audit_entries_bulk(stage2_audit)
 
-    # -- Build Daily tab: screened APPLY/MAYBE + no-desc jobs for manual review --
+    # ── Phase 9: Write Daily + Audit tabs ─────────────────────
+    ui.phase(9, "Writing Daily + Audit tabs")
     daily_jobs = [
         j for j in screened_jobs
         if j.verdict in (ScreeningVerdict.APPLY, ScreeningVerdict.MAYBE)
     ]
-
-    # No-desc jobs bypass screening — surface them for manual review
-    for job in no_desc_jobs:
+    for job in no_desc_passed:
         daily_jobs.append(ScreenedJob(
-            title=job.title,
-            company=job.company,
-            location=job.location,
-            description=job.description,
-            salary_min=job.salary_min,
-            salary_max=job.salary_max,
-            url=job.url,
-            source=job.source,
-            scraped_at=job.scraped_at,
+            **job.model_dump(),
             verdict=ScreeningVerdict.MAYBE,
             confidence=1,
             reasoning="No JD available — review link manually",
@@ -254,10 +281,8 @@ async def run_pipeline():
             risk_flags=["no_description"],
             suggested_angle="",
         ))
-
     daily_ops.write_screened_jobs(daily_ws, daily_jobs)
 
-    # Audit tab: Stage 1 rejections + Stage 2 SKIP jobs
     audit_ops.write_rejections(audit_ws, rejected)
     stage2_skips = [
         type("FilterResult", (), {
@@ -268,24 +293,42 @@ async def run_pipeline():
     ]
     if stage2_skips:
         audit_ops.write_rejections(audit_ws, stage2_skips)
+    ui.phase_done(f"{len(daily_jobs)} to Daily  ·  {len(rejected) + len(stage2_skips)} to Audit")
 
-    # -- Summary --
-    print_summary(
-        total_scraped=len(unique_jobs),
-        dupes=0,
-        stage1_passed=len(passed_jobs),
-        stage1_rejected=len(rejected),
-        stage2_results=screened_jobs,
-        errors=scrape_result.errors,
-        backfill_filled=backfill_result.filled,
-        backfill_failed=backfill_result.failed,
-        no_desc_surfaced=len(no_desc_jobs),
+    # ── Final summary panel ──────────────────────────────────
+    apply_count = sum(1 for j in screened_jobs if j.verdict == ScreeningVerdict.APPLY)
+    maybe_count = sum(1 for j in screened_jobs if j.verdict == ScreeningVerdict.MAYBE)
+    skip_count = sum(1 for j in screened_jobs if j.verdict == ScreeningVerdict.SKIP)
+
+    top: tuple[str, int] | None = None
+    apply_jobs_sorted = sorted(
+        (j for j in screened_jobs if j.verdict == ScreeningVerdict.APPLY),
+        key=lambda j: j.confidence, reverse=True,
     )
+    if apply_jobs_sorted:
+        best = apply_jobs_sorted[0]
+        top = (f"{best.company} — {best.title}", best.confidence)
+
+    stats = {
+        "Total scraped": len(all_scraped),
+        f"Fresh (<= {HOURS_OLD}h)": len(unique_jobs),
+        "Stale dropped": len(stale_jobs),
+        "Backfilled from URL": backfill_result.filled,
+        "Stage 1 passed": len(passed_jobs),
+        "APPLY": apply_count,
+        "MAYBE": maybe_count,
+        "SKIP": skip_count,
+        "Written to Daily": len(daily_jobs),
+    }
+    if scrape_result.errors:
+        stats["Source errors"] = f"{len(scrape_result.errors)} (see log)"
+
+    ui.summary(stats, top_apply=top, log_path=LOG_PATH)
 
     db.close()
 
 
-def main():
+def main() -> None:
     asyncio.run(run_pipeline())
 
 
