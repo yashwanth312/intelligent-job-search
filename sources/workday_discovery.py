@@ -10,7 +10,6 @@ logger = logging.getLogger(__name__)
 _WORKDAY_RE = re.compile(
     r"^https?://([^.]+)\.(wd\d+)\.myworkdayjobs\.com"
     r"(?:/[a-z]{2}-[A-Z]{2})?/([^/?#]+)",
-    re.IGNORECASE,
 )
 
 
