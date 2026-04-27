@@ -232,3 +232,39 @@ ashby:
     name: Runway
   - token: prefect
     name: Prefect
+
+workday:
+  # Verified 2026-04-27 — 7 live boards confirmed via API
+  # ── Security ──────────────────────────────────────────────
+  - tenant: crowdstrike
+    wd_server: wd5
+    site: CrowdStrikeCareers
+    name: CrowdStrike
+  - tenant: trendmicro
+    wd_server: wd3
+    site: External
+    name: Trend Micro
+
+  # ── Cloud / Platform ──────────────────────────────────────
+  - tenant: salesforce
+    wd_server: wd12
+    site: External_Career_Site
+    name: Salesforce
+  - tenant: zoom
+    wd_server: wd5
+    site: Zoom
+    name: Zoom
+  - tenant: workday
+    wd_server: wd5
+    site: Workday
+    name: Workday
+
+  # ── Semiconductors / Hardware ─────────────────────────────
+  - tenant: nvidia
+    wd_server: wd5
+    site: NVIDIAExternalCareerSite
+    name: NVIDIA
+  - tenant: intel
+    wd_server: wd1
+    site: External
+    name: Intel
