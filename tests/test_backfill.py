@@ -58,7 +58,7 @@ class TestBackfillDescriptions:
     @pytest.mark.asyncio
     async def test_skips_jobs_with_existing_description(self):
         jobs = [make_job(description="Already has a description")]
-        result = await backfill_descriptions(jobs, delay=0)
+        result = await backfill_descriptions(jobs)
         assert result.skipped == 1
         assert result.filled == 0
         assert result.failed == 0
@@ -66,7 +66,7 @@ class TestBackfillDescriptions:
     @pytest.mark.asyncio
     async def test_skips_jobs_with_no_url(self):
         jobs = [make_job(url="")]
-        result = await backfill_descriptions(jobs, delay=0)
+        result = await backfill_descriptions(jobs)
         assert result.skipped == 1
         assert result.filled == 0
 
@@ -86,7 +86,7 @@ class TestBackfillDescriptions:
         mock_session.__aexit__ = AsyncMock(return_value=False)
 
         with patch("sources.backfill.aiohttp.ClientSession", return_value=mock_session):
-            result = await backfill_descriptions(jobs, delay=0)
+            result = await backfill_descriptions(jobs)
 
         assert result.filled == 1
         assert jobs[0].description is not None
@@ -107,7 +107,7 @@ class TestBackfillDescriptions:
         mock_session.__aexit__ = AsyncMock(return_value=False)
 
         with patch("sources.backfill.aiohttp.ClientSession", return_value=mock_session):
-            result = await backfill_descriptions(jobs, delay=0)
+            result = await backfill_descriptions(jobs)
 
         assert result.failed == 1
         assert jobs[0].description is None
@@ -130,10 +130,10 @@ class TestBackfillDescriptions:
         mock_session.__aexit__ = AsyncMock(return_value=False)
 
         with patch("sources.backfill.aiohttp.ClientSession", return_value=mock_session):
-            result = await backfill_descriptions(jobs, delay=0)
+            result = await backfill_descriptions(jobs)
 
         assert result.filled == 1
-        assert len(jobs[0].description) <= 5000
+        assert len(jobs[0].description) <= 15000
 
 
 class TestFetchDescriptionFromUrl:

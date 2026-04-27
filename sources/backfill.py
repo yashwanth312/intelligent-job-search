@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from dataclasses import dataclass
+from typing import Callable
 
 import aiohttp
 from bs4 import BeautifulSoup
@@ -19,14 +20,17 @@ _STRIP_TAGS = ["script", "style", "nav", "header", "footer", "noscript", "iframe
 # Minimum extracted text length to consider it a real description
 _MIN_DESC_LENGTH = 50
 
-# Maximum description length to store
-_MAX_DESC_LENGTH = 5000
+# Maximum description length to store — generous cap so late-appearing content
+# (sponsorship disclaimers, experience requirements, tech stack) is not cut off.
+_MAX_DESC_LENGTH = 15000
 
 _USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
     "AppleWebKit/537.36 (KHTML, like Gecko) "
     "Chrome/125.0.0.0 Safari/537.36"
 )
+
+_CONCURRENT_FETCHES = 10  # max parallel description fetches
 
 
 @dataclass
@@ -77,41 +81,55 @@ async def _fetch_one(
 
 async def backfill_descriptions(
     jobs: list[RawJob],
-    delay: float = 1.5,
+    concurrency: int = _CONCURRENT_FETCHES,
     timeout: float = 15.0,
+    on_progress: Callable[[int], None] | None = None,
 ) -> BackfillResult:
     """Fetch descriptions from URLs for jobs that are missing them.
 
+    Fetches up to `concurrency` URLs in parallel (default 10).
     Mutates each job's `description` field in place when successful.
+    If `on_progress` is provided, it's called with `1` after each job
+    completes (success or failure) — for wiring a progress bar.
     """
     needs_backfill = [
         j for j in jobs
         if not (j.description and j.description.strip()) and j.url.strip()
     ]
     skipped = len(jobs) - len(needs_backfill)
-    filled = 0
-    failed = 0
 
     if not needs_backfill:
         logger.info("Backfill: no jobs need description fetching")
         return BackfillResult(filled=0, failed=0, skipped=skipped)
 
-    logger.info(f"Backfill: attempting to fetch descriptions for {len(needs_backfill)} jobs")
+    logger.info(
+        f"Backfill: fetching descriptions for {len(needs_backfill)} jobs "
+        f"(concurrency={concurrency})"
+    )
+
+    sem = asyncio.Semaphore(concurrency)
+
+    async def _fetch_job(session: aiohttp.ClientSession, job: RawJob) -> str:
+        async with sem:
+            text = await _fetch_one(session, job.url, timeout)
+        if text:
+            job.description = text
+            logger.debug(f"Backfill OK: {job.company} — {job.title}")
+            result = "filled"
+        else:
+            logger.debug(f"Backfill FAIL: {job.company} — {job.title}")
+            result = "failed"
+        if on_progress:
+            on_progress(1)
+        return result
 
     async with aiohttp.ClientSession() as session:
-        for job in needs_backfill:
-            text = await _fetch_one(session, job.url, timeout)
-            if text:
-                job.description = text
-                filled += 1
-                logger.debug(f"Backfill OK: {job.company} — {job.title}")
-            else:
-                failed += 1
-                logger.debug(f"Backfill FAIL: {job.company} — {job.title}")
+        outcomes = await asyncio.gather(
+            *[_fetch_job(session, job) for job in needs_backfill]
+        )
 
-            if delay > 0:
-                await asyncio.sleep(delay)
-
+    filled = outcomes.count("filled")
+    failed = outcomes.count("failed")
     logger.info(f"Backfill: {filled} filled, {failed} failed, {skipped} skipped (has desc or no url)")
     return BackfillResult(filled=filled, failed=failed, skipped=skipped)
 
