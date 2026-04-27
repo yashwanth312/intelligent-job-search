@@ -4,7 +4,6 @@ from __future__ import annotations
 import os
 import tempfile
 
-import pytest
 import yaml
 
 from sources.workday_discovery import extract_workday_tenant, save_new_companies
@@ -43,6 +42,12 @@ class TestExtractWorkdayTenant:
         result = extract_workday_tenant(url, "CrowdStrike")
         assert result["tenant"] == "crowdstrike"
         assert result["wd_server"] == "wd5"
+
+    def test_extract_url_with_uppercase_locale(self):
+        url = "https://salesforce.wd12.myworkdayjobs.com/EN-US/External_Career_Site/job/x"
+        result = extract_workday_tenant(url, "Salesforce")
+        assert result is not None
+        assert result["site"] == "External_Career_Site"
 
 
 class TestSaveNewCompanies:

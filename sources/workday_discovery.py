@@ -2,14 +2,17 @@
 from __future__ import annotations
 
 import logging
+import pathlib
 import re
+
+_DEFAULT_YAML = pathlib.Path(__file__).parent.parent / "target_companies.yaml"
 
 logger = logging.getLogger(__name__)
 
 # Matches: https://{tenant}.{wd_server}.myworkdayjobs.com[/{locale}]/{site}/...
 _WORKDAY_RE = re.compile(
     r"^https?://([^.]+)\.(wd\d+)\.myworkdayjobs\.com"
-    r"(?:/[a-z]{2}-[A-Z]{2})?/([^/?#]+)",
+    r"(?:/(?i:[a-z]{2}-[a-z]{2}))?/([^/?#]+)",
 )
 
 
@@ -33,7 +36,7 @@ def extract_workday_tenant(url: str | None, company_name: str) -> dict | None:
 
 def save_new_companies(
     discoveries: list[dict],
-    yaml_path: str = "target_companies.yaml",
+    yaml_path: str | pathlib.Path = _DEFAULT_YAML,
 ) -> int:
     """Append entries not already present (by tenant) to the workday: section
     of target_companies.yaml. Returns the count of newly added companies.
@@ -57,6 +60,9 @@ def save_new_companies(
         added = 0
         seen_in_batch: set[str] = set()
         for d in discoveries:
+            if not all(k in d for k in ("tenant", "wd_server", "site", "name")):
+                logger.warning(f"Workday discovery: skipping malformed entry: {d}")
+                continue
             tenant = d["tenant"]
             if tenant not in existing_tenants and tenant not in seen_in_batch:
                 data["workday"].append(d)
