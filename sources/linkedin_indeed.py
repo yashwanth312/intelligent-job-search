@@ -72,7 +72,8 @@ class LinkedInIndeedAdapter(SourceAdapter):
 
     @property
     def discovered_workday_companies(self) -> list[dict]:
-        return list(self._discovered.values())
+        with self._lock:
+            return list(self._discovered.values())
 
     async def scrape(self, titles: list[str], locations: list[str]) -> SourceResult:
         """Scrape LinkedIn/Indeed using TARGET_TITLES x locations.
