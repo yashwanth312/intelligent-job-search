@@ -34,6 +34,7 @@ Verdict guidelines:
 Be generous with APPLY for roles where the candidate has 60%+ skill match.
 Flag but don't auto-reject "preferred" experience requirements (e.g., "3+ years preferred").
 Auto-SKIP: explicit no-sponsorship, security clearance required, 5+ years required, senior/staff level.
+If h1b_sponsor_verified is false: add "no_h1b_history" to risk_flags and reduce confidence by 1 (minimum 1). Do not auto-SKIP on this signal alone.
 
 ## Jobs to Screen
 

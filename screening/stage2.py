@@ -3,10 +3,14 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import re
+import shutil
 import subprocess
+import tempfile
 import yaml
 from pathlib import Path
+from typing import Callable
 
 from models.job import RawJob, ScreenedJob, ScreeningVerdict
 from config import SCREENING_BATCH_SIZE, CLAUDE_CLI
@@ -15,11 +19,21 @@ logger = logging.getLogger(__name__)
 
 PROMPT_PATH = Path(__file__).parent.parent / "prompts" / "screening.md"
 
-
 class Stage2Screen:
     def __init__(self, profile_path: str = "profile.yaml"):
         self.profile_path = profile_path
         self._profile_summary: str | None = None
+
+    def validate_cli(self) -> None:
+        """Raise RuntimeError if the Claude CLI binary cannot be located."""
+        cli = CLAUDE_CLI
+        if not (shutil.which(cli) or Path(cli).is_file()):
+            raise RuntimeError(
+                f"Claude CLI not found at '{cli}'.\n"
+                "Install it:  npm install -g @anthropic-ai/claude-code\n"
+                "Then either restart your terminal (so PATH is refreshed) or "
+                "add CLAUDE_CLI=/full/path/to/claude to your .env file."
+            )
 
     def _load_profile_summary(self) -> str:
         if self._profile_summary:
@@ -44,8 +58,11 @@ class Stage2Screen:
         self._profile_summary = "\n".join(parts)
         return self._profile_summary
 
-    def screen_batch(self, jobs: list[RawJob]) -> list[ScreenedJob]:
-        """Screen a batch of jobs using Claude CLI. Returns ScreenedJob list."""
+    def screen_batch(
+        self,
+        jobs: list[RawJob],
+        on_progress: Callable[[int], None] | None = None,
+    ) -> list[ScreenedJob]:
         all_screened: list[ScreenedJob] = []
 
         for i in range(0, len(jobs), SCREENING_BATCH_SIZE):
@@ -73,6 +90,9 @@ class Stage2Screen:
                 else:
                     all_screened.append(self._default_maybe(job))
 
+            if on_progress:
+                on_progress(1)
+
         return all_screened
 
     def _screen_one_batch(self, jobs: list[RawJob]) -> list[dict]:
@@ -80,7 +100,7 @@ class Stage2Screen:
 
         jobs_data = []
         for job in jobs:
-            desc = (job.description or "")[:3000]
+            desc = (job.description or "")[:8000]
             jobs_data.append({
                 "fingerprint": job.fingerprint,
                 "title": job.title,
@@ -90,6 +110,7 @@ class Stage2Screen:
                 "salary_min": job.salary_min,
                 "salary_max": job.salary_max,
                 "source": job.source,
+                "h1b_sponsor_verified": job.h1b_sponsor_verified,
             })
 
         prompt = prompt_template.replace(
@@ -98,21 +119,50 @@ class Stage2Screen:
             "{{jobs_json}}", json.dumps(jobs_data, indent=2)
         )
 
+        tmp_path = None
         try:
-            result = subprocess.run(
-                [CLAUDE_CLI, "-p", prompt, "--output-format", "text"],
-                capture_output=True, text=True, timeout=120,
-            )
+            with tempfile.NamedTemporaryFile(
+                mode='w', suffix='.md', delete=False, encoding='utf-8'
+            ) as tmp:
+                tmp.write(prompt)
+                tmp_path = tmp.name
+
+            env = os.environ.copy()
+            env["CLAUDECODE"] = "1"
+            env.pop("ANTHROPIC_API_KEY", None)  # prevent depleted API key from overriding Max subscription
+
+            with open(tmp_path, encoding='utf-8') as stdin_file:
+                result = subprocess.run(
+                    [CLAUDE_CLI, "-p", "--output-format", "text"],
+                    stdin=stdin_file,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    timeout=120,
+                    encoding="utf-8",
+                    errors="replace",
+                    env=env,
+                )
             if result.returncode != 0:
-                logger.error(f"Claude CLI error: {result.stderr}")
+                logger.error(
+                    f"Claude CLI error (rc={result.returncode}): "
+                    f"stderr={result.stderr[:500]!r}  stdout={result.stdout[:300]!r}"
+                )
                 return []
             return self._parse_response(result.stdout)
         except subprocess.TimeoutExpired:
             logger.error("Claude CLI timed out")
             return []
         except FileNotFoundError:
-            logger.error("Claude CLI not found — is it installed and in PATH?")
-            return []
+            raise RuntimeError(
+                f"Claude CLI not found at '{CLAUDE_CLI}'. "
+                "Run `npm install -g @anthropic-ai/claude-code` and ensure it is in PATH."
+            )
+        finally:
+            if tmp_path:
+                try:
+                    os.unlink(tmp_path)
+                except OSError:
+                    pass
 
     def _parse_response(self, text: str) -> list[dict]:
         text = text.strip()
@@ -131,19 +181,23 @@ class Stage2Screen:
             return []
 
     def _default_apply(self, job: RawJob) -> ScreenedJob:
+        risk_flags = ["no_h1b_history"] if job.h1b_sponsor_verified is False else []
         return ScreenedJob(
             **job.model_dump(),
             verdict=ScreeningVerdict.APPLY,
             confidence=2,
             reasoning="Claude screening failed — defaulting to APPLY for manual review",
             suggested_angle="",
+            risk_flags=risk_flags,
         )
 
     def _default_maybe(self, job: RawJob) -> ScreenedJob:
+        risk_flags = ["no_h1b_history"] if job.h1b_sponsor_verified is False else []
         return ScreenedJob(
             **job.model_dump(),
             verdict=ScreeningVerdict.MAYBE,
             confidence=2,
             reasoning="Not returned in Claude screening batch — flagged for review",
             suggested_angle="",
+            risk_flags=risk_flags,
         )
