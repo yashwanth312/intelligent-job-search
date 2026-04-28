@@ -8,6 +8,7 @@
 
 import os
 import shutil
+import sys
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -26,23 +27,30 @@ GOOGLE_DRIVE_FOLDER_ID = os.getenv("GOOGLE_DRIVE_FOLDER_ID", "")
 DB_FILE = "jobs.db"
 
 # ── TARGET JOB TITLES ─────────────────────────────────────
-# Full list used for title matching / Stage 1 filtering
+# Used as both LinkedIn/Indeed search queries AND Stage 1 title matching.
+# Each title gets its own dedicated search so niche titles are never buried.
 TARGET_TITLES = [
     # Cloud / Infrastructure
     "Cloud Engineer",
     "Junior Cloud Engineer",
     "Associate Cloud Engineer",
     "Cloud Infrastructure Engineer",
+    "Infrastructure Engineer",
+    "Systems Engineer",
     # DevOps / SRE / Platform
     "DevOps Engineer",
     "Junior DevOps Engineer",
     "Associate DevOps Engineer",
     "Cloud DevOps Engineer",
     "SRE",
+    "Site Reliability Engineer",
     "Associate SRE",
     "Junior SRE",
+    "Reliability Engineer",
     "Platform Engineer",
     "Associate Platform Engineer",
+    "Kubernetes Engineer",
+    "Observability Engineer",
     # Security
     "Security Engineer",
     "Junior Security Engineer",
@@ -50,6 +58,7 @@ TARGET_TITLES = [
     "Cloud Security Engineer",
     "DevSecOps Engineer",
     "Security Automation Engineer",
+    "Security Operations Engineer",
     "Security Analyst",
     "Junior Security Analyst",
     # AI Intersection
@@ -61,21 +70,9 @@ TARGET_TITLES = [
     "AI DevOps Engineer",
 ]
 
-# ── SEARCH QUERIES ────────────────────────────────────────
-# Grouped search terms for LinkedIn/Indeed — each one is a separate search.
-# Keep this short: fewer broad queries > many narrow ones.
-SEARCH_QUERIES = [
-    "Cloud Engineer",
-    "DevOps Engineer",
-    "SRE Site Reliability Engineer",
-    "Platform Engineer",
-    "Security Engineer",
-    "DevSecOps Engineer",
-    "MLOps Engineer",
-    "AI Infrastructure Engineer",
-]
-
 # ── LOCATIONS ─────────────────────────────────────────────
+# Cast the widest net across US tech hubs. 24h freshness filter
+# keeps volume sane even with 17 locations.
 LOCATIONS = [
     "Chicago, IL",
     "New York, NY",
@@ -85,21 +82,57 @@ LOCATIONS = [
     "Denver, CO",
     "Philadelphia, PA",
     "Washington, DC",
+    "San Francisco, CA",
+    "San Jose, CA",
+    "Los Angeles, CA",
+    "Atlanta, GA",
+    "Raleigh, NC",
+    "Minneapolis, MN",
+    "Dallas, TX",
+    "Portland, OR",
     "Remote",
 ]
 
 # ── CLAUDE CLI ────────────────────────────────────────────
-# Auto-detect Claude CLI path. Falls back to common install locations.
-CLAUDE_CLI = (
-    shutil.which("claude")
-    or os.path.expanduser("~/.local/bin/claude.exe")
-    or os.path.expanduser("~/.local/bin/claude")
-    or "claude"
-)
+def _find_claude_cli() -> str:
+    """Locate the Claude CLI binary, trying platform-specific install paths."""
+    found = shutil.which("claude")
+    if found:
+        return found
+
+    if sys.platform == "win32":
+        # npm installs global packages to %APPDATA%\npm on Windows.
+        # This directory is often missing from PATH even though npm added it.
+        appdata = os.environ.get("APPDATA", "")
+        localappdata = os.environ.get("LOCALAPPDATA", "")
+        for candidate in [
+            os.path.join(appdata, "npm", "claude.cmd"),
+            os.path.join(appdata, "npm", "claude"),
+            os.path.join(localappdata, "Programs", "claude", "claude.exe"),
+            os.path.join(localappdata, "AnthropicClaude", "claude.exe"),
+        ]:
+            if os.path.isfile(candidate):
+                return candidate
+    else:
+        for candidate in [
+            os.path.expanduser("~/.local/bin/claude"),
+            os.path.expanduser("~/.npm-global/bin/claude"),
+            "/usr/local/bin/claude",
+        ]:
+            if os.path.isfile(candidate):
+                return candidate
+
+    return "claude"  # last-resort; will fail with a clear error at runtime
+
+
+CLAUDE_CLI = _find_claude_cli()
 
 # ── SCRAPER SETTINGS ──────────────────────────────────────
-RESULTS_PER_SEARCH = 20
-HOURS_OLD = 24
+# RESULTS_PER_SEARCH: per-query cap for JobSpy. With HOURS_OLD=24 the
+# realistic return per (site, query, location) is often much lower,
+# so a larger cap costs little and widens the net.
+RESULTS_PER_SEARCH = 50
+HOURS_OLD = 24  # Enforced across ALL sources via sources/orchestrator.filter_fresh_jobs
 SCRAPER_WORKERS = 8
 STALE_JOB_DAYS = 5
 
@@ -115,6 +148,7 @@ EXCLUDE_TITLE_KEYWORDS = [
 TITLE_DOMAIN_KEYWORDS = [
     "cloud", "devops", "security", "sre", "platform", "infrastructure",
     "mlops", "ai", "ml", "machine learning", "devsecops",
+    "reliability", "kubernetes", "observability", "systems",
 ]
 
 # ── DESCRIPTION HARD-STOP PATTERNS ────────────────────────
@@ -137,10 +171,11 @@ EXCLUDE_DESC_PATTERNS = [
 
 # ── MUST-HAVE KEYWORDS ────────────────────────────────────
 REQUIRE_ONE_OF = [
-    "aws", "cloud", "kubernetes", "k8s", "terraform", "devops",
-    "security", "iam", "sre", "platform", "infrastructure",
+    "aws", "gcp", "azure", "cloud", "kubernetes", "k8s", "terraform",
+    "devops", "security", "iam", "sre", "platform", "infrastructure",
     "ci/cd", "docker", "jenkins", "github actions", "ansible",
-    "mlops", "ai", "machine learning", "ml pipeline",
+    "prometheus", "grafana", "helm", "vault", "linux", "automation",
+    "mlops", "ai", "machine learning", "ml pipeline", "observability",
 ]
 
 # ── SALARY FLOOR ──────────────────────────────────────────
@@ -148,14 +183,16 @@ SALARY_FLOOR = 80_000
 
 # ── SCREENING SETTINGS ────────────────────────────────────
 SCREENING_CONFIDENCE_THRESHOLD = 3  # Minimum confidence for APPLY verdict
-SCREENING_BATCH_SIZE = 10           # JDs per Claude CLI invocation
+SCREENING_BATCH_SIZE = 5            # JDs per Claude CLI invocation (Windows argv limit ~32KB; 10 overflows with 3KB descs)
+H1B_CACHE_TTL_DAYS = 30             # Days before re-checking a company on h1bdata.info
 
 # ── DAILY TAB COLUMNS ─────────────────────────────────────
-# Status is right after Confidence so you don't have to scroll
+# Status is right after Confidence so you don't have to scroll.
+# Posted shows "Xh ago" — lets you pick the freshest matches at a glance.
 DAILY_HEADERS = [
-    "Company", "Job Title", "Location", "Confidence", "Status",
-    "Source", "AI Reasoning", "Suggested Angle", "Match Signals",
-    "Risk Flags", "Salary Range", "Apply Link", "Notes",
+    "Company", "Job Title", "Location", "Confidence", "Status", "Apply Link",
+    "Posted", "Source", "AI Reasoning", "Suggested Angle", "Match Signals",
+    "Risk Flags", "Salary Range", "Notes",
 ]
 
 # ── AUDIT TAB COLUMNS ─────────────────────────────────────

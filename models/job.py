@@ -25,6 +25,8 @@ class RawJob(BaseModel):
     url: str
     source: str  # e.g. "greenhouse-anthropic", "hn-apr2026", "linkedin"
     scraped_at: datetime = Field(default_factory=datetime.now)
+    posted_at: datetime | None = None  # When the company actually posted the job (UTC)
+    h1b_sponsor_verified: bool | None = None  # None = not checked / curated source
 
     @computed_field
     @property
