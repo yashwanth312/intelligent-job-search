@@ -1,5 +1,4 @@
 """Tests for rescreen._row_to_raw_job reconstruction logic."""
-import pytest
 from unittest.mock import MagicMock
 
 
@@ -49,6 +48,11 @@ def test_row_to_raw_job_no_db_record():
     job = _row_to_raw_job(row, db)
 
     assert job.description is None
+    assert job.company == "Beta Inc"
+    assert job.title == "DevOps Engineer"
+    assert job.location == "Remote"
+    assert job.source == "lever-beta"
+    assert job.url == "https://example.com/job/2"
 
 
 def test_row_to_raw_job_db_record_empty_description():
