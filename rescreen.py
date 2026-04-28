@@ -48,45 +48,50 @@ def main() -> None:
     db = Database(DB_FILE)
     db.initialize()
 
-    print("Reading Daily tab...")
-    rows = daily_ws.get_all_records()
-    if not rows:
-        print("Daily tab is empty — nothing to rescreen.")
+    try:
+        print("Reading Daily tab...")
+        rows = daily_ws.get_all_records()
+        if not rows:
+            print("Daily tab is empty — nothing to rescreen.")
+            return
+
+        print(f"Reconstructing {len(rows)} jobs from sheet + SQLite...")
+        raw_jobs = [_row_to_raw_job(row, db) for row in rows]
+
+        no_desc = sum(1 for j in raw_jobs if not j.description)
+        if no_desc:
+            print(
+                f"  {no_desc} job(s) have no description in SQLite "
+                "— will be screened without JD text"
+            )
+
+        stage2 = Stage2Screen(profile_path="profile.yaml")
+        try:
+            stage2.validate_cli()
+        except RuntimeError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)
+
+        num_batches = (len(raw_jobs) + SCREENING_BATCH_SIZE - 1) // SCREENING_BATCH_SIZE
+        print(f"Running Stage 2 on {len(raw_jobs)} jobs ({num_batches} batch(es))...")
+        screened = stage2.screen_batch(raw_jobs)
+
+        apply_n = sum(1 for j in screened if j.verdict == ScreeningVerdict.APPLY)
+        maybe_n = sum(1 for j in screened if j.verdict == ScreeningVerdict.MAYBE)
+        skip_n = sum(1 for j in screened if j.verdict == ScreeningVerdict.SKIP)
+
+        daily_jobs = [
+            j for j in screened
+            if j.verdict in (ScreeningVerdict.APPLY, ScreeningVerdict.MAYBE)
+        ]
+
+        print(f"Rewriting Daily tab ({len(daily_jobs)} jobs)...")
+        daily_ops.clear_and_write_headers(daily_ws)
+        daily_ops.write_screened_jobs(daily_ws, daily_jobs)
+
+        print(f"\nDone.  APPLY {apply_n}  ·  MAYBE {maybe_n}  ·  SKIP {skip_n} (dropped from sheet)")
+    finally:
         db.close()
-        return
-
-    print(f"Reconstructing {len(rows)} jobs from sheet + SQLite...")
-    raw_jobs = [_row_to_raw_job(row, db) for row in rows]
-
-    no_desc = sum(1 for j in raw_jobs if not j.description)
-    if no_desc:
-        print(
-            f"  {no_desc} job(s) have no description in SQLite "
-            "— will be screened without JD text"
-        )
-
-    stage2 = Stage2Screen(profile_path="profile.yaml")
-    stage2.validate_cli()
-
-    num_batches = (len(raw_jobs) + SCREENING_BATCH_SIZE - 1) // SCREENING_BATCH_SIZE
-    print(f"Running Stage 2 on {len(raw_jobs)} jobs ({num_batches} batch(es))...")
-    screened = stage2.screen_batch(raw_jobs)
-
-    apply_n = sum(1 for j in screened if j.verdict == ScreeningVerdict.APPLY)
-    maybe_n = sum(1 for j in screened if j.verdict == ScreeningVerdict.MAYBE)
-    skip_n = sum(1 for j in screened if j.verdict == ScreeningVerdict.SKIP)
-
-    daily_jobs = [
-        j for j in screened
-        if j.verdict in (ScreeningVerdict.APPLY, ScreeningVerdict.MAYBE)
-    ]
-
-    print(f"Rewriting Daily tab ({len(daily_jobs)} jobs)...")
-    daily_ops.clear_and_write_headers(daily_ws)
-    daily_ops.write_screened_jobs(daily_ws, daily_jobs)
-
-    print(f"\nDone.  APPLY {apply_n}  ·  MAYBE {maybe_n}  ·  SKIP {skip_n} (dropped from sheet)")
-    db.close()
 
 
 if __name__ == "__main__":
