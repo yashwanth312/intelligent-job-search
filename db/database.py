@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from models.job import RawJob
@@ -70,6 +70,13 @@ class Database:
                 updated_at TEXT DEFAULT (datetime('now'))
             );
 
+            CREATE TABLE IF NOT EXISTS h1b_sponsor_cache (
+                company_key  TEXT PRIMARY KEY,
+                company_raw  TEXT NOT NULL,
+                verified     INTEGER NOT NULL,
+                checked_at   TEXT NOT NULL
+            );
+
             CREATE INDEX IF NOT EXISTS idx_jobs_fingerprint ON jobs(fingerprint);
             CREATE INDEX IF NOT EXISTS idx_audit_run_date ON screening_audit(run_date);
             CREATE INDEX IF NOT EXISTS idx_feedback_fingerprint ON feedback(job_fingerprint);
@@ -122,6 +129,19 @@ class Database:
         cursor = self.conn.execute(
             f"SELECT fingerprint FROM jobs WHERE fingerprint IN ({placeholders})",
             list(fingerprints),
+        )
+        return {row["fingerprint"] for row in cursor.fetchall()}
+
+    def get_recent_fingerprints(self, days: int) -> set[str]:
+        """Return fingerprints of all jobs seen in the last `days` days.
+
+        Used to dedupe across runs so we don't re-process the same listings
+        day after day. Uses `created_at` (when we first saw it), not `scraped_at`,
+        since a job's scraped_at is refreshed whenever it re-scrapes.
+        """
+        cursor = self.conn.execute(
+            "SELECT fingerprint FROM jobs WHERE created_at >= datetime('now', ?)",
+            (f"-{int(days)} days",),
         )
         return {row["fingerprint"] for row in cursor.fetchall()}
 
@@ -200,3 +220,31 @@ class Database:
         )
         row = cursor.fetchone()
         return row["url"] if row else None
+
+    def get_h1b_cache(self, company_key: str) -> bool | None:
+        """Return cached verified bool if fresh (within TTL), else None."""
+        from config import H1B_CACHE_TTL_DAYS
+        row = self.conn.execute(
+            "SELECT verified, checked_at FROM h1b_sponsor_cache WHERE company_key = ?",
+            (company_key,),
+        ).fetchone()
+        if row is None:
+            return None
+        checked = datetime.fromisoformat(row["checked_at"])
+        if checked.tzinfo is None:
+            checked = checked.replace(tzinfo=timezone.utc)
+        age_days = (datetime.now(timezone.utc) - checked).days
+        if age_days >= H1B_CACHE_TTL_DAYS:
+            return None
+        return bool(row["verified"])
+
+    def set_h1b_cache(self, company_key: str, company_raw: str, verified: bool) -> None:
+        """Upsert a sponsor check result. Only call with definitive True/False, not None."""
+        now = datetime.now(timezone.utc).isoformat()
+        self.conn.execute(
+            """INSERT OR REPLACE INTO h1b_sponsor_cache
+               (company_key, company_raw, verified, checked_at)
+               VALUES (?, ?, ?, ?)""",
+            (company_key, company_raw, int(verified), now),
+        )
+        self.conn.commit()
