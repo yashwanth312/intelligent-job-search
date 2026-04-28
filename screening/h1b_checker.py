@@ -36,3 +36,38 @@ class H1BChecker:
         if "no data available in table" in html.lower():
             return False
         return bool(re.search(r"<tbody[^>]*>\s*<tr", html, re.IGNORECASE))
+
+    async def _scrape_year(
+        self, session: aiohttp.ClientSession, company_key: str, year: int
+    ) -> bool:
+        url = (
+            "https://h1bdata.info/index.php"
+            f"?em={urllib.parse.quote_plus(company_key)}&job=&city=&year={year}"
+        )
+        async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as resp:
+            html = await resp.text(errors="replace")
+        return self._has_results(html)
+
+    async def _check_company(
+        self,
+        sem: asyncio.Semaphore,
+        session: aiohttp.ClientSession,
+        company_key: str,
+        company_raw: str,
+    ) -> bool | None:
+        """Return True/False from h1bdata.info, or None on any error."""
+        async with sem:
+            try:
+                year = datetime.now(timezone.utc).year
+                results = await asyncio.gather(
+                    self._scrape_year(session, company_key, year),
+                    self._scrape_year(session, company_key, year - 1),
+                    return_exceptions=True,
+                )
+                if any(r is True for r in results):
+                    return True
+                if any(isinstance(r, BaseException) for r in results):
+                    return None  # at least one request errored — don't penalise
+                return False
+            except Exception:
+                return None

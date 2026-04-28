@@ -6,6 +6,7 @@ import unittest
 from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock
 
+import aiohttp
 import pytest
 
 from db.database import Database
@@ -16,6 +17,29 @@ def _make_db() -> Database:
     db = Database(":memory:")
     db.initialize()
     return db
+
+
+def _mock_session(html_by_year: dict[int, str]):
+    """Return a mock aiohttp.ClientSession whose get() returns HTML keyed by year."""
+
+    def make_resp(html: str):
+        resp = MagicMock()
+        resp.text = AsyncMock(return_value=html)
+        resp.__aenter__ = AsyncMock(return_value=resp)
+        resp.__aexit__ = AsyncMock(return_value=None)
+        return resp
+
+    def get(url, **kwargs):
+        for year, html in html_by_year.items():
+            if str(year) in url:
+                return make_resp(html)
+        return make_resp("<html></html>")
+
+    session = MagicMock()
+    session.get = get
+    session.__aenter__ = AsyncMock(return_value=session)
+    session.__aexit__ = AsyncMock(return_value=None)
+    return session
 
 
 def _make_job(company: str, source: str = "linkedin") -> RawJob:
@@ -125,3 +149,64 @@ class TestH1BCheckerHasResults(unittest.TestCase):
         from screening.h1b_checker import H1BChecker
         html = "<html><body><table><tbody></tbody></table></body></html>"
         assert H1BChecker._has_results(html) is False
+
+
+class TestH1BCheckerScrape(unittest.TestCase):
+    def test_scrape_year_returns_true_when_rows(self):
+        from screening.h1b_checker import H1BChecker
+        html_with_rows = (
+            "<html><table><tbody><tr><td>STRIPE INC</td></tr></tbody></table></html>"
+        )
+        session = _mock_session({2025: html_with_rows})
+        checker = H1BChecker(_make_db())
+
+        result = asyncio.run(checker._scrape_year(session, "stripe", 2025))
+        assert result is True
+
+    def test_scrape_year_returns_false_when_no_data(self):
+        from screening.h1b_checker import H1BChecker
+        html_no_data = (
+            "<html><table><tbody>No data available in table</tbody></table></html>"
+        )
+        session = _mock_session({2025: html_no_data})
+        checker = H1BChecker(_make_db())
+
+        result = asyncio.run(checker._scrape_year(session, "noco", 2025))
+        assert result is False
+
+    def test_check_company_returns_true_if_current_year_has_data(self):
+        from screening.h1b_checker import H1BChecker
+        current_year = datetime.now(timezone.utc).year
+        html_rows = "<html><table><tbody><tr><td>X</td></tr></tbody></table></html>"
+        html_none = "<html><table><tbody>No data available in table</tbody></table></html>"
+        session = _mock_session({current_year: html_rows, current_year - 1: html_none})
+        checker = H1BChecker(_make_db())
+        sem = asyncio.Semaphore(3)
+
+        result = asyncio.run(checker._check_company(sem, session, "stripe", "Stripe"))
+        assert result is True
+
+    def test_check_company_returns_false_if_both_years_empty(self):
+        from screening.h1b_checker import H1BChecker
+        current_year = datetime.now(timezone.utc).year
+        html_none = "<html><table><tbody>No data available in table</tbody></table></html>"
+        session = _mock_session({current_year: html_none, current_year - 1: html_none})
+        checker = H1BChecker(_make_db())
+        sem = asyncio.Semaphore(3)
+
+        result = asyncio.run(checker._check_company(sem, session, "noco", "NoCo"))
+        assert result is False
+
+    def test_check_company_returns_none_on_exception(self):
+        from screening.h1b_checker import H1BChecker
+
+        async def boom(*args, **kwargs):
+            raise aiohttp.ClientError("network failure")
+
+        checker = H1BChecker(_make_db())
+        checker._scrape_year = boom
+        sem = asyncio.Semaphore(3)
+        session = MagicMock()
+
+        result = asyncio.run(checker._check_company(sem, session, "errco", "ErrCo"))
+        assert result is None
