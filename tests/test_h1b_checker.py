@@ -210,3 +210,143 @@ class TestH1BCheckerScrape(unittest.TestCase):
 
         result = asyncio.run(checker._check_company(sem, session, "errco", "ErrCo"))
         assert result is None
+
+
+class TestH1BCheckerBatch(unittest.TestCase):
+    def test_curated_sources_are_skipped(self):
+        from screening.h1b_checker import H1BChecker
+        checker = H1BChecker(_make_db())
+        jobs = [
+            _make_job("Anthropic", source="greenhouse-anthropic"),
+            _make_job("Scale AI", source="lever-scaleai"),
+            _make_job("Weights & Biases", source="ashby-wandb"),
+        ]
+        asyncio.run(checker.check_batch(jobs))
+        for job in jobs:
+            assert job.h1b_sponsor_verified is None
+
+    def test_open_source_job_gets_verified_true(self):
+        from screening.h1b_checker import H1BChecker
+        from unittest.mock import patch
+
+        db = _make_db()
+        checker = H1BChecker(db)
+        job = _make_job("Stripe", source="linkedin")
+
+        async def fake_check(sem, session, key, raw):
+            return True
+
+        with patch.object(checker, "_check_company", side_effect=fake_check):
+            asyncio.run(checker.check_batch([job]))
+
+        assert job.h1b_sponsor_verified is True
+
+    def test_open_source_job_gets_verified_false(self):
+        from screening.h1b_checker import H1BChecker
+        from unittest.mock import patch
+
+        db = _make_db()
+        checker = H1BChecker(db)
+        job = _make_job("TinyStartup", source="remoteok")
+
+        async def fake_check(sem, session, key, raw):
+            return False
+
+        with patch.object(checker, "_check_company", side_effect=fake_check):
+            asyncio.run(checker.check_batch([job]))
+
+        assert job.h1b_sponsor_verified is False
+
+    def test_error_result_leaves_field_none(self):
+        from screening.h1b_checker import H1BChecker
+        from unittest.mock import patch
+
+        db = _make_db()
+        checker = H1BChecker(db)
+        job = _make_job("ErrCo", source="hackernews")
+
+        async def fake_check(sem, session, key, raw):
+            return None
+
+        with patch.object(checker, "_check_company", side_effect=fake_check):
+            asyncio.run(checker.check_batch([job]))
+
+        assert job.h1b_sponsor_verified is None
+
+    def test_cache_hit_skips_scrape(self):
+        from screening.h1b_checker import H1BChecker
+        from unittest.mock import patch
+
+        db = _make_db()
+        db.set_h1b_cache("stripe", "Stripe", True)
+        checker = H1BChecker(db)
+        job = _make_job("Stripe", source="linkedin")
+
+        call_count = 0
+
+        async def fake_check(sem, session, key, raw):
+            nonlocal call_count
+            call_count += 1
+            return False
+
+        with patch.object(checker, "_check_company", side_effect=fake_check):
+            asyncio.run(checker.check_batch([job]))
+
+        assert call_count == 0
+        assert job.h1b_sponsor_verified is True
+
+    def test_same_company_deduplicated(self):
+        from screening.h1b_checker import H1BChecker
+        from unittest.mock import patch
+
+        db = _make_db()
+        checker = H1BChecker(db)
+        jobs = [
+            _make_job("Stripe", source="linkedin"),
+            _make_job("Stripe, Inc.", source="indeed"),
+        ]
+
+        call_count = 0
+
+        async def fake_check(sem, session, key, raw):
+            nonlocal call_count
+            call_count += 1
+            return True
+
+        with patch.object(checker, "_check_company", side_effect=fake_check):
+            asyncio.run(checker.check_batch(jobs))
+
+        assert call_count == 1
+        assert all(j.h1b_sponsor_verified is True for j in jobs)
+
+    def test_verified_result_is_cached(self):
+        from screening.h1b_checker import H1BChecker
+        from unittest.mock import patch
+
+        db = _make_db()
+        checker = H1BChecker(db)
+        job = _make_job("Datadog", source="linkedin")
+
+        async def fake_check(sem, session, key, raw):
+            return False
+
+        with patch.object(checker, "_check_company", side_effect=fake_check):
+            asyncio.run(checker.check_batch([job]))
+
+        assert db.get_h1b_cache("datadog") is False
+
+    def test_none_result_is_not_cached(self):
+        from screening.h1b_checker import H1BChecker
+        from unittest.mock import patch
+
+        db = _make_db()
+        checker = H1BChecker(db)
+        job = _make_job("ErrCo", source="remoteok")
+
+        async def fake_check(sem, session, key, raw):
+            return None
+
+        with patch.object(checker, "_check_company", side_effect=fake_check):
+            asyncio.run(checker.check_batch([job]))
+
+        assert db.get_h1b_cache("errco") is None

@@ -71,3 +71,55 @@ class H1BChecker:
                 return False
             except Exception:
                 return None
+
+    async def check_batch(self, jobs: list[RawJob]) -> None:
+        """Mutate h1b_sponsor_verified on open-source jobs in-place.
+
+        Curated sources (greenhouse-*, lever-*, ashby-*) are left as None.
+        Open-source jobs get True/False from cache or h1bdata.info scrape.
+        Error results (None) are not cached and leave the field as None.
+        """
+        open_jobs = [j for j in jobs if not j.source.startswith(_CURATED_PREFIXES)]
+        if not open_jobs:
+            return
+
+        # Group by normalized company key; keep one raw name per key
+        by_key: dict[str, list[RawJob]] = {}
+        raw_name: dict[str, str] = {}
+        for job in open_jobs:
+            key = self._normalize(job.company)
+            by_key.setdefault(key, []).append(job)
+            raw_name.setdefault(key, job.company)
+
+        # Serve cache hits; collect misses
+        verified: dict[str, bool | None] = {}
+        misses: list[str] = []
+        for key in by_key:
+            hit = self._db.get_h1b_cache(key)
+            if hit is not None:
+                verified[key] = hit
+            else:
+                misses.append(key)
+
+        # Scrape cache misses concurrently
+        if misses:
+            sem = asyncio.Semaphore(3)
+            async with aiohttp.ClientSession(
+                headers={"User-Agent": "Mozilla/5.0"},
+            ) as session:
+                results = await asyncio.gather(
+                    *[
+                        self._check_company(sem, session, key, raw_name[key])
+                        for key in misses
+                    ]
+                )
+            for key, result in zip(misses, results):
+                verified[key] = result
+                if result is not None:  # only cache definitive True/False
+                    self._db.set_h1b_cache(key, raw_name[key], result)
+
+        # Mutate jobs in-place
+        for key, job_list in by_key.items():
+            v = verified.get(key)
+            for job in job_list:
+                job.h1b_sponsor_verified = v
