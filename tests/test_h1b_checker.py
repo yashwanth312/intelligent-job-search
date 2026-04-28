@@ -82,3 +82,46 @@ class TestH1BCacheDB(unittest.TestCase):
         db.conn.commit()
         db.set_h1b_cache("stripe", "Stripe", True)
         assert db.get_h1b_cache("stripe") is True
+
+
+class TestH1BCheckerNormalize(unittest.TestCase):
+    def test_strips_inc_suffix(self):
+        from screening.h1b_checker import H1BChecker
+        assert H1BChecker._normalize("Stripe, Inc.") == "stripe"
+
+    def test_strips_llc_suffix(self):
+        from screening.h1b_checker import H1BChecker
+        assert H1BChecker._normalize("Meta Platforms LLC") == "meta platforms"
+
+    def test_no_suffix(self):
+        from screening.h1b_checker import H1BChecker
+        assert H1BChecker._normalize("ServiceNow") == "servicenow"
+
+    def test_strips_corp(self):
+        from screening.h1b_checker import H1BChecker
+        assert H1BChecker._normalize("Oracle Corp") == "oracle"
+
+    def test_strips_limited(self):
+        from screening.h1b_checker import H1BChecker
+        assert H1BChecker._normalize("Tata Consultancy Services Limited") == "tata consultancy services"
+
+    def test_collapses_extra_whitespace(self):
+        from screening.h1b_checker import H1BChecker
+        assert H1BChecker._normalize("  Google  LLC  ") == "google"
+
+
+class TestH1BCheckerHasResults(unittest.TestCase):
+    def test_no_data_string_returns_false(self):
+        from screening.h1b_checker import H1BChecker
+        html = "<html><body><table><tbody>No data available in table</tbody></table></body></html>"
+        assert H1BChecker._has_results(html) is False
+
+    def test_tbody_with_tr_returns_true(self):
+        from screening.h1b_checker import H1BChecker
+        html = "<html><body><table><tbody><tr><td>STRIPE INC</td></tr></tbody></table></body></html>"
+        assert H1BChecker._has_results(html) is True
+
+    def test_empty_tbody_returns_false(self):
+        from screening.h1b_checker import H1BChecker
+        html = "<html><body><table><tbody></tbody></table></body></html>"
+        assert H1BChecker._has_results(html) is False
