@@ -125,3 +125,40 @@ class H1BChecker:
             v = verified.get(key)
             for job in job_list:
                 job.h1b_sponsor_verified = v
+
+
+# Sources where "no H-1B history" reliably means "won't sponsor".
+# These skew toward established companies; if they have zero LCA
+# filings on record, dropping them is safe.
+_DROPPABLE_SOURCES = frozenset({"linkedin", "indeed", "google", "workday"})
+
+
+def is_droppable_source(source: str) -> bool:
+    """Return True if a source belongs to the big-company drop bucket.
+
+    Sources outside this set are either user-curated (greenhouse/lever/ashby
+    prefixes) or startup-heavy (hackernews, remoteok), where a missing
+    h1bdata.info record is uninformative.
+    """
+    return source in _DROPPABLE_SOURCES
+
+
+def partition_drops(jobs: list[RawJob]) -> tuple[list[RawJob], list[RawJob]]:
+    """Split a list of H1B-checked jobs into (kept, dropped).
+
+    A job is dropped iff its source is in the drop bucket AND its
+    h1b_sponsor_verified is False (definitively no LCA filings).
+    All other combinations — verified=True, verified=None, or any
+    keep-bucket source — pass through unchanged.
+
+    Pre-condition: callers should run H1BChecker.check_batch first so
+    h1b_sponsor_verified is populated where applicable.
+    """
+    kept: list[RawJob] = []
+    dropped: list[RawJob] = []
+    for job in jobs:
+        if job.h1b_sponsor_verified is False and is_droppable_source(job.source):
+            dropped.append(job)
+        else:
+            kept.append(job)
+    return kept, dropped
