@@ -108,7 +108,7 @@ def format_daily(spreadsheet: Spreadsheet, ws: Worksheet) -> None:
     requests.append(_cond_format_number(sheet_id, col=3, op="NUMBER_LESS_THAN_EQ", value="2", bg=SKIP_RED))
 
     # Alternating row colors
-    requests.append(_banding(sheet_id))
+    requests.append(_banding(sheet_id, 14))
 
     spreadsheet.batch_update({"requests": requests})
 
@@ -133,7 +133,7 @@ def format_audit(spreadsheet: Spreadsheet, ws: Worksheet) -> None:
     for col, width in widths:
         requests.append(_col_width(sheet_id, col, width))
 
-    requests.append(_banding(sheet_id))
+    requests.append(_banding(sheet_id, 6))
 
     spreadsheet.batch_update({"requests": requests})
 
@@ -145,46 +145,48 @@ def format_applied(spreadsheet: Spreadsheet, ws: Worksheet) -> None:
     requests = []
 
     requests.append(_freeze_rows(sheet_id, 1))
-    requests.append(_header_format(sheet_id, 15))
+    requests.append(_header_format(sheet_id, 14))
 
     widths = [
         (0, 100),   # Date Applied
         (1, 160),   # Company
-        (2, 200),   # Job Title
+        (2, 220),   # Job Title
         (3, 130),   # Location
-        (4, 200),   # Resume Link
-        (5, 200),   # Cover Letter Link
+        (4, 220),   # Resume Link
+        (5, 220),   # Cover Letter Link
         (6, 250),   # Apply Link
-        (7, 140),   # Angle Used
+        (7, 150),   # Angle Used
         (8, 80),    # Screen Confidence
         (9, 130),   # Source
-        (10, 110),  # Status
-        (11, 80),   # Days Waiting
-        (12, 100),  # Follow-up Date
-        (13, 90),   # Follow-up Sent
-        (14, 150),  # Notes
+        (10, 120),  # Status
+        (11, 100),  # Follow-up Date
+        (12, 90),   # Follow-up Sent
+        (13, 200),  # Notes
     ]
     for col, width in widths:
         requests.append(_col_width(sheet_id, col, width))
 
-    # Status dropdown
+    # Status dropdown (col 10 = column K)
     requests.append(_data_validation(
         sheet_id, col=10,
         values=["Ready to Apply", "Applied", "Phone Screen", "Interview", "Offer", "Rejected", "No Response"]
     ))
 
-    # Follow-up Sent dropdown
-    requests.append(_data_validation(sheet_id, col=13, values=["No", "Yes"]))
+    # Follow-up Sent dropdown (col 12 = column M)
+    requests.append(_data_validation(sheet_id, col=12, values=["No", "Yes"]))
 
-    # Conditional formatting on Status
-    requests.append(_cond_format_text(sheet_id, col=10, text="Offer", bg=APPLY_GREEN))
-    requests.append(_cond_format_text(sheet_id, col=10, text="Interview", bg=APPLY_GREEN))
-    requests.append(_cond_format_text(sheet_id, col=10, text="Phone Screen", bg=MAYBE_YELLOW))
-    requests.append(_cond_format_text(sheet_id, col=10, text="Rejected", bg=SKIP_RED))
-    requests.append(_cond_format_text(sheet_id, col=10, text="No Response", bg=REJECTED_GRAY))
-    requests.append(_cond_format_text(sheet_id, col=10, text="Applied", bg=APPLIED_BLUE))
-
-    requests.append(_banding(sheet_id))
+    # Row-level conditional formatting — entire row colored by Status (col K = index 10).
+    # Each status gets a distinct vibrant color; Ready to Apply stays plain white.
+    row_rules = [
+        ("No Response",  _rgb(229, 231, 235)),   # gray-200   — faded, ghosted
+        ("Rejected",     _rgb(254, 202, 202)),   # red-200    — clear red
+        ("Applied",      _rgb(191, 219, 254)),   # blue-200   — calm blue, in-flight
+        ("Phone Screen", _rgb(253, 230, 138)),   # amber-200  — warm amber, heating up
+        ("Interview",    _rgb(221, 214, 254)),   # violet-200 — vibrant purple, exciting
+        ("Offer",        _rgb(187, 247, 208)),   # green-200  — bright green, celebrate
+    ]
+    for status_text, bg in row_rules:
+        requests.append(_row_cond_format(sheet_id, 14, f'=$K2="{status_text}"', bg))
 
     spreadsheet.batch_update({"requests": requests})
 
@@ -309,13 +311,39 @@ def _cond_format_number(sheet_id: int, col: int, op: str, value: str, bg: dict) 
     }
 
 
-def _banding(sheet_id: int) -> dict:
+def _row_cond_format(sheet_id: int, num_cols: int, formula: str, bg: dict) -> dict:
+    """Conditional format that colors the entire row based on a custom formula."""
+    return {
+        "addConditionalFormatRule": {
+            "rule": {
+                "ranges": [{
+                    "sheetId": sheet_id,
+                    "startRowIndex": 1, "endRowIndex": 1000,
+                    "startColumnIndex": 0, "endColumnIndex": num_cols,
+                }],
+                "booleanRule": {
+                    "condition": {
+                        "type": "CUSTOM_FORMULA",
+                        "values": [{"userEnteredValue": formula}],
+                    },
+                    "format": {"backgroundColor": bg},
+                },
+            },
+            "index": 0,
+        }
+    }
+
+
+def _banding(sheet_id: int, num_cols: int) -> dict:
     return {
         "addBanding": {
             "bandedRange": {
                 "range": {
                     "sheetId": sheet_id,
                     "startRowIndex": 0,
+                    "endRowIndex": 1000,
+                    "startColumnIndex": 0,
+                    "endColumnIndex": num_cols,
                 },
                 "rowProperties": {
                     "headerColor": HEADER_BG,
