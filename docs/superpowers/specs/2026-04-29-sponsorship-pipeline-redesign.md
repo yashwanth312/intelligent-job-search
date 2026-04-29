@@ -20,7 +20,8 @@ h1bdata.info only lists companies that have *already filed* H1B petitions. A you
 We resolve this by partitioning sources by their startup likelihood:
 
 - **Drop bucket** — sources that skew toward established companies, where `verified=False` strongly indicates "won't sponsor":
-  - `linkedin`, `indeed`, `google`, `workday`
+  - exact match: `linkedin`, `indeed`, `google`
+  - prefix match: `workday-*` (per-tenant adapters emit `workday-{tenant}`)
 - **Keep bucket** — sources that skew toward startups or are user-curated, where we want benefit of the doubt:
   - `hackernews`, `remoteok`, `greenhouse-*`, `lever-*`, `ashby-*`
 
