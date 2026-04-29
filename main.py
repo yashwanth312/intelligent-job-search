@@ -2,15 +2,16 @@
 ============================================================
   INTELLIGENT JOB SEARCH — Main Pipeline
 ============================================================
-  1. Init (creds + profile + DB)
-  2. Clear Daily + Audit tabs
-  3. Parallel scrape all sources
-  4. Freshness filter (<= HOURS_OLD)
-  5. Backfill descriptions for no-desc jobs
-  6. Stage 1 regex filter
-  7. Persist to SQLite
-  8. Stage 2 Claude CLI precision screen
-  9. Write to Daily + Audit
+  1.  Init (creds + profile + DB)
+  2.  Clear Daily + Audit tabs
+  3.  Parallel scrape all sources
+  4.  Freshness filter (<= HOURS_OLD)
+  5.  Backfill descriptions for no-desc jobs
+  6.  Stage 1 regex filter
+  7.  H1B Sponsor Check
+  8.  Persist to SQLite
+  9.  Stage 2 Claude CLI precision screen
+  10. Write to Daily + Audit
 ============================================================
 """
 from __future__ import annotations
@@ -258,7 +259,7 @@ async def run_pipeline() -> None:
         ui.error(str(e))
         ui.error(
             "Pipeline aborted at Stage 2. Fix the CLI path and re-run. "
-            "Phases 1-7 completed successfully; SQLite was updated."
+            "Phases 1-8 completed successfully; SQLite was updated."
         )
         db.close()
         sys.exit(1)
