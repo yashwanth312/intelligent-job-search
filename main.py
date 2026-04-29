@@ -2,16 +2,15 @@
 ============================================================
   INTELLIGENT JOB SEARCH — Main Pipeline
 ============================================================
-  1.  Init (creds + profile + DB)
-  2.  Clear Daily + Audit tabs
-  3.  Parallel scrape all sources
-  4.  Freshness filter (<= HOURS_OLD)
-  5.  Backfill descriptions for no-desc jobs
-  6.  Stage 1 regex filter
-  7.  H1B Sponsor Check
-  8.  Persist to SQLite
-  9.  Stage 2 Claude CLI precision screen
-  10. Write to Daily + Audit
+  1. Init (creds + profile + DB)
+  2. Clear Daily + Audit tabs
+  3. Parallel scrape all sources
+  4. Freshness filter (<= HOURS_OLD)
+  5. H1B Sponsor Check + source-aware drop
+  6. Stage 1 regex filter
+  7. Persist to SQLite
+  8. Stage 2 Claude CLI precision screen
+  9. Write to Daily + Audit
 ============================================================
 """
 from __future__ import annotations
@@ -33,12 +32,11 @@ from models.job import ScreenedJob, ScreeningVerdict
 from output.ui import PipelineUI, install_rich_logging
 from screening.stage1 import Stage1Filter
 from screening.stage2 import Stage2Screen
-from screening.h1b_checker import H1BChecker
+from screening.h1b_checker import H1BChecker, partition_drops
 from sheets.client import SheetsClient
 from sheets import daily as daily_ops, audit as audit_ops
 from sheets.formatting import format_all_sheets
 from sources.orchestrator import ScraperOrchestrator, filter_fresh_jobs
-from sources.backfill import backfill_descriptions
 from sources.greenhouse import GreenhouseAdapter
 from sources.lever import LeverAdapter
 from sources.ashby import AshbyAdapter
@@ -53,7 +51,7 @@ if sys.platform == "win32" and hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
-TOTAL_PHASES = 10
+TOTAL_PHASES = 9
 
 # Initialize logging + rich console before anything else.
 Path("logs").mkdir(exist_ok=True)
@@ -171,28 +169,69 @@ async def run_pipeline() -> None:
     unique_jobs, stale_jobs = filter_fresh_jobs(all_scraped, HOURS_OLD)
     ui.phase_done(f"kept {len(unique_jobs)}  ·  dropped {len(stale_jobs)} stale")
 
-    # ── Phase 5: Backfill descriptions ────────────────────────
-    ui.phase(5, "Backfilling missing descriptions")
-    needs_backfill = sum(
+    # ── Phase 5: H1B Sponsor Check + source-aware drop ───────
+    ui.phase(5, "H1B Sponsor Check + source-aware drop")
+    checker = H1BChecker(db)
+    await checker.check_batch(unique_jobs)
+    n_curated = sum(
         1 for j in unique_jobs
-        if not (j.description and j.description.strip()) and j.url.strip()
+        if j.source.startswith(("greenhouse-", "lever-", "ashby-"))
     )
-    if needs_backfill == 0:
-        backfill_result = await backfill_descriptions(unique_jobs)
-        ui.phase_done("nothing to backfill")
-    else:
-        with ui.progress("Fetching descriptions", total=needs_backfill) as advance:
-            backfill_result = await backfill_descriptions(
-                unique_jobs, on_progress=advance,
-            )
-        ui.phase_done(
-            f"{backfill_result.filled} filled  ·  {backfill_result.failed} failed"
-        )
+    n_verified = sum(1 for j in unique_jobs if j.h1b_sponsor_verified is True)
+    sponsor_kept, sponsor_dropped = partition_drops(unique_jobs)
+    n_checked = sum(1 for j in unique_jobs if j.h1b_sponsor_verified is not None)
+    n_no_history_kept = sum(
+        1 for j in sponsor_kept if j.h1b_sponsor_verified is False
+    )
+    unique_jobs = sponsor_kept  # rebind for downstream phases
 
+    # Persist dropped jobs to Audit so the funnel is auditable
+    if sponsor_dropped:
+        today_str = date.today().isoformat()
+        h1b_audit_entries = [
+            {
+                "job_fingerprint": j.fingerprint,
+                "company": j.company,
+                "title": j.title,
+                "source": j.source,
+                "stage": "stage_h1b",
+                "verdict": "REJECT",
+                "reason": "company has no H-1B sponsorship history",
+                "confidence": None,
+                "run_date": today_str,
+            }
+            for j in sponsor_dropped
+        ]
+        db.save_audit_entries_bulk(h1b_audit_entries)
+
+        h1b_drop_results = [
+            type("FilterResult", (), {
+                "job": j,
+                "stage": "stage_h1b",
+                "reason": "company has no H-1B sponsorship history",
+                "passed": False,
+            })()
+            for j in sponsor_dropped
+        ]
+        audit_ops.write_rejections(audit_ws, h1b_drop_results)
+
+    ui.phase_done(
+        f"{n_checked} checked  ·  {n_verified} verified  ·  "
+        f"{len(sponsor_dropped)} no-history dropped  ·  "
+        f"{n_no_history_kept} no-history kept (startup-friendly)  ·  "
+        f"{n_curated} curated skipped"
+    )
+
+    # Partition jobs by whether they arrived with descriptions. Sources that
+    # return descriptions inline (Greenhouse/Lever/Ashby/HN/RemoteOK + LinkedIn
+    # with fetch_description=True) feed the full Stage 1 filter. Sources that
+    # don't (Workday) get a title-only Stage 1 pass and surface in Daily as
+    # MAYBE for manual review. The previous bulk URL-backfill phase was removed
+    # 2026-04-29 — fill rate was ~2% and it dominated runtime.
     desc_jobs = [j for j in unique_jobs if j.description and j.description.strip()]
     no_desc_jobs = [j for j in unique_jobs if not (j.description and j.description.strip())]
 
-    # ── Phase 6: Stage 1 regex filter ─────────────────────────
+    # ── Phase 6: Stage 1 regex filter ─────────────────────
     ui.phase(6, "Stage 1 regex filter")
     stage1 = Stage1Filter()
     passed_jobs, desc_rejected = stage1.filter_batch(desc_jobs)
@@ -207,23 +246,8 @@ async def run_pipeline() -> None:
         f"·  {len(no_desc_passed)} no-desc title-passed"
     )
 
-    # ── Phase 7: H1B Sponsor Check ───────────────────────────
-    ui.phase(7, "H1B Sponsor Check")
-    checker = H1BChecker(db)
-    await checker.check_batch(passed_jobs)
-    n_curated = sum(
-        1 for j in passed_jobs if j.source.startswith(("greenhouse-", "lever-", "ashby-"))
-    )
-    n_verified = sum(1 for j in passed_jobs if j.h1b_sponsor_verified is True)
-    n_unverified = sum(1 for j in passed_jobs if j.h1b_sponsor_verified is False)
-    n_checked = n_verified + n_unverified
-    ui.phase_done(
-        f"{n_checked} checked  ·  {n_verified} verified  ·  {n_unverified} unverified"
-        f"  ·  {n_curated} skipped (curated)"
-    )
-
-    # ── Phase 8: Persist to SQLite ────────────────────────────
-    ui.phase(8, "Persisting to SQLite")
+    # ── Phase 7: Persist to SQLite ────────────────────────────
+    ui.phase(7, "Persisting to SQLite")
     # Only save jobs that have descriptions — no_desc_jobs are intentionally
     # excluded so their fingerprints don't block re-scraping on future runs.
     # If the listing gains a description tomorrow it will be picked up fresh.
@@ -251,8 +275,8 @@ async def run_pipeline() -> None:
         db.save_audit_entries_bulk(audit_entries)
     ui.phase_done(f"{len(unique_jobs)} jobs + {len(audit_entries)} audit rows")
 
-    # ── Phase 9: Stage 2 Claude screen ────────────────────────
-    ui.phase(9, "Stage 2 Claude CLI precision screen")
+    # ── Phase 8: Stage 2 Claude screen ────────────────────────
+    ui.phase(8, "Stage 2 Claude CLI precision screen")
     stage2 = Stage2Screen(profile_path="profile.yaml")
 
     try:
@@ -261,7 +285,7 @@ async def run_pipeline() -> None:
         ui.error(str(e))
         ui.error(
             "Pipeline aborted at Stage 2. Fix the CLI path and re-run. "
-            "Phases 1-8 completed successfully; SQLite was updated."
+            "Phases 1-7 completed successfully; SQLite was updated."
         )
         db.close()
         sys.exit(1)
@@ -297,8 +321,8 @@ async def run_pipeline() -> None:
     if stage2_audit:
         db.save_audit_entries_bulk(stage2_audit)
 
-    # ── Phase 10: Write Daily + Audit tabs ────────────────────
-    ui.phase(10, "Writing Daily + Audit tabs")
+    # ── Phase 9: Write Daily + Audit tabs ────────────────────
+    ui.phase(9, "Writing Daily + Audit tabs")
     daily_jobs = [
         j for j in screened_jobs
         if j.verdict in (ScreeningVerdict.APPLY, ScreeningVerdict.MAYBE)
@@ -344,12 +368,12 @@ async def run_pipeline() -> None:
     stats = {
         # ── Scrape funnel ──────────────────────────────────────
         "Scraped (all sources)": len(all_scraped),
-        f"Fresh (<= {HOURS_OLD}h)": len(unique_jobs),
+        f"Fresh (<= {HOURS_OLD}h)": len(unique_jobs) + len(sponsor_dropped),
         "Stale dropped": len(stale_jobs),
-        # ── After backfill ─────────────────────────────────────
+        "Dropped (no h1b sponsor)": len(sponsor_dropped),
+        # ── Description partition ──────────────────────────────
         "With descriptions": len(desc_jobs),
-        "No description (backfill failed)": len(no_desc_jobs),
-        "Backfilled from URL": backfill_result.filled,
+        "No description (Workday/etc)": len(no_desc_jobs),
         # ── Stage 1 ────────────────────────────────────────────
         "Stage 1 passed": len(passed_jobs),
         "Stage 1 rejected": len(desc_rejected),
