@@ -1,10 +1,12 @@
 personal:
   name: "Yashwanth Medisetti"
   email: "yashwanthsaikrishna@gmail.com"
-  phone: "+1 (630) 276 8408"
-  location: "Chicago, IL (Open to Relocation)"
+  phone: "(630) 276 8408"
+  location: "Chicago, IL"
+  open_to_relocation: true
   visa: "F1 OPT, STEM-extendable through June 2028. Sponsorship needed only after that."
-  linkedin: "LinkedIn - Yashwanth Medisetti"
+  linkedin: "linkedin.com/in/yashwanth-medisetti"
+  github: "github.com/yashwanth312"
 
 education:
   - school: "Illinois Institute of Technology, Chicago, IL"
@@ -106,7 +108,7 @@ projects:
   - name: "DiaSense AI"
     raw_context: |
       LLM-based / ML-based diabetes detection application. Neural network with
-      TensorFlow/Keras (8 neurons input, 3 hidden layers, 78% accuracy, RELU +
+      TensorFlow/Keras (8 neurons input, 3 hidden layers, 85% accuracy, RELU +
       SIGMOID activations, Adam optimizer). Containerized with custom Docker image
       (650+ downloads on DockerHub: yashwanth3/flask-keras:v2). Deployed on AWS EKS
       with CI/CD via Jenkins + GitHub Actions (automated build, container scanning,
@@ -210,13 +212,6 @@ projects:
           - "Built an AI-powered job search platform with multi-agent architecture: LLM-based screening, automated resume tailoring, and feedback-driven optimization."
           - "Implemented multi-source job scraping (8+ sources including direct ATS APIs), two-stage AI screening, and automated document generation using Claude Code CLI."
 
-  - name: "Face Recognition Door Lock (IEEE Published)"
-    raw_context: |
-      IEEE International 2023 SCEECS published research. Biometric authentication
-      for physical access control. Prototype achieving 98.43% accuracy in controlled
-      tests. Integrates AI, IoT, and cybersecurity with email alerting. Replaces
-      traditional locks with facial biometrics.
-
   - name: "Various DevOps/Cloud Projects"
     raw_context: |
       20+ GitHub repos demonstrating breadth:
@@ -232,24 +227,136 @@ projects:
       - Flask/Python chatbots
       - ML models: Salary prediction, Mask-RCNN, Hough Lines detection
 
+  - name: "AI Voice Agent Platform (Ocklet)"
+    raw_context: |
+      Production SaaS AI voice agent platform for small to medium businesses (Ocklet,
+      operated by KVBits LLC). Handles inbound business phone calls 24/7 with no
+      human intervention. Solves the 62% missed-call problem in SMBs — 85% of
+      callers won't call back and 1 in 3 choose a competitor after a missed call.
+      Core capabilities: natural conversation (no IVR/phone trees), emotional
+      intelligence (detects frustration, responds with empathy), business context
+      awareness (real-time availability access, customer history), <1 second answer
+      time, 10+ language multilingual support with auto-detection, Google Calendar
+      + Outlook booking integration, auto-text follow-ups with upsell capabilities,
+      full call transcripts and recordings, handles 100+ concurrent calls
+      simultaneously. Analytics dashboard for call tracking and lead management.
+      Target verticals: dental clinics, home services, salons & spas, restaurants.
+      Commercial SaaS with tiered pricing, 48-hour onboarding, no contracts.
+      Tech stack: Next.js + React frontend, Cloudflare Workers for edge-deployed
+      serverless backend (low-latency global execution suited to real-time voice
+      pipelines), Supabase for database + auth (Postgres-backed), Resend for
+      transactional email (auto-text follow-ups, lead notifications), ElevenLabs
+      for voice synthesis (TTS) and LLM APIs orchestrating ASR/NLU/TTS pipelines
+      for real-time voice conversation, telephony integration for inbound call
+      routing, Google Calendar + Microsoft Graph (Outlook) APIs for booking,
+      webhook-driven lead capture pipeline.
+      Production SaaS with paying customers; private repository.
+    framings:
+      ai_engineering:
+        bullets:
+          - "Architected and shipped a production AI voice agent platform serving SMB customers 24/7, orchestrating LLM-based NLU, ElevenLabs voice synthesis, and real-time ASR/TTS pipelines to handle 100+ concurrent calls with <1 second answer latency."
+          - "Engineered emotional intelligence and live business-context layers on top of LLM APIs — enabling the agent to detect caller frustration, retrieve real-time availability from Supabase, and recall customer history mid-call."
+          - "Delivered a commercial multi-tenant SaaS product with 48-hour customer onboarding, addressing the 62% missed-call rate for SMB verticals across dental, home services, salons, and restaurants."
+      fullstack:
+        bullets:
+          - "Built end-to-end SaaS platform with Next.js + React frontend, Cloudflare Workers serverless backend, and Supabase (Postgres + Auth) for data and identity — supporting lead capture, appointment booking, and a real-time analytics dashboard."
+          - "Integrated Google Calendar and Microsoft Graph (Outlook) for live appointment booking, Resend for auto-text follow-ups and notifications, and webhook-driven lead capture into a unified customer-engagement system."
+          - "Shipped multilingual support (10+ languages with auto-detection) and omnichannel follow-up (voice + SMS) across the full SaaS stack with full call transcript and recording storage."
+      devops:
+        bullets:
+          - "Deployed a real-time voice platform globally on Cloudflare Workers, leveraging edge-deployed serverless execution to keep voice-loop latency under 1 second across geographies."
+          - "Designed a webhook-driven, event-oriented architecture connecting telephony providers, ElevenLabs, LLM/ASR APIs, calendar integrations, and Resend email notifications without managing dedicated servers."
+          - "Operated a production multi-tenant SaaS handling 100+ concurrent calls with rapid customer onboarding using Supabase-managed Postgres and Cloudflare's edge runtime."
+      security:
+        bullets:
+          - "Designed secure multi-tenant data isolation on Supabase (Postgres + Auth) for SMB customer call data, transcripts, and PII captured from inbound calls."
+          - "Hardened the call-recording and transcript pipeline to handle sensitive customer data (names, phone numbers, appointment details) with controlled access via Supabase Auth and edge-side request validation on Cloudflare Workers."
+
+publications:
+  - title: "Real Time Door Unlocking System using Facial Biometrics based on IoT and Python"
+    venue: "2023 IEEE International Students' Conference on Electrical, Electronics and Computer Science (SCEECS)"
+    venue_short: "IEEE SCEECS 2023"
+    date: "February 2023"
+    pages: "1-5"
+    doi: "10.1109/SCEECS57921.2023.10063142"
+    url: "https://ieeexplore.ieee.org/document/10063142"
+    authorship: "First Author and Corresponding Author"
+    affiliation: "Maulana Azad National Institute of Technology (NIT), Bhopal — Department of Electrical Engineering"
+    keywords: ["IoT", "AI", "facial recognition", "LBPH", "security", "smart home"]
+    raw_context: |
+      First-author and corresponding-author IEEE-published research at the 2023
+      IEEE International Students' Conference on Electrical, Electronics and
+      Computer Science (SCEECS), pp. 1-5, DOI 10.1109/SCEECS57921.2023.10063142.
+      Conducted at NIT Bhopal, Department of Electrical Engineering.
+      Designed and built an end-to-end IoT biometric door access system replacing
+      traditional key locks with facial authentication. User looks at the camera;
+      device authenticates against preregistered face dataset and physically
+      unlocks the door, or on failure captures the intruder's image and emails
+      it to the owner over SMTP with TLS.
+      Algorithms: Haar cascade frontal-face detector for face localization
+      (grayscale, OpenCV) followed by Local Binary Pattern Histogram (LBPH) for
+      recognition. LBPH parameters: radius=1, 8 sample points, 8x8 grid. Chose
+      LBPH over LDA, PCA, and DCT after comparative analysis for low-light
+      robustness, minimum noise interference, and superior confidence factor on
+      a microcontroller compute budget.
+      Hardware: ESP32-CAM (240 MHz, 600 DMIPS, onboard controller running
+      inference at the edge with SD-card image storage), Arduino (ATmega328P)
+      for control logic, FTDI programmer for serial-to-USB bridging, 5V relay
+      module driving a 12V DC solenoid lock (2000 N locking force, 40 N
+      latching), buzzer for local alerting.
+      Software: Python with PySerial for the Python-to-Arduino bridge, Arduino
+      IDE for embedded firmware, OpenCV for Haar cascade and LBPH, smtplib over
+      TLS for intruder-alert emails (SMTP per RFC 5321 with STARTTLS per
+      RFC 3207).
+      Workflow: edge image capture -> grayscale preprocess -> Haar cascade
+      detection -> LBPH histogram comparison vs. preregistered set -> on match,
+      relay HIGH, solenoid retracts, door unlocks; on mismatch, intruder image
+      saved to ESP32-CAM SD card and emailed to owner via SMTP/TLS with image
+      attachment.
+      Results reported in paper: ~88% confidence rate on preregistered-face
+      authentication; end-to-end intruder-alert pipeline validated.
+      Keywords (paper): IoT, AI, facial recognition, LBPH, security, smart home.
+      Role: first author and corresponding author — led system design, hardware
+      integration, Python/embedded software implementation, experimental
+      validation, and paper authorship.
+    framings:
+      security:
+        bullets:
+          - "First-authored an IEEE-published biometric access control system (SCEECS 2023, DOI 10.1109/SCEECS57921.2023.10063142) replacing traditional door locks with facial authentication, addressing the 58.3% forcible-entry burglary rate cited in FBI statistics."
+          - "Engineered an automated intruder-alert pipeline that captures unauthorized faces and notifies the owner over SMTP with TLS encryption (RFC 5321 / RFC 3207 STARTTLS), hardening the device against eavesdropping and tampering."
+          - "Designed the complete authentication pipeline — Haar cascade detection plus LBPH recognition with tuned parameters (radius=1, 8 sample points, 8x8 grid) — chosen over LDA, PCA, and DCT after comparative analysis for low-light robustness and minimum noise interference."
+      ai_ml:
+        bullets:
+          - "First-authored and corresponding-authored an IEEE computer vision publication (SCEECS 2023) deploying Haar cascade face detection and Local Binary Pattern Histogram (LBPH) recognition in Python/OpenCV, achieving ~88% match confidence on preregistered-face authentication."
+          - "Performed comparative algorithm evaluation across LBPH, LDA, PCA, and DCT, selecting LBPH for its superior low-light performance, minimum noise interference, and deployable compute footprint on a 240 MHz edge microcontroller."
+          - "Implemented an end-to-end real-time face recognition pipeline running inference directly on the ESP32-CAM's onboard controller — eliminating the need for an external Raspberry Pi or cloud inference."
+
 certifications:
   - name: "CompTIA Security+ CE"
     issuer: "CompTIA"
+    credential_id: "afd8e412-3cd8-45ef-b39d-34a90dd14347"
+    issued: "02/23/2025"
+    expires: "02/23/2028"
     status: "Active"
-    expires: "Feb 2028"
   - name: "Red Hat Certified System Administrator (RHCSA)"
     issuer: "Red Hat"
+    credential_id: "3d1593f4-e3de-4c65-a9e3-2a70c916577a"
+    issued: "10/26/2023"
+    expires: "10/26/2026"
     status: "Active"
-    expires: "Oct 2026"
   - name: "Google Cloud Associate Cloud Engineer"
     issuer: "Google Cloud"
+    credential_id: "2c3a27ee-7260-4928-8660-8294d8555968"
+    issued: "04/06/2022"
+    expires: "04/06/2025"
     status: "Expired"
-    expires: "Apr 2025"
     note: "Skill still current, certification lapsed"
   - name: "Red Hat Certified Specialist in Containers and Kubernetes"
     issuer: "Red Hat"
+    credential_id: "4a343a15-df2c-4563-a533-3dbb9d2e4348"
+    issued: "05/24/2021"
+    expires: "05/24/2024"
     status: "Expired"
-    expires: "May 2024"
     note: "Skill still current, certification lapsed"
 
 training:
@@ -276,6 +383,7 @@ skills:
     - "AWS (EC2, S3, Lambda, EKS, CloudFormation, VPC, GuardDuty, WAF, Cognito)"
     - "Azure (App Service)"
     - "GCP (Compute Engine, certified ACE)"
+    - "Cloudflare Workers (edge serverless)"
   containers:
     - "Docker"
     - "Kubernetes (EKS, cluster automation)"
@@ -329,6 +437,7 @@ skills:
     - "Flask"
     - "Spring Boot"
     - "Node.js"
+    - "Resend (transactional email)"
   databases:
     - "PostgreSQL"
     - "Supabase"
@@ -341,6 +450,7 @@ skills:
     - "LLM integration"
     - "Claude Code (agents, skills, context management)"
     - "AI-assisted development"
+    - "ElevenLabs (voice synthesis / TTS)"
   web3:
     - "Solidity"
     - "MetaMask"

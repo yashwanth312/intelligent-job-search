@@ -18,6 +18,8 @@ def add_job(
     resume_link: str,
     cover_letter_link: str,
     angle_used: str,
+    notes: str = "",
+    status: str = "Ready to Apply",
 ) -> None:
     today = date.today()
     followup = today + timedelta(days=7)
@@ -33,13 +35,18 @@ def add_job(
         angle_used,
         job.confidence,
         job.source,
-        "Ready to Apply",
+        status,
         "",
         followup.isoformat(),
         "No",
-        "",
+        notes,
     ]
-    ws.append_row(row, value_input_option="USER_ENTERED")
+    # Use explicit row detection instead of append_row — gspread's append_row
+    # misdetects the table bounds when the sheet has conditional formatting/banding
+    # spanning many columns, causing each row to land 12 columns to the right.
+    col_a = ws.col_values(1)  # 1-indexed; returns values up to last non-empty cell
+    next_row = len(col_a) + 1
+    ws.update(f"A{next_row}:O{next_row}", [row], value_input_option="USER_ENTERED")
 
 
 def get_all_applied(ws: gspread.Worksheet) -> list[dict]:

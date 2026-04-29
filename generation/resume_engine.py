@@ -1,20 +1,29 @@
-"""Resume + cover letter generation via Claude Code CLI."""
+"""Resume + cover letter generation via Claude Code CLI.
+
+A SINGLE Claude CLI call returns both the structured resume JSON and the
+cover letter text. The prompt is piped via stdin (not argv) so neither the
+full profile.yaml nor the full job description hits Windows' ~32KB argv
+limit. ANTHROPIC_API_KEY is purged from the subprocess env so the call
+always uses the user's Max subscription via the Claude CLI session, never
+pay-per-token API credits.
+"""
 from __future__ import annotations
 
 import json
 import logging
+import os
 import re
 import subprocess
+import tempfile
 from pathlib import Path
 
 import yaml
 
-from config import YOUR_NAME, YOUR_EMAIL, YOUR_PHONE, CLAUDE_CLI
+from config import CLAUDE_CLI
 
 logger = logging.getLogger(__name__)
 
-RESUME_PROMPT_PATH = Path(__file__).parent.parent / "prompts" / "resume.md"
-CL_PROMPT_PATH = Path(__file__).parent.parent / "prompts" / "cover_letter.md"
+PROMPT_PATH = Path(__file__).parent.parent / "prompts" / "application_materials.md"
 
 
 class ResumeEngine:
@@ -27,26 +36,13 @@ class ResumeEngine:
         self, company: str, title: str, location: str,
         description: str, source: str, screening_notes: str = "",
     ) -> dict | None:
-        """Generate resume + cover letter for one job. Returns parsed dict or None."""
-        resume_data = self._generate_resume(
-            company, title, location, description, source, screening_notes,
-        )
-        if not resume_data:
-            return None
+        """Generate resume + cover letter for one job in a single Claude call.
 
-        cover_letter_data = self._generate_cover_letter(
-            company, title, location, description,
-            resume_data.get("decisions", {}).get("angle", ""),
-        )
-
-        resume_data["cover_letter"] = cover_letter_data.get("cover_letter", "") if cover_letter_data else ""
-        return resume_data
-
-    def _generate_resume(
-        self, company: str, title: str, location: str,
-        description: str, source: str, screening_notes: str,
-    ) -> dict | None:
-        template = RESUME_PROMPT_PATH.read_text()
+        Returns a dict shaped like:
+          {"resume": {...}, "decisions": {...}, "cover_letter": "..."}
+        or None if the call or parse failed.
+        """
+        template = PROMPT_PATH.read_text(encoding="utf-8")
         prompt = (
             template
             .replace("{{profile_yaml}}", self._profile_raw)
@@ -55,47 +51,55 @@ class ResumeEngine:
             .replace("{{location}}", location)
             .replace("{{source}}", source)
             .replace("{{screening_notes}}", screening_notes)
-            .replace("{{description}}", (description or "")[:4000])
-        )
-        output = self._invoke_claude(prompt)
-        return self._parse_response(output) if output else None
-
-    def _generate_cover_letter(
-        self, company: str, title: str, location: str,
-        description: str, resume_angle: str,
-    ) -> dict | None:
-        personal = self._profile.get("personal", {})
-        profile_summary = f"Name: {personal.get('name', '')}\nVisa: {personal.get('visa', '')}"
-
-        template = CL_PROMPT_PATH.read_text()
-        prompt = (
-            template
-            .replace("{{profile_summary}}", profile_summary)
-            .replace("{{company}}", company)
-            .replace("{{title}}", title)
-            .replace("{{location}}", location)
-            .replace("{{description}}", (description or "")[:4000])
-            .replace("{{resume_angle}}", resume_angle)
+            .replace("{{description}}", description or "")
         )
         output = self._invoke_claude(prompt)
         return self._parse_response(output) if output else None
 
     def _invoke_claude(self, prompt: str) -> str | None:
+        """Invoke Claude CLI with prompt on stdin. Forces Max subscription path."""
+        env = os.environ.copy()
+        env["CLAUDECODE"] = "1"
+        env.pop("ANTHROPIC_API_KEY", None)  # force Max subscription, not pay-per-token API
+
+        tmp_path = None
         try:
-            result = subprocess.run(
-                [CLAUDE_CLI, "-p", prompt, "--output-format", "text"],
-                capture_output=True, text=True, timeout=180,
-            )
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix=".md", delete=False, encoding="utf-8"
+            ) as tmp:
+                tmp.write(prompt)
+                tmp_path = tmp.name
+
+            with open(tmp_path, encoding="utf-8") as stdin_file:
+                result = subprocess.run(
+                    [CLAUDE_CLI, "-p", "--output-format", "text"],
+                    stdin=stdin_file,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    timeout=300,
+                    encoding="utf-8",
+                    errors="replace",
+                    env=env,
+                )
             if result.returncode != 0:
-                logger.error(f"Claude CLI error: {result.stderr[:500]}")
+                logger.error(
+                    f"Claude CLI error (rc={result.returncode}): "
+                    f"stderr={result.stderr[:500]!r}  stdout={result.stdout[:300]!r}"
+                )
                 return None
             return result.stdout
         except subprocess.TimeoutExpired:
-            logger.error("Claude CLI timed out during resume generation")
+            logger.error("Claude CLI timed out during materials generation")
             return None
         except FileNotFoundError:
-            logger.error("Claude CLI not found")
+            logger.error(f"Claude CLI not found at '{CLAUDE_CLI}'")
             return None
+        finally:
+            if tmp_path:
+                try:
+                    os.unlink(tmp_path)
+                except OSError:
+                    pass
 
     def _parse_response(self, text: str) -> dict | None:
         text = text.strip()
@@ -103,7 +107,14 @@ class ResumeEngine:
         if match:
             text = match.group(1).strip()
         try:
-            return json.loads(text)
+            data = json.loads(text)
         except json.JSONDecodeError:
-            logger.warning(f"Failed to parse response: {text[:200]}")
+            logger.warning(f"Failed to parse response as JSON: {text[:200]}")
             return None
+
+        if not isinstance(data, dict) or "resume" not in data:
+            logger.warning(f"Response missing 'resume' key: {str(data)[:200]}")
+            return None
+        data.setdefault("cover_letter", "")
+        data.setdefault("decisions", {})
+        return data

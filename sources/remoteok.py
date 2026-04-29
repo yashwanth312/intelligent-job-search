@@ -6,6 +6,7 @@ import logging
 import aiohttp
 
 from models.job import RawJob
+from sources._dates import parse_epoch, parse_iso
 from sources.base import SourceAdapter, SourceResult
 
 logger = logging.getLogger(__name__)
@@ -47,6 +48,10 @@ class RemoteOKAdapter(SourceAdapter):
 
             salary_min = item.get("salary_min")
             salary_max = item.get("salary_max")
+            posted_at = (
+                parse_epoch(item.get("epoch"))
+                or parse_iso(item.get("date"))
+            )
 
             jobs.append(
                 RawJob(
@@ -58,6 +63,7 @@ class RemoteOKAdapter(SourceAdapter):
                     salary_max=int(salary_max) if salary_max else None,
                     url=item.get("url", ""),
                     source="remoteok",
+                    posted_at=posted_at,
                 )
             )
 

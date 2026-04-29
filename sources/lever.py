@@ -11,6 +11,7 @@ from datetime import datetime
 import aiohttp
 
 from models.job import RawJob
+from sources._dates import parse_epoch
 from sources.base import SourceAdapter, SourceResult
 from sources.greenhouse import _title_is_relevant
 
@@ -76,6 +77,7 @@ class LeverAdapter(SourceAdapter):
                     description=item.get("descriptionPlain", ""),
                     url=item.get("hostedUrl", ""),
                     source=f"lever-{token}",
+                    posted_at=parse_epoch(item.get("createdAt"), ms=True),
                 )
             )
 

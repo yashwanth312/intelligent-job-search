@@ -16,7 +16,10 @@ load_dotenv()
 # ── PERSONAL INFO ──────────────────────────────────────────
 YOUR_NAME = os.getenv("YOUR_NAME", "Yashwanth Medisetti")
 YOUR_EMAIL = os.getenv("YOUR_EMAIL", "yashwanthsaikrishna@gmail.com")
-YOUR_PHONE = os.getenv("YOUR_PHONE", "+1 (630) 276 8408")
+YOUR_PHONE = os.getenv("YOUR_PHONE", "(630) 276 8408")
+YOUR_LOCATION_FALLBACK = os.getenv("YOUR_LOCATION_FALLBACK", "Chicago, IL")
+YOUR_LINKEDIN = os.getenv("YOUR_LINKEDIN", "linkedin.com/in/yashwanth-medisetti")
+YOUR_GITHUB = os.getenv("YOUR_GITHUB", "github.com/yashwanth312")
 
 # ── GOOGLE INTEGRATIONS ───────────────────────────────────
 GOOGLE_SHEETS_CREDS_FILE = os.getenv("GOOGLE_SHEETS_CREDS_FILE", "credentials.json")

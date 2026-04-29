@@ -16,6 +16,7 @@ from bs4 import BeautifulSoup
 
 from config import TITLE_DOMAIN_KEYWORDS
 from models.job import RawJob
+from sources._dates import parse_iso
 from sources.base import SourceAdapter, SourceResult
 
 logger = logging.getLogger(__name__)
@@ -102,6 +103,7 @@ class GreenhouseAdapter(SourceAdapter):
                     description=description,
                     url=item.get("absolute_url", ""),
                     source=f"greenhouse-{token}",
+                    posted_at=parse_iso(item.get("created_at") or item.get("updated_at")),
                 )
             )
 

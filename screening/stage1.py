@@ -77,6 +77,47 @@ class Stage1Filter:
         return FilterResult(job=job, passed=True, reason="Passed all Stage 1 filters",
                             stage="stage1_pass")
 
+    def filter_titles_only(self, jobs: list[RawJob]) -> tuple[list[RawJob], list[FilterResult]]:
+        """Run only title exclusion + domain check on jobs that have no description.
+
+        Used for no_desc_jobs before they reach the Daily tab so that obviously
+        wrong titles (senior, intern, unrelated domain) are routed to Audit instead.
+        """
+        passed: list[RawJob] = []
+        rejected: list[FilterResult] = []
+
+        for job in jobs:
+            title_lower = job.title.lower()
+
+            for kw in EXCLUDE_TITLE_KEYWORDS:
+                pattern = r'\b' + re.escape(kw.strip().rstrip('.')) + r'\b'
+                if re.search(pattern, title_lower):
+                    rejected.append(FilterResult(
+                        job=job, passed=False,
+                        reason=f"Title exclusion: '{kw}' matched in '{job.title}'",
+                        stage="stage1_title",
+                    ))
+                    break
+            else:
+                has_domain = any(
+                    re.search(r'\b' + re.escape(kw) + r'\b', title_lower)
+                    for kw in TITLE_DOMAIN_KEYWORDS
+                )
+                if not has_domain:
+                    rejected.append(FilterResult(
+                        job=job, passed=False,
+                        reason=f"No domain keyword in title: '{job.title}'",
+                        stage="stage1_title_domain",
+                    ))
+                else:
+                    passed.append(job)
+
+        logger.info(
+            f"Stage 1 (title-only): {len(passed)} passed, {len(rejected)} rejected "
+            f"out of {len(jobs)} no-description jobs"
+        )
+        return passed, rejected
+
     def filter_batch(self, jobs: list[RawJob]) -> tuple[list[RawJob], list[FilterResult]]:
         passed: list[RawJob] = []
         rejected: list[FilterResult] = []

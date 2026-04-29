@@ -2,22 +2,119 @@
 <html><head><meta charset="utf-8">
 <style>
   @page { margin: 0.5in; size: letter; }
-  body { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 10pt; color: #222; margin: 0; line-height: 1.4; }
-  h1 { font-size: 18pt; margin: 0 0 4px 0; text-align: center; }
-  .contact { text-align: center; font-size: 9pt; color: #444; margin-bottom: 12px; }
-  h2 { font-size: 11pt; border-bottom: 1.5px solid #222; padding-bottom: 2px; margin: 14px 0 6px 0; text-transform: uppercase; letter-spacing: 0.5px; }
-  .summary { font-size: 10pt; margin-bottom: 8px; }
-  .job-header { display: flex; justify-content: space-between; margin-bottom: 2px; }
-  .job-title { font-weight: bold; font-size: 10pt; }
-  .dates { font-size: 9pt; color: #555; white-space: nowrap; }
+  body {
+    font-family: 'Calibri', 'Helvetica Neue', Arial, sans-serif;
+    font-size: 10pt;
+    color: #222;
+    margin: 0;
+    line-height: 1.35;
+  }
+
+  /* ── Header ── */
+  h1 {
+    font-size: 20pt;
+    margin: 0 0 4px 0;
+    text-align: center;
+    color: #1F3864;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+  }
+  .contact {
+    text-align: center;
+    font-size: 9.5pt;
+    color: #333;
+    margin-bottom: 14px;
+  }
+
+  /* ── Section headings ── */
+  h2 {
+    font-size: 11pt;
+    color: #1F3864;
+    border-bottom: 1.5px solid #1F3864;
+    padding-bottom: 2px;
+    margin: 14px 0 6px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    font-weight: 700;
+  }
+
+  /* ── Summary ── */
+  .summary { font-size: 10pt; margin-bottom: 8px; text-align: justify; }
+
+  /* ── Experience / Projects shared ── */
+  .job-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 2px;
+  }
+  .job-title { font-weight: 700; font-size: 10.5pt; color: #222; }
+  .dates { font-size: 9.5pt; color: #555; white-space: nowrap; }
   ul { margin: 2px 0 8px 0; padding-left: 18px; }
-  li { margin-bottom: 2px; font-size: 9.5pt; }
-  .project strong { font-size: 10pt; }
-  .skills li { margin-bottom: 1px; }
+  li { margin-bottom: 2px; font-size: 10pt; }
+  .experience { margin-bottom: 6px; }
+  .project { margin-bottom: 4px; }
+  .project-name { font-weight: 700; font-size: 10.5pt; color: #222; }
+
+  /* ── Education ── */
+  .edu-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 4px;
+    font-size: 10pt;
+  }
+  .edu-left { font-weight: 700; }
+  .edu-date { color: #555; white-space: nowrap; font-size: 9.5pt; }
+
+  /* ── Skills table ── */
+  table.skills, table.certs {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 10pt;
+    margin: 2px 0 4px 0;
+  }
+  table.skills td {
+    padding: 3px 6px;
+    vertical-align: top;
+  }
+  table.skills td.cat {
+    width: 25%;
+    font-weight: 700;
+    color: #222;
+    white-space: nowrap;
+  }
+
+  /* ── Certifications table ── */
+  table.certs {
+    margin-top: 4px;
+  }
+  table.certs th, table.certs td {
+    border: 0.75px solid #BBB;
+    padding: 4px 8px;
+    font-size: 9.5pt;
+    text-align: left;
+    vertical-align: middle;
+  }
+  table.certs th {
+    background: #F2F4F8;
+    color: #1F3864;
+    font-weight: 700;
+    text-transform: none;
+    font-size: 9.5pt;
+  }
+  table.certs td.cert-name { font-weight: 700; }
+
+  /* ── Publications ── */
+  .pub { margin-bottom: 6px; font-size: 10pt; }
+  .pub-title { font-weight: 700; }
+  .pub-venue { font-style: italic; color: #444; }
+
+  strong { font-weight: 700; color: #222; }
 </style></head><body>
 
 <h1>{{name}}</h1>
-<div class="contact">{{email}} | {{phone}}</div>
+<div class="contact">{{contact_line}}</div>
 
 <h2>Summary</h2>
 <div class="summary">{{summary}}</div>
@@ -25,13 +122,27 @@
 <h2>Work Experience</h2>
 {{experience}}
 
+<h2>Education</h2>
+{{education}}
+
+<h2>Skills</h2>
+<table class="skills">{{skills}}</table>
+
+<h2>Certifications</h2>
+<table class="certs">
+  <tr>
+    <th>Certification</th>
+    <th>Issuing Organization</th>
+    <th>Credential ID</th>
+    <th>Issued</th>
+    <th>Expires</th>
+  </tr>
+  {{certifications}}
+</table>
+
 <h2>Projects</h2>
 {{projects}}
 
-<h2>Skills</h2>
-<ul class="skills">{{skills}}</ul>
-
-<h2>Certifications</h2>
-<ul>{{certifications}}</ul>
+{{publications_section}}
 
 </body></html>

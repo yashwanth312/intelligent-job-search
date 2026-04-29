@@ -98,6 +98,13 @@ class WorkdayAdapter(SourceAdapter):
                     source=f"workday-{tenant}",
                     posted_at=parse_iso(posting.get("postedOn")),
                 ))
+            if err == "__422__":
+                logger.warning(
+                    f"Workday {name}: board returned 422 (requires auth or config wrong) "
+                    "— skipping all remaining titles for this company"
+                )
+                errors.append(f"{name}: HTTP 422 — board not publicly accessible")
+                break
             if err:
                 errors.append(err)
                 continue
@@ -160,6 +167,11 @@ class WorkdayAdapter(SourceAdapter):
                         )
                         await asyncio.sleep(wait)
                         continue
+                    if resp.status == 422:
+                        # Board requires authentication or tenant/site config is wrong.
+                        # Return a sentinel so _scrape_company can bail out of all
+                        # remaining titles rather than logging 30+ identical warnings.
+                        return {}, "__422__"
                     logger.warning(
                         f"Workday {company_name} '{title}': HTTP {resp.status}"
                     )

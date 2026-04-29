@@ -3,7 +3,7 @@ import json
 from generation.resume_engine import ResumeEngine
 
 
-MOCK_RESUME_RESPONSE = json.dumps({
+MOCK_COMBINED_RESPONSE = json.dumps({
     "resume": {
         "summary": "Cloud and AI infrastructure engineer...",
         "experience": [
@@ -28,18 +28,40 @@ MOCK_RESUME_RESPONSE = json.dumps({
         "skills_reordered": "Cloud first",
         "certs_highlighted": ["GCP ACE"],
     },
+    "cover_letter": "Dear Hiring Manager,\n\nI'm excited to apply...\n\nSincerely,\nYash",
 })
 
 
 class TestResumeEngine:
-    def test_parse_resume_response(self):
+    def test_parse_combined_response(self):
         engine = ResumeEngine.__new__(ResumeEngine)
-        result = engine._parse_response(MOCK_RESUME_RESPONSE)
+        result = engine._parse_response(MOCK_COMBINED_RESPONSE)
         assert result is not None
         assert result["resume"]["summary"].startswith("Cloud")
         assert result["decisions"]["angle"] == "AI Infrastructure"
+        assert "I'm excited to apply" in result["cover_letter"]
 
     def test_parse_handles_invalid_json(self):
         engine = ResumeEngine.__new__(ResumeEngine)
         result = engine._parse_response("not json")
         assert result is None
+
+    def test_parse_strips_markdown_fences(self):
+        engine = ResumeEngine.__new__(ResumeEngine)
+        wrapped = f"```json\n{MOCK_COMBINED_RESPONSE}\n```"
+        result = engine._parse_response(wrapped)
+        assert result is not None
+        assert result["resume"]["summary"].startswith("Cloud")
+
+    def test_parse_rejects_response_without_resume_key(self):
+        engine = ResumeEngine.__new__(ResumeEngine)
+        result = engine._parse_response('{"only": "noise"}')
+        assert result is None
+
+    def test_parse_defaults_missing_cover_letter_and_decisions(self):
+        engine = ResumeEngine.__new__(ResumeEngine)
+        minimal = json.dumps({"resume": {"summary": "x", "experience": [], "projects": [], "skills": {}, "certifications": []}})
+        result = engine._parse_response(minimal)
+        assert result is not None
+        assert result["cover_letter"] == ""
+        assert result["decisions"] == {}

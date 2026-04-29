@@ -1,5 +1,7 @@
+from datetime import datetime, timedelta, timezone
+
 import pytest
-from sources.orchestrator import ScraperOrchestrator
+from sources.orchestrator import ScraperOrchestrator, filter_fresh_jobs
 from sources.base import SourceAdapter, SourceResult
 from models.job import RawJob
 
@@ -64,3 +66,44 @@ class TestOrchestrator:
         assert len(result.jobs) == 1
         assert len(result.errors) == 1
         assert "Source is down" in result.errors[0]
+
+
+class TestFilterFreshJobs:
+    def _job(self, source: str, posted_at=None) -> RawJob:
+        return RawJob(
+            title="Cloud Engineer", company="Co", location="Remote",
+            url="https://x.com", source=source, posted_at=posted_at,
+        )
+
+    def test_keeps_recent_posted_at(self):
+        now = datetime.now(timezone.utc)
+        fresh_job = self._job("greenhouse-x", posted_at=now - timedelta(hours=2))
+        stale_job = self._job("greenhouse-x", posted_at=now - timedelta(hours=48))
+        fresh, stale = filter_fresh_jobs([fresh_job, stale_job], hours_old=24)
+        assert fresh == [fresh_job]
+        assert stale == [stale_job]
+
+    def test_drops_unknown_posted_at_for_untrusted_source(self):
+        # A source that doesn't pre-filter by age AND has no posted_at
+        # must be dropped — we can't prove it's new.
+        job = self._job("hackernews", posted_at=None)
+        fresh, stale = filter_fresh_jobs([job], hours_old=24)
+        assert fresh == []
+        assert stale == [job]
+
+    def test_keeps_unknown_posted_at_for_jobspy_sources(self):
+        # JobSpy passes hours_old=24 at scrape time, so we trust the source
+        # when posted_at happens to be missing from an individual row.
+        li = self._job("linkedin", posted_at=None)
+        ind = self._job("indeed", posted_at=None)
+        gg = self._job("google", posted_at=None)
+        fresh, stale = filter_fresh_jobs([li, ind, gg], hours_old=24)
+        assert len(fresh) == 3
+        assert stale == []
+
+    def test_boundary_exactly_at_cutoff(self):
+        # A job posted exactly at the cutoff should be kept (>= cutoff).
+        now = datetime.now(timezone.utc)
+        edge = self._job("greenhouse-x", posted_at=now - timedelta(hours=24, seconds=-1))
+        fresh, stale = filter_fresh_jobs([edge], hours_old=24)
+        assert fresh == [edge]

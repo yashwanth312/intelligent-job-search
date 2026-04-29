@@ -69,24 +69,25 @@ def format_daily(spreadsheet: Spreadsheet, ws: Worksheet) -> None:
     # Freeze header row
     requests.append(_freeze_rows(sheet_id, 1))
 
-    # Header style: dark navy bg, white bold text
-    requests.append(_header_format(sheet_id, 13))  # 13 columns
+    # Header style: dark navy bg, white bold text (14 columns incl. Posted)
+    requests.append(_header_format(sheet_id, 14))
 
-    # Column widths — Status is right after Confidence for quick access
+    # Column widths — Apply Link is right after Status
     widths = [
         (0, 160),   # Company
         (1, 220),   # Job Title
         (2, 150),   # Location
         (3, 90),    # Confidence
         (4, 90),    # Status
-        (5, 130),   # Source
-        (6, 300),   # AI Reasoning
-        (7, 140),   # Suggested Angle
-        (8, 180),   # Match Signals
-        (9, 180),   # Risk Flags
-        (10, 120),  # Salary Range
-        (11, 250),  # Apply Link
-        (12, 150),  # Notes
+        (5, 250),   # Apply Link
+        (6, 90),    # Posted  (e.g. "3h ago")
+        (7, 130),   # Source
+        (8, 300),   # AI Reasoning
+        (9, 140),   # Suggested Angle
+        (10, 180),  # Match Signals
+        (11, 180),  # Risk Flags
+        (12, 120),  # Salary Range
+        (13, 150),  # Notes
     ]
     for col, width in widths:
         requests.append(_col_width(sheet_id, col, width))

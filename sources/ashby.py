@@ -10,6 +10,7 @@ import logging
 import aiohttp
 
 from models.job import RawJob
+from sources._dates import parse_iso
 from sources.base import SourceAdapter, SourceResult
 from sources.greenhouse import _title_is_relevant
 
@@ -63,6 +64,11 @@ class AshbyAdapter(SourceAdapter):
             if isinstance(location, dict):
                 location = location.get("name", "")
 
+            posted_at = (
+                parse_iso(item.get("publishedAt"))
+                or parse_iso(item.get("publishedDate"))
+                or parse_iso(item.get("updatedAt"))
+            )
             jobs.append(
                 RawJob(
                     title=title,
@@ -71,6 +77,7 @@ class AshbyAdapter(SourceAdapter):
                     description=item.get("descriptionPlain", item.get("description", "")),
                     url=item.get("jobUrl", item.get("applyUrl", "")),
                     source=f"ashby-{token}",
+                    posted_at=posted_at,
                 )
             )
 
