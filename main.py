@@ -32,6 +32,7 @@ from models.job import ScreenedJob, ScreeningVerdict
 from output.ui import PipelineUI, install_rich_logging
 from screening.stage1 import Stage1Filter
 from screening.stage2 import Stage2Screen
+from screening.h1b_checker import H1BChecker
 from sheets.client import SheetsClient
 from sheets import daily as daily_ops, audit as audit_ops
 from sheets.formatting import format_all_sheets
@@ -51,7 +52,7 @@ if sys.platform == "win32" and hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
-TOTAL_PHASES = 9
+TOTAL_PHASES = 10
 
 # Initialize logging + rich console before anything else.
 Path("logs").mkdir(exist_ok=True)
@@ -193,17 +194,33 @@ async def run_pipeline() -> None:
     # ── Phase 6: Stage 1 regex filter ─────────────────────────
     ui.phase(6, "Stage 1 regex filter")
     stage1 = Stage1Filter()
-    passed_jobs, rejected = stage1.filter_batch(desc_jobs)
+    passed_jobs, desc_rejected = stage1.filter_batch(desc_jobs)
 
     # Apply title-only checks to no_desc_jobs so "Senior X" / unrelated titles
     # are routed to Audit instead of cluttering the Daily tab.
     no_desc_passed, no_desc_rejected = stage1.filter_titles_only(no_desc_jobs)
-    rejected.extend(no_desc_rejected)
+    rejected = desc_rejected + no_desc_rejected
 
-    ui.phase_done(f"{len(passed_jobs)} passed  ·  {len(rejected)} rejected")
+    ui.phase_done(
+        f"{len(passed_jobs)} passed  ·  {len(desc_rejected)} rejected  "
+        f"·  {len(no_desc_passed)} no-desc title-passed"
+    )
 
-    # ── Phase 7: Persist to SQLite ────────────────────────────
-    ui.phase(7, "Persisting to SQLite")
+    # ── Phase 7: H1B Sponsor Check ───────────────────────────
+    ui.phase(7, "H1B Sponsor Check")
+    checker = H1BChecker(db)
+    await checker.check_batch(passed_jobs)
+    n_curated = sum(
+        1 for j in passed_jobs if j.source.startswith(("greenhouse-", "lever-", "ashby-"))
+    )
+    n_verified = sum(1 for j in passed_jobs if j.h1b_sponsor_verified is True)
+    n_unverified = sum(1 for j in passed_jobs if j.h1b_sponsor_verified is False)
+    ui.phase_done(
+        f"{n_verified} verified  ·  {n_unverified} unverified  ·  {n_curated} skipped (curated)"
+    )
+
+    # ── Phase 8: Persist to SQLite ────────────────────────────
+    ui.phase(8, "Persisting to SQLite")
     # Only save jobs that have descriptions — no_desc_jobs are intentionally
     # excluded so their fingerprints don't block re-scraping on future runs.
     # If the listing gains a description tomorrow it will be picked up fresh.
@@ -231,9 +248,21 @@ async def run_pipeline() -> None:
         db.save_audit_entries_bulk(audit_entries)
     ui.phase_done(f"{len(unique_jobs)} jobs + {len(audit_entries)} audit rows")
 
-    # ── Phase 8: Stage 2 Claude screen ────────────────────────
-    ui.phase(8, "Stage 2 Claude CLI precision screen")
+    # ── Phase 9: Stage 2 Claude screen ────────────────────────
+    ui.phase(9, "Stage 2 Claude CLI precision screen")
     stage2 = Stage2Screen(profile_path="profile.yaml")
+
+    try:
+        stage2.validate_cli()
+    except RuntimeError as e:
+        ui.error(str(e))
+        ui.error(
+            "Pipeline aborted at Stage 2. Fix the CLI path and re-run. "
+            "Phases 1-7 completed successfully; SQLite was updated."
+        )
+        db.close()
+        sys.exit(1)
+
     if not passed_jobs:
         screened_jobs: list[ScreenedJob] = []
         ui.phase_done("nothing to screen")
@@ -265,8 +294,8 @@ async def run_pipeline() -> None:
     if stage2_audit:
         db.save_audit_entries_bulk(stage2_audit)
 
-    # ── Phase 9: Write Daily + Audit tabs ─────────────────────
-    ui.phase(9, "Writing Daily + Audit tabs")
+    # ── Phase 10: Write Daily + Audit tabs ────────────────────
+    ui.phase(10, "Writing Daily + Audit tabs")
     daily_jobs = [
         j for j in screened_jobs
         if j.verdict in (ScreeningVerdict.APPLY, ScreeningVerdict.MAYBE)
@@ -310,14 +339,23 @@ async def run_pipeline() -> None:
         top = (f"{best.company} — {best.title}", best.confidence)
 
     stats = {
-        "Total scraped": len(all_scraped),
+        # ── Scrape funnel ──────────────────────────────────────
+        "Scraped (all sources)": len(all_scraped),
         f"Fresh (<= {HOURS_OLD}h)": len(unique_jobs),
         "Stale dropped": len(stale_jobs),
+        # ── After backfill ─────────────────────────────────────
+        "With descriptions": len(desc_jobs),
+        "No description (backfill failed)": len(no_desc_jobs),
         "Backfilled from URL": backfill_result.filled,
+        # ── Stage 1 ────────────────────────────────────────────
         "Stage 1 passed": len(passed_jobs),
-        "APPLY": apply_count,
-        "MAYBE": maybe_count,
-        "SKIP": skip_count,
+        "Stage 1 rejected": len(desc_rejected),
+        "No-desc title-passed": len(no_desc_passed),
+        # ── Stage 2 ────────────────────────────────────────────
+        "Stage 2 APPLY": apply_count,
+        "Stage 2 MAYBE": maybe_count,
+        "Stage 2 SKIP": skip_count,
+        # ── Output ─────────────────────────────────────────────
         "Written to Daily": len(daily_jobs),
     }
     if scrape_result.errors:
