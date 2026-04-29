@@ -129,8 +129,13 @@ class H1BChecker:
 
 # Sources where "no H-1B history" reliably means "won't sponsor".
 # These skew toward established companies; if they have zero LCA
-# filings on record, dropping them is safe.
-_DROPPABLE_SOURCES = frozenset({"linkedin", "indeed", "google", "workday"})
+# filings on record, dropping them is safe. New sources default to
+# KEEP — explicitly add to this set/prefix when triaged.
+_DROPPABLE_SOURCES = frozenset({"linkedin", "indeed", "google"})
+
+# Per-tenant adapters emit `source=f"{adapter}-{tenant}"`. Workday
+# tenants (e.g. "workday-broadcom") are big-company by construction.
+_DROPPABLE_PREFIXES = ("workday-",)
 
 
 def is_droppable_source(source: str) -> bool:
@@ -140,7 +145,9 @@ def is_droppable_source(source: str) -> bool:
     prefixes) or startup-heavy (hackernews, remoteok), where a missing
     h1bdata.info record is uninformative.
     """
-    return source in _DROPPABLE_SOURCES
+    if source in _DROPPABLE_SOURCES:
+        return True
+    return source.startswith(_DROPPABLE_PREFIXES)
 
 
 def partition_drops(jobs: list[RawJob]) -> tuple[list[RawJob], list[RawJob]]:

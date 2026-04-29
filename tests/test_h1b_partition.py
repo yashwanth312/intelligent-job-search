@@ -26,8 +26,15 @@ class TestIsDroppableSource:
     def test_google_is_droppable(self):
         assert is_droppable_source("google") is True
 
-    def test_workday_is_droppable(self):
-        assert is_droppable_source("workday") is True
+    def test_workday_prefixed_is_droppable(self):
+        # Real Workday source strings include the tenant: "workday-broadcom".
+        assert is_droppable_source("workday-broadcom") is True
+        assert is_droppable_source("workday-magnite") is True
+
+    def test_bare_workday_is_not_droppable(self):
+        # No adapter emits the bare literal — this asserts the prefix
+        # rule is what's matching workday tenants, not a stray literal.
+        assert is_droppable_source("workday") is False
 
     def test_hackernews_is_not_droppable(self):
         assert is_droppable_source("hackernews") is False
@@ -94,7 +101,7 @@ class TestPartitionDrops:
         drop_a = _job("indeed", False)
         keep_b = _job("hackernews", False)  # kept despite False because source
         keep_c = _job("greenhouse-x", None)
-        drop_b = _job("workday", False)
+        drop_b = _job("workday-broadcom", False)
 
         kept, dropped = partition_drops([keep_a, drop_a, keep_b, keep_c, drop_b])
         assert kept == [keep_a, keep_b, keep_c]
