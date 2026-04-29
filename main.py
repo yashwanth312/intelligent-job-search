@@ -216,8 +216,10 @@ async def run_pipeline() -> None:
     )
     n_verified = sum(1 for j in passed_jobs if j.h1b_sponsor_verified is True)
     n_unverified = sum(1 for j in passed_jobs if j.h1b_sponsor_verified is False)
+    n_checked = n_verified + n_unverified
     ui.phase_done(
-        f"{n_verified} verified  ·  {n_unverified} unverified  ·  {n_curated} skipped (curated)"
+        f"{n_checked} checked  ·  {n_verified} verified  ·  {n_unverified} unverified"
+        f"  ·  {n_curated} skipped (curated)"
     )
 
     # ── Phase 8: Persist to SQLite ────────────────────────────

@@ -88,6 +88,8 @@ class H1BChecker:
         raw_name: dict[str, str] = {}
         for job in open_jobs:
             key = self._normalize(job.company)
+            if not key:
+                continue
             by_key.setdefault(key, []).append(job)
             raw_name.setdefault(key, job.company)
 

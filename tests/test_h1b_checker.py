@@ -350,3 +350,32 @@ class TestH1BCheckerBatch(unittest.TestCase):
             asyncio.run(checker.check_batch([job]))
 
         assert db.get_h1b_cache("errco") is None
+
+    def test_empty_company_name_is_skipped(self):
+        from screening.h1b_checker import H1BChecker
+        from unittest.mock import patch
+
+        db = _make_db()
+        checker = H1BChecker(db)
+        # A job whose company normalizes to empty string (e.g., just "Inc.")
+        job = RawJob(
+            title="Cloud Engineer",
+            company="Inc.",
+            location="Remote",
+            url="https://example.com/job",
+            source="linkedin",
+            description="We use AWS.",
+        )
+
+        call_count = 0
+
+        async def fake_check(sem, session, key, raw):
+            nonlocal call_count
+            call_count += 1
+            return True
+
+        with patch.object(checker, "_check_company", side_effect=fake_check):
+            asyncio.run(checker.check_batch([job]))
+
+        assert call_count == 0  # skipped — no meaningful key
+        assert job.h1b_sponsor_verified is None  # left untouched
