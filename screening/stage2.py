@@ -181,23 +181,21 @@ class Stage2Screen:
             return []
 
     def _default_apply(self, job: RawJob) -> ScreenedJob:
-        risk_flags = ["no_h1b_history"] if job.h1b_sponsor_verified is False else []
         return ScreenedJob(
             **job.model_dump(),
             verdict=ScreeningVerdict.APPLY,
             confidence=2,
             reasoning="Claude screening failed — defaulting to APPLY for manual review",
             suggested_angle="",
-            risk_flags=risk_flags,
+            risk_flags=[],
         )
 
     def _default_maybe(self, job: RawJob) -> ScreenedJob:
-        risk_flags = ["no_h1b_history"] if job.h1b_sponsor_verified is False else []
         return ScreenedJob(
             **job.model_dump(),
             verdict=ScreeningVerdict.MAYBE,
             confidence=2,
             reasoning="Not returned in Claude screening batch — flagged for review",
             suggested_angle="",
-            risk_flags=risk_flags,
+            risk_flags=[],
         )

@@ -34,3 +34,36 @@ class TestStage2Screen:
         wrapped = f"```json\n{MOCK_CLAUDE_OUTPUT}\n```"
         results = screen._parse_response(wrapped)
         assert len(results) == 1
+
+
+def test_default_apply_does_not_inject_no_h1b_history_flag():
+    """no_h1b_history was a risk flag; sponsorship now has its own column."""
+    from models.job import RawJob
+    from screening.stage2 import Stage2Screen
+
+    job = RawJob(
+        title="Cloud Engineer",
+        company="Acme",
+        location="Remote",
+        url="https://example.com",
+        source="linkedin",
+        h1b_sponsor_verified=False,  # would have triggered the flag previously
+    )
+    screened = Stage2Screen()._default_apply(job)
+    assert "no_h1b_history" not in screened.risk_flags
+
+
+def test_default_maybe_does_not_inject_no_h1b_history_flag():
+    from models.job import RawJob
+    from screening.stage2 import Stage2Screen
+
+    job = RawJob(
+        title="Cloud Engineer",
+        company="Acme",
+        location="Remote",
+        url="https://example.com",
+        source="linkedin",
+        h1b_sponsor_verified=False,
+    )
+    screened = Stage2Screen()._default_maybe(job)
+    assert "no_h1b_history" not in screened.risk_flags
