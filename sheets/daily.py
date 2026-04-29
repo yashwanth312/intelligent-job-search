@@ -67,20 +67,21 @@ def write_screened_jobs(ws: gspread.Worksheet, jobs: list[ScreenedJob]) -> None:
             salary = f"${job.salary_min:,}+"
 
         rows.append([
-            job.company,                          # Company
-            job.title,                            # Job Title
-            job.location,                         # Location
-            job.confidence,                       # Confidence
-            "",                                   # Status (user fills)
-            job.url,                              # Apply Link
-            _humanize_posted(job.posted_at),      # Posted (e.g. "3h ago")
-            job.source,                           # Source
-            job.reasoning,                        # AI Reasoning
-            job.suggested_angle,                  # Suggested Angle
-            ", ".join(job.match_signals),         # Match Signals
-            ", ".join(job.risk_flags),            # Risk Flags
-            salary,                               # Salary Range
-            "",                                   # Notes
+            job.company,                          # 0  Company
+            job.title,                            # 1  Job Title
+            job.location,                         # 2  Location
+            job.confidence,                       # 3  Confidence
+            "",                                   # 4  Status (user fills)
+            ", ".join(job.risk_flags),            # 5  Risk Flags
+            job.url,                              # 6  Apply Link
+            _humanize_posted(job.posted_at),      # 7  Posted (e.g. "3h ago")
+            job.source,                           # 8  Source
+            job.reasoning,                        # 9  AI Reasoning
+            job.suggested_angle,                  # 10 Suggested Angle
+            ", ".join(job.match_signals),         # 11 Match Signals
+            _sponsorship_label(job),              # 12 Sponsorship
+            salary,                               # 13 Salary Range
+            "",                                   # 14 Notes
         ])
 
     if rows:
