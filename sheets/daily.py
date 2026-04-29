@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import date
+from datetime import date, datetime, timezone
 
 import gspread
 
@@ -10,6 +10,43 @@ from config import DAILY_HEADERS
 from models.job import ScreenedJob
 
 logger = logging.getLogger(__name__)
+
+
+def _humanize_posted(dt: datetime | None) -> str:
+    """Render posted_at as 'Xm ago' / 'Xh ago' / 'Xd ago' — empty if unknown."""
+    if dt is None:
+        return ""
+    now = datetime.now(timezone.utc)
+    # Normalize naive datetimes to UTC so subtraction doesn't raise.
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    delta = now - dt
+    seconds = max(int(delta.total_seconds()), 0)
+    if seconds < 60:
+        return "just now"
+    if seconds < 3600:
+        return f"{seconds // 60}m ago"
+    if seconds < 86400:
+        return f"{seconds // 3600}h ago"
+    days = seconds // 86400
+    return f"{days}d ago"
+
+
+def _sponsorship_label(job: ScreenedJob) -> str:
+    """Render the Sponsorship column for a screened job.
+
+    True  → "Verified sponsor" (LCA filings found on h1bdata.info)
+    False → "No H-1B history" (only reaches Daily for kept-bucket sources)
+    None  + curated ATS source → "Curated — unknown"
+    None  + other source → "" (blank)
+    """
+    if job.h1b_sponsor_verified is True:
+        return "Verified sponsor"
+    if job.h1b_sponsor_verified is False:
+        return "No H-1B history"
+    if job.source.startswith(("greenhouse-", "lever-", "ashby-")):
+        return "Curated — unknown"
+    return ""
 
 
 def clear_and_write_headers(ws: gspread.Worksheet) -> None:
@@ -34,14 +71,15 @@ def write_screened_jobs(ws: gspread.Worksheet, jobs: list[ScreenedJob]) -> None:
             job.title,                            # Job Title
             job.location,                         # Location
             job.confidence,                       # Confidence
-            "",                                   # Status (user fills — right next to Confidence)
+            "",                                   # Status (user fills)
+            job.url,                              # Apply Link
+            _humanize_posted(job.posted_at),      # Posted (e.g. "3h ago")
             job.source,                           # Source
             job.reasoning,                        # AI Reasoning
             job.suggested_angle,                  # Suggested Angle
             ", ".join(job.match_signals),         # Match Signals
             ", ".join(job.risk_flags),            # Risk Flags
             salary,                               # Salary Range
-            job.url,                              # Apply Link
             "",                                   # Notes
         ])
 
