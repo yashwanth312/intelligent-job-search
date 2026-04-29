@@ -69,25 +69,26 @@ def format_daily(spreadsheet: Spreadsheet, ws: Worksheet) -> None:
     # Freeze header row
     requests.append(_freeze_rows(sheet_id, 1))
 
-    # Header style: dark navy bg, white bold text (14 columns incl. Posted)
-    requests.append(_header_format(sheet_id, 14))
+    # Header style: dark navy bg, white bold text (15 columns)
+    requests.append(_header_format(sheet_id, 15))
 
-    # Column widths — Apply Link is right after Status
+    # Column widths — Risk Flags after Status, Sponsorship before Salary
     widths = [
         (0, 160),   # Company
         (1, 220),   # Job Title
         (2, 150),   # Location
         (3, 90),    # Confidence
         (4, 90),    # Status
-        (5, 250),   # Apply Link
-        (6, 90),    # Posted  (e.g. "3h ago")
-        (7, 130),   # Source
-        (8, 300),   # AI Reasoning
-        (9, 140),   # Suggested Angle
-        (10, 180),  # Match Signals
-        (11, 180),  # Risk Flags
-        (12, 120),  # Salary Range
-        (13, 150),  # Notes
+        (5, 180),   # Risk Flags
+        (6, 250),   # Apply Link
+        (7, 90),    # Posted (e.g. "3h ago")
+        (8, 130),   # Source
+        (9, 300),   # AI Reasoning
+        (10, 140),  # Suggested Angle
+        (11, 180),  # Match Signals
+        (12, 130),  # Sponsorship
+        (13, 120),  # Salary Range
+        (14, 150),  # Notes
     ]
     for col, width in widths:
         requests.append(_col_width(sheet_id, col, width))
@@ -108,7 +109,7 @@ def format_daily(spreadsheet: Spreadsheet, ws: Worksheet) -> None:
     requests.append(_cond_format_number(sheet_id, col=3, op="NUMBER_LESS_THAN_EQ", value="2", bg=SKIP_RED))
 
     # Alternating row colors
-    requests.append(_banding(sheet_id, 14))
+    requests.append(_banding(sheet_id, 15))
 
     spreadsheet.batch_update({"requests": requests})
 
