@@ -190,12 +190,14 @@ SCREENING_BATCH_SIZE = 5            # JDs per Claude CLI invocation (Windows arg
 H1B_CACHE_TTL_DAYS = 30             # Days before re-checking a company on h1bdata.info
 
 # ── DAILY TAB COLUMNS ─────────────────────────────────────
-# Status is right after Confidence so you don't have to scroll.
-# Posted shows "Xh ago" — lets you pick the freshest matches at a glance.
+# Risk Flags sits right after Status so visa/clearance/seniority
+# concerns are visible without scrolling. Sponsorship is a dedicated
+# column derived from h1b_sponsor_verified + source — replaces the old
+# `no_h1b_history` risk flag.
 DAILY_HEADERS = [
-    "Company", "Job Title", "Location", "Confidence", "Status", "Apply Link",
-    "Posted", "Source", "AI Reasoning", "Suggested Angle", "Match Signals",
-    "Risk Flags", "Salary Range", "Notes",
+    "Company", "Job Title", "Location", "Confidence", "Status", "Risk Flags",
+    "Apply Link", "Posted", "Source", "AI Reasoning", "Suggested Angle",
+    "Match Signals", "Sponsorship", "Salary Range", "Notes",
 ]
 
 # ── AUDIT TAB COLUMNS ─────────────────────────────────────
