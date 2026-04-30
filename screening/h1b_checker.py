@@ -1,4 +1,4 @@
-"""H1B sponsor check via h1bdata.info — Phase 7 of the pipeline."""
+"""H1B sponsor check via h1bdata.info — Phase 5 of the pipeline."""
 from __future__ import annotations
 
 import asyncio

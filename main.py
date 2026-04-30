@@ -30,7 +30,7 @@ from config import (
 from db.database import Database
 from models.job import ScreenedJob, ScreeningVerdict
 from output.ui import PipelineUI, install_rich_logging
-from screening.stage1 import Stage1Filter
+from screening.stage1 import FilterResult, Stage1Filter
 from screening.stage2 import Stage2Screen
 from screening.h1b_checker import H1BChecker, partition_drops
 from sheets.client import SheetsClient
@@ -205,12 +205,12 @@ async def run_pipeline() -> None:
         db.save_audit_entries_bulk(h1b_audit_entries)
 
         h1b_drop_results = [
-            type("FilterResult", (), {
-                "job": j,
-                "stage": "stage_h1b",
-                "reason": "company has no H-1B sponsorship history",
-                "passed": False,
-            })()
+            FilterResult(
+                job=j,
+                passed=False,
+                reason="company has no H-1B sponsorship history",
+                stage="stage_h1b",
+            )
             for j in sponsor_dropped
         ]
         audit_ops.write_rejections(audit_ws, h1b_drop_results)
