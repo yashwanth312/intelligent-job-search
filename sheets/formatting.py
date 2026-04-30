@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import gspread
 from gspread import Worksheet, Spreadsheet
 from gspread.utils import rowcol_to_a1
 
@@ -24,7 +25,7 @@ ROW_ALT = _rgb(248, 249, 250)       # Alternating row stripe
 
 
 def format_all_sheets(spreadsheet: Spreadsheet) -> None:
-    """Apply formatting to all three tabs."""
+    """Apply formatting to all tabs."""
     try:
         daily = spreadsheet.worksheet("Daily")
         format_daily(spreadsheet, daily)
@@ -37,11 +38,24 @@ def format_all_sheets(spreadsheet: Spreadsheet) -> None:
     except Exception as e:
         logger.warning(f"Audit formatting failed: {e}")
 
+    for tab_name in ("Materials", "Applied"):  # "Applied" = legacy name
+        try:
+            ws = spreadsheet.worksheet(tab_name)
+            format_materials(spreadsheet, ws)
+            break
+        except gspread.WorksheetNotFound:
+            continue
+        except Exception as e:
+            logger.warning(f"Materials formatting failed: {e}")
+            break
+
     try:
-        applied = spreadsheet.worksheet("Applied")
-        format_applied(spreadsheet, applied)
+        tracker = spreadsheet.worksheet("Tracker")
+        format_tracker(spreadsheet, tracker)
+    except gspread.WorksheetNotFound:
+        pass
     except Exception as e:
-        logger.warning(f"Applied formatting failed: {e}")
+        logger.warning(f"Tracker formatting failed: {e}")
 
     logger.info("Sheet formatting applied")
 
@@ -139,55 +153,101 @@ def format_audit(spreadsheet: Spreadsheet, ws: Worksheet) -> None:
     spreadsheet.batch_update({"requests": requests})
 
 
-def format_applied(spreadsheet: Spreadsheet, ws: Worksheet) -> None:
-    """Format the Applied tab."""
+def format_materials(spreadsheet: Spreadsheet, ws: Worksheet) -> None:
+    """Format the Materials tab — generated resumes/CLs queue."""
     sheet_id = ws.id
     _clear_banding(spreadsheet, sheet_id)
     requests = []
 
     requests.append(_freeze_rows(sheet_id, 1))
-    requests.append(_header_format(sheet_id, 14))
+    requests.append(_header_format(sheet_id, 12))
 
     widths = [
-        (0, 100),   # Date Applied
+        (0, 100),   # Date Generated
         (1, 160),   # Company
         (2, 220),   # Job Title
         (3, 130),   # Location
         (4, 220),   # Resume Link
         (5, 220),   # Cover Letter Link
         (6, 250),   # Apply Link
-        (7, 150),   # Angle Used
+        (7, 160),   # Angle Used
         (8, 80),    # Screen Confidence
         (9, 130),   # Source
         (10, 120),  # Status
-        (11, 100),  # Follow-up Date
-        (12, 90),   # Follow-up Sent
-        (13, 200),  # Notes
+        (11, 220),  # Notes
     ]
     for col, width in widths:
         requests.append(_col_width(sheet_id, col, width))
 
-    # Status dropdown (col 10 = column K)
+    # Status dropdown (col 10 = column K): queue states only
     requests.append(_data_validation(
         sheet_id, col=10,
-        values=["Ready to Apply", "Applied", "Phone Screen", "Interview", "Offer", "Rejected", "No Response"]
+        values=["Ready to Apply", "Applied", "Skipped"]
     ))
 
-    # Follow-up Sent dropdown (col 12 = column M)
-    requests.append(_data_validation(sheet_id, col=12, values=["No", "Yes"]))
-
-    # Row-level conditional formatting — entire row colored by Status (col K = index 10).
-    # Each status gets a distinct vibrant color; Ready to Apply stays plain white.
+    # Row colors by status. "Applied" turns the whole row blue so it's
+    # immediately obvious which jobs you've already submitted.
+    # "Ready to Apply" stays white (plain) — those need action.
     row_rules = [
-        ("No Response",  _rgb(229, 231, 235)),   # gray-200   — faded, ghosted
-        ("Rejected",     _rgb(254, 202, 202)),   # red-200    — clear red
-        ("Applied",      _rgb(191, 219, 254)),   # blue-200   — calm blue, in-flight
-        ("Phone Screen", _rgb(253, 230, 138)),   # amber-200  — warm amber, heating up
-        ("Interview",    _rgb(221, 214, 254)),   # violet-200 — vibrant purple, exciting
-        ("Offer",        _rgb(187, 247, 208)),   # green-200  — bright green, celebrate
+        ("Skipped",       _rgb(229, 231, 235)),  # gray-200   — deprioritized
+        ("Applied",       _rgb(191, 219, 254)),  # blue-200   — submitted, move to Tracker
     ]
     for status_text, bg in row_rules:
-        requests.append(_row_cond_format(sheet_id, 14, f'=$K2="{status_text}"', bg))
+        requests.append(_row_cond_format(sheet_id, 12, f'=$K2="{status_text}"', bg))
+
+    spreadsheet.batch_update({"requests": requests})
+
+
+# Keep legacy alias so any old callers don't break
+format_applied = format_materials
+
+
+def format_tracker(spreadsheet: Spreadsheet, ws: Worksheet) -> None:
+    """Format the Tracker tab — applied job pipeline."""
+    sheet_id = ws.id
+    _clear_banding(spreadsheet, sheet_id)
+    requests = []
+
+    requests.append(_freeze_rows(sheet_id, 1))
+    requests.append(_header_format(sheet_id, 9))
+
+    widths = [
+        (0, 100),   # Date Applied
+        (1, 160),   # Company
+        (2, 220),   # Job Title
+        (3, 130),   # Location
+        (4, 250),   # Apply Link
+        (5, 130),   # Status
+        (6, 100),   # Follow-up Date
+        (7, 90),    # Follow-up Sent
+        (8, 220),   # Notes
+    ]
+    for col, width in widths:
+        requests.append(_col_width(sheet_id, col, width))
+
+    # Status dropdown (col 5 = column F)
+    requests.append(_data_validation(
+        sheet_id, col=5,
+        values=["Applied", "Phone Screen", "Interview", "Offer", "Rejected", "No Response", "Withdrawn"]
+    ))
+
+    # Follow-up Sent dropdown (col 7 = column H)
+    requests.append(_data_validation(sheet_id, col=7, values=["No", "Yes"]))
+
+    # Row-level colors by pipeline stage (Status in col F = index 5, formula uses $F2)
+    row_rules = [
+        ("No Response",  _rgb(229, 231, 235)),  # gray-200   — went cold
+        ("Withdrawn",    _rgb(254, 215, 170)),  # orange-200 — you pulled out
+        ("Rejected",     _rgb(254, 202, 202)),  # red-200    — hard stop
+        ("Applied",      _rgb(191, 219, 254)),  # blue-200   — in flight
+        ("Phone Screen", _rgb(253, 230, 138)),  # amber-200  — heating up
+        ("Interview",    _rgb(221, 214, 254)),  # violet-200 — exciting
+        ("Offer",        _rgb(187, 247, 208)),  # green-200  — celebrate
+    ]
+    for status_text, bg in row_rules:
+        requests.append(_row_cond_format(sheet_id, 9, f'=$F2="{status_text}"', bg))
+
+    requests.append(_banding(sheet_id, 9))
 
     spreadsheet.batch_update({"requests": requests})
 

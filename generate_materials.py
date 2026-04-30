@@ -25,7 +25,7 @@ from generation.pdf_renderer import render_resume_pdf, render_cover_letter_pdf
 from generation.drive_uploader import DriveUploader
 from models.job import ScreenedJob, ScreeningVerdict
 from sheets.client import SheetsClient
-from sheets import daily as daily_ops, applied as applied_ops
+from sheets import daily as daily_ops, materials as materials_ops
 from sheets.formatting import format_all_sheets
 
 if sys.platform == "win32" and hasattr(sys.stdout, "reconfigure"):
@@ -211,27 +211,21 @@ def process_job(
     # ── Step 5: classify outcome + write to Sheet ─────────
     notes_parts = []
     if not resume_ok:
-        notes_parts.append(f"⚠ Resume PDF render FAILED — see {resume_path.with_suffix('.html')}")
+        notes_parts.append(f"Resume PDF render FAILED — see {resume_path.with_suffix('.html')}")
     if not cl_ok:
-        notes_parts.append(f"⚠ Cover letter PDF render FAILED — see {cl_path.with_suffix('.html')}")
+        notes_parts.append(f"Cover letter PDF render FAILED — see {cl_path.with_suffix('.html')}")
     if drive_failure_msg:
-        notes_parts.append(f"⚠ Drive upload failed ({drive_failure_msg}) — link cells contain local file paths")
-    elif uploader is None:
-        notes_parts.append("ℹ Drive uploads disabled — link cells contain local file paths")
+        notes_parts.append(f"Drive upload failed ({drive_failure_msg})")
     notes = " | ".join(notes_parts)
 
     if not resume_ok or not cl_ok:
         status = "PDF Render Failed"
         outcome = "pdf_failed"
-        outcome_symbol, outcome_msg = "⚠", f"PDF render failed ({status})"
-    elif drive_failure_msg or uploader is None:
-        status = "Local PDFs Only"
-        outcome = "local_only"
-        outcome_symbol, outcome_msg = "✓", f"local PDFs ready ({status})"
+        outcome_symbol, outcome_msg = "⚠", "PDF render failed"
     else:
         status = "Ready to Apply"
-        outcome = "success"
-        outcome_symbol, outcome_msg = "✓", f"uploaded to Drive ({status})"
+        outcome = "success" if (uploader and not drive_failure_msg) else "local_only"
+        outcome_symbol, outcome_msg = "✓", "uploaded to Drive" if outcome == "success" else "local PDFs ready"
 
     finish = step("Recording in Applied tab")
     screened = ScreenedJob(
@@ -240,7 +234,7 @@ def process_job(
         verdict=ScreeningVerdict.APPLY, confidence=int(confidence),
         reasoning=reasoning, suggested_angle=suggested_angle,
     )
-    applied_ops.add_job(
+    materials_ops.add_job(
         applied_ws, screened,
         resume_link=resume_link, cover_letter_link=cl_link,
         angle_used=result.get("decisions", {}).get("angle", suggested_angle),
@@ -270,7 +264,7 @@ def main():
 
     sheets = SheetsClient()
     daily_ws = sheets.get_daily_sheet()
-    applied_ws = sheets.get_applied_sheet()
+    applied_ws = sheets.get_materials_sheet()
     try:
         format_all_sheets(sheets.spreadsheet)
     except Exception as e:
@@ -304,7 +298,7 @@ def main():
                 print(f"  └─ ✗ UNEXPECTED ERROR: {type(e).__name__}: {e}\n")
                 logger.exception("Unexpected error processing job")
     except KeyboardInterrupt:
-        print("\n\n⚠ Interrupted by user. Progress so far is saved in the Applied tab + DB.\n")
+        print("\n\n⚠ Interrupted by user. Progress so far is saved in the Materials tab + DB.\n")
     finally:
         db.close()
 

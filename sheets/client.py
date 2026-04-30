@@ -8,7 +8,7 @@ from googleapiclient.discovery import build
 
 from config import (
     GOOGLE_SHEETS_CREDS_FILE, SPREADSHEET_NAME,
-    DAILY_HEADERS, AUDIT_HEADERS, APPLIED_HEADERS,
+    DAILY_HEADERS, AUDIT_HEADERS, MATERIALS_HEADERS, TRACKER_HEADERS,
 )
 
 logger = logging.getLogger(__name__)
@@ -42,8 +42,11 @@ class SheetsClient:
             audit = ss.add_worksheet(title="Audit", rows=1000, cols=len(AUDIT_HEADERS))
             audit.append_row(AUDIT_HEADERS)
 
-            applied = ss.add_worksheet(title="Applied", rows=1000, cols=len(APPLIED_HEADERS))
-            applied.append_row(APPLIED_HEADERS)
+            materials = ss.add_worksheet(title="Materials", rows=1000, cols=len(MATERIALS_HEADERS))
+            materials.append_row(MATERIALS_HEADERS)
+
+            tracker = ss.add_worksheet(title="Tracker", rows=1000, cols=len(TRACKER_HEADERS))
+            tracker.append_row(TRACKER_HEADERS)
 
             return ss
 
@@ -67,25 +70,39 @@ class SheetsClient:
         _ensure_headers(ws, AUDIT_HEADERS)
         return ws
 
-    def get_applied_sheet(self) -> gspread.Worksheet:
+    def get_materials_sheet(self) -> gspread.Worksheet:
+        # Try "Materials" first; fall back to legacy "Applied" tab and rename it.
         try:
-            ws = self.spreadsheet.worksheet("Applied")
+            ws = self.spreadsheet.worksheet("Materials")
         except gspread.WorksheetNotFound:
-            ws = self.spreadsheet.add_worksheet("Applied", rows=1000, cols=len(APPLIED_HEADERS))
-            ws.append_row(APPLIED_HEADERS)
-            return ws
-        _ensure_headers(ws, APPLIED_HEADERS)
+            try:
+                ws = self.spreadsheet.worksheet("Applied")
+                ws.update_title("Materials")
+                logger.info("Renamed 'Applied' tab to 'Materials'")
+            except gspread.WorksheetNotFound:
+                ws = self.spreadsheet.add_worksheet("Materials", rows=1000, cols=len(MATERIALS_HEADERS))
+                ws.append_row(MATERIALS_HEADERS)
+                return ws
+        _ensure_headers(ws, MATERIALS_HEADERS)
         return ws
+
+    def get_tracker_sheet(self) -> gspread.Worksheet:
+        try:
+            ws = self.spreadsheet.worksheet("Tracker")
+        except gspread.WorksheetNotFound:
+            ws = self.spreadsheet.add_worksheet("Tracker", rows=1000, cols=len(TRACKER_HEADERS))
+            ws.append_row(TRACKER_HEADERS)
+            return ws
+        _ensure_headers(ws, TRACKER_HEADERS)
+        return ws
+
+    # Legacy alias so existing callers don't break during transition
+    def get_applied_sheet(self) -> gspread.Worksheet:
+        return self.get_materials_sheet()
 
 
 def _ensure_headers(ws: gspread.Worksheet, expected: list[str]) -> None:
-    """Insert the expected header row at row 1 if it isn't already there.
-
-    Detects a missing header by checking row 1's first cell against the first
-    expected header. If the sheet is empty or row 1 holds data instead of
-    headers (e.g. user cleared the tab), the headers are prepended and any
-    existing data is pushed down.
-    """
+    """Insert the expected header row at row 1 if it isn't already there."""
     first_row = ws.row_values(1)
     if first_row and first_row[0] == expected[0]:
         return
