@@ -32,45 +32,32 @@ DB_FILE = "jobs.db"
 # ── TARGET JOB TITLES ─────────────────────────────────────
 # Used as both LinkedIn/Indeed search queries AND Stage 1 title matching.
 # Each title gets its own dedicated search so niche titles are never buried.
+#
+# This list deliberately excludes "Junior X" / "Associate X" variants:
+# LinkedIn keyword search returns the same posting set regardless of those
+# qualifiers (postings rarely put "Junior" in the title), so they were pure
+# duplicate queries adding scrape time with no new postings. Seniority is
+# already filtered post-scrape by EXCLUDE_TITLE_KEYWORDS below.
+#
+# Synonyms collapsed: SRE → "Site Reliability Engineer" (matches both),
+# "Reliability Engineer" / "Observability Engineer" / "Kubernetes Engineer"
+# are subsumed by SRE/Platform. "Cloud DevOps" / "AI DevOps" / "ML Platform"
+# are subsumed by their broader peers.
 TARGET_TITLES = [
     # Cloud / Infrastructure
     "Cloud Engineer",
-    "Junior Cloud Engineer",
-    "Associate Cloud Engineer",
-    "Cloud Infrastructure Engineer",
     "Infrastructure Engineer",
-    "Systems Engineer",
     # DevOps / SRE / Platform
     "DevOps Engineer",
-    "Junior DevOps Engineer",
-    "Associate DevOps Engineer",
-    "Cloud DevOps Engineer",
-    "SRE",
     "Site Reliability Engineer",
-    "Associate SRE",
-    "Junior SRE",
-    "Reliability Engineer",
     "Platform Engineer",
-    "Associate Platform Engineer",
-    "Kubernetes Engineer",
-    "Observability Engineer",
     # Security
     "Security Engineer",
-    "Junior Security Engineer",
-    "Associate Security Engineer",
-    "Cloud Security Engineer",
-    "DevSecOps Engineer",
-    "Security Automation Engineer",
-    "Security Operations Engineer",
     "Security Analyst",
-    "Junior Security Analyst",
     # AI Intersection
     "MLOps Engineer",
-    "AI Infrastructure Engineer",
     "AI Platform Engineer",
     "AI Security Engineer",
-    "ML Platform Engineer",
-    "AI DevOps Engineer",
 ]
 
 # ── LOCATIONS ─────────────────────────────────────────────
@@ -205,10 +192,21 @@ AUDIT_HEADERS = [
     "Company", "Job Title", "Killed At", "Reason", "Source", "Apply Link",
 ]
 
-# ── APPLIED TAB COLUMNS ───────────────────────────────────
-APPLIED_HEADERS = [
-    "Date Applied", "Company", "Job Title", "Location",
+# ── MATERIALS TAB COLUMNS ─────────────────────────────────
+# Queue of generated resumes/CLs. Status: Ready to Apply → Applied → Skipped.
+MATERIALS_HEADERS = [
+    "Date Generated", "Company", "Job Title", "Location",
     "Resume Link", "Cover Letter Link", "Apply Link",
     "Angle Used", "Screen Confidence", "Source",
-    "Status", "Days Waiting", "Follow-up Date", "Follow-up Sent", "Notes",
+    "Status", "Notes",
 ]
+
+# ── TRACKER TAB COLUMNS ───────────────────────────────────
+# Pipeline for actually-applied jobs. Populated by sync_applied.py.
+TRACKER_HEADERS = [
+    "Date Applied", "Company", "Job Title", "Location",
+    "Apply Link", "Status", "Follow-up Date", "Follow-up Sent", "Notes",
+]
+
+# Keep for any legacy references
+APPLIED_HEADERS = MATERIALS_HEADERS

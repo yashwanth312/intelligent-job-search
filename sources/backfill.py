@@ -1,17 +1,17 @@
 # sources/backfill.py
-"""Backfill missing job descriptions by fetching the job URL."""
+"""Single-URL description fetcher.
+
+Used by generate_materials.py as a last-chance fallback when the DB has no
+description for a job we're about to write a resume for. The bulk pipeline
+backfill was removed 2026-04-29 — fill rate was ~2% and it dominated runtime.
+"""
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
-from dataclasses import dataclass
-from typing import Callable
 
 import aiohttp
 from bs4 import BeautifulSoup
-
-from models.job import RawJob
 
 logger = logging.getLogger(__name__)
 
@@ -31,8 +31,6 @@ _HEADERS = {
     "Accept-Language": "en-US,en;q=0.9",
 }
 
-_CONCURRENT_FETCHES = 10
-
 # LinkedIn-specific selectors for the "About the job" section
 _LINKEDIN_SELECTORS = [
     ".description__text",
@@ -49,13 +47,6 @@ _GENERIC_SELECTORS = [
     "[class*='jobDescription']",
     "[id*='jobDescription']",
 ]
-
-
-@dataclass
-class BackfillResult:
-    filled: int
-    failed: int
-    skipped: int
 
 
 def extract_description_from_html(html: str, url: str = "") -> str | None:
@@ -132,61 +123,6 @@ async def _fetch_one(
     except Exception as e:
         logger.debug(f"Backfill fetch error for {url}: {e}")
         return None
-
-
-async def backfill_descriptions(
-    jobs: list[RawJob],
-    concurrency: int = _CONCURRENT_FETCHES,
-    timeout: float = 15.0,
-    on_progress: Callable[[int], None] | None = None,
-) -> BackfillResult:
-    """Fetch descriptions from URLs for jobs that are missing them.
-
-    Fetches up to `concurrency` URLs in parallel (default 10).
-    Mutates each job's `description` field in place when successful.
-    If `on_progress` is provided, it's called with `1` after each job
-    completes (success or failure) — for wiring a progress bar.
-    """
-    needs_backfill = [
-        j for j in jobs
-        if not (j.description and j.description.strip()) and j.url.strip()
-    ]
-    skipped = len(jobs) - len(needs_backfill)
-
-    if not needs_backfill:
-        logger.info("Backfill: no jobs need description fetching")
-        return BackfillResult(filled=0, failed=0, skipped=skipped)
-
-    logger.info(
-        f"Backfill: fetching descriptions for {len(needs_backfill)} jobs "
-        f"(concurrency={concurrency})"
-    )
-
-    sem = asyncio.Semaphore(concurrency)
-
-    async def _fetch_job(session: aiohttp.ClientSession, job: RawJob) -> str:
-        async with sem:
-            text = await _fetch_one(session, job.url, timeout)
-        if text:
-            job.description = text
-            logger.debug(f"Backfill OK: {job.company} — {job.title}")
-            result = "filled"
-        else:
-            logger.debug(f"Backfill FAIL: {job.company} — {job.title}")
-            result = "failed"
-        if on_progress:
-            on_progress(1)
-        return result
-
-    async with aiohttp.ClientSession() as session:
-        outcomes = await asyncio.gather(
-            *[_fetch_job(session, job) for job in needs_backfill]
-        )
-
-    filled = outcomes.count("filled")
-    failed = outcomes.count("failed")
-    logger.info(f"Backfill: {filled} filled, {failed} failed, {skipped} skipped (has desc or no url)")
-    return BackfillResult(filled=filled, failed=failed, skipped=skipped)
 
 
 async def fetch_description_from_url(url: str, timeout: float = 15.0) -> str | None:

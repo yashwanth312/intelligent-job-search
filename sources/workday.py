@@ -3,14 +3,28 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
+from typing import Callable
 
 import aiohttp
+from bs4 import BeautifulSoup
 
 from models.job import RawJob
 from sources._dates import parse_iso
 from sources.base import SourceAdapter, SourceResult
 
 logger = logging.getLogger(__name__)
+
+# Parses the public-facing job URL into the components needed to build the
+# Workday detail API endpoint.
+# Public form: https://{tenant}.{wd_server}.myworkdayjobs.com[/{locale}]/{site}/{external_path}
+_DETAIL_URL_RE = re.compile(
+    r"^https?://([^.]+)\.(wd\d+)\.myworkdayjobs\.com"
+    r"(?:/(?i:[a-z]{2}-[a-z]{2}))?/([^/]+)/(.+)$"
+)
+
+# Minimum extracted text length to consider a Workday description usable.
+_MIN_DESC_LENGTH = 50
 
 _HEADERS = {
     "Content-Type": "application/json",
@@ -189,3 +203,109 @@ class WorkdayAdapter(SourceAdapter):
             f"Workday {company_name} '{title}': "
             f"max retries exceeded after repeated 429s"
         )
+
+
+# ── Description backfill (post-Stage-1) ────────────────────────────────────
+# Workday search endpoints don't return job descriptions. We fetch them on
+# demand AFTER Stage 1's title-only filter trims the list, so volume is
+# small (~50–200 fetches/run) and we only pay the cost on jobs whose title
+# already cleared screening. Survivors then get a full Stage 1 pass + Stage 2.
+
+def _build_detail_url(public_url: str) -> str | None:
+    """Convert a public Workday job URL to its JSON detail API endpoint.
+
+    Returns None if the URL doesn't match the expected pattern.
+    """
+    m = _DETAIL_URL_RE.match(public_url)
+    if not m:
+        return None
+    tenant, wd_server, site, external_path = m.groups()
+    # external_path already contains "job/..." — don't re-prefix.
+    return (
+        f"https://{tenant}.{wd_server}.myworkdayjobs.com"
+        f"/wday/cxs/{tenant}/{site}/{external_path}"
+    )
+
+
+def _extract_description(detail_payload: dict) -> str | None:
+    """Pull jobDescription HTML out of a Workday detail-API response and
+    return the stripped plain text, or None if too short / missing.
+    """
+    posting_info = (detail_payload or {}).get("jobPostingInfo") or {}
+    desc_html = posting_info.get("jobDescription") or ""
+    if not desc_html:
+        return None
+    text = BeautifulSoup(desc_html, "html.parser").get_text(
+        separator="\n", strip=True
+    )
+    if len(text) < _MIN_DESC_LENGTH:
+        return None
+    return text
+
+
+async def _fetch_one_description(
+    sem: asyncio.Semaphore,
+    session: aiohttp.ClientSession,
+    job: RawJob,
+    timeout: float,
+) -> bool:
+    api_url = _build_detail_url(job.url)
+    if not api_url:
+        return False
+    async with sem:
+        try:
+            async with session.get(
+                api_url, timeout=aiohttp.ClientTimeout(total=timeout),
+            ) as resp:
+                if resp.status != 200:
+                    return False
+                data = await resp.json(content_type=None)
+        except Exception as e:
+            logger.debug(
+                f"Workday detail fetch failed for {job.company} — {job.title}: {e}"
+            )
+            return False
+    text = _extract_description(data)
+    if not text:
+        return False
+    job.description = text
+    return True
+
+
+async def fetch_descriptions(
+    jobs: list[RawJob],
+    concurrency: int = 8,
+    timeout: float = 15.0,
+    on_progress: Callable[[int], None] | None = None,
+) -> int:
+    """Fetch jobDescription text for Workday jobs missing descriptions.
+
+    Operates only on jobs whose source starts with 'workday-' AND whose
+    description is currently None/empty. Mutates each job's description
+    field in place. Returns the count of jobs successfully filled.
+    """
+    targets = [
+        j for j in jobs
+        if j.source.startswith("workday-")
+        and not (j.description and j.description.strip())
+    ]
+    if not targets:
+        return 0
+
+    sem = asyncio.Semaphore(concurrency)
+
+    async def _one(session: aiohttp.ClientSession, job: RawJob) -> bool:
+        ok = await _fetch_one_description(sem, session, job, timeout)
+        if on_progress:
+            on_progress(1)
+        return ok
+
+    async with aiohttp.ClientSession(headers=_HEADERS) as session:
+        results = await asyncio.gather(*[_one(session, j) for j in targets])
+
+    n_filled = sum(1 for r in results if r)
+    logger.info(
+        f"Workday description fetch: {n_filled}/{len(targets)} filled "
+        f"(concurrency={concurrency}, timeout={timeout}s)"
+    )
+    return n_filled

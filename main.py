@@ -43,8 +43,8 @@ from sources.ashby import AshbyAdapter
 from sources.linkedin_indeed import LinkedInIndeedAdapter
 from sources.hackernews import HackerNewsAdapter
 from sources.remoteok import RemoteOKAdapter
-from sources.workday import WorkdayAdapter
-from sources.workday_discovery import save_new_companies
+from sources.workday import WorkdayAdapter, fetch_descriptions as fetch_workday_descriptions
+from sources.workday_discovery import save_candidates
 
 # Fix Windows console encoding
 if sys.platform == "win32" and hasattr(sys.stdout, "reconfigure"):
@@ -152,16 +152,18 @@ async def run_pipeline() -> None:
     all_scraped = scrape_result.jobs
     ui.phase_done(f"{len(all_scraped)} unique jobs after cross-source + DB dedup")
 
-    # Persist any newly discovered Workday companies for the next run
-    new_wd = save_new_companies(
+    # Queue any newly discovered Workday tenants for promotion review.
+    # Discoveries don't go straight into the active scrape list — they wait
+    # in workday_candidates.yaml until promote_workday_candidates.py validates
+    # them against h1bdata.info + a live Workday API ping.
+    new_wd_queued, new_wd_repeats = save_candidates(
         li_adapter.discovered_workday_companies,
-        yaml_path="target_companies.yaml",
     )
-    if new_wd:
+    if new_wd_queued or new_wd_repeats:
         logger.info(
-            f"Discovered {new_wd} new Workday "
-            f"{'company' if new_wd == 1 else 'companies'} — "
-            f"added to target_companies.yaml for next run"
+            f"Workday candidates: {new_wd_queued} new queued, "
+            f"{new_wd_repeats} repeat sightings — "
+            f"run `python scripts/promote_workday_candidates.py` to validate"
         )
 
     # ── Phase 4: Freshness filter ─────────────────────────────
@@ -239,11 +241,48 @@ async def run_pipeline() -> None:
     # Apply title-only checks to no_desc_jobs so "Senior X" / unrelated titles
     # are routed to Audit instead of cluttering the Daily tab.
     no_desc_passed, no_desc_rejected = stage1.filter_titles_only(no_desc_jobs)
-    rejected = desc_rejected + no_desc_rejected
+    rejected: list[FilterResult] = list(desc_rejected) + list(no_desc_rejected)
+
+    # Workday returns no descriptions inline. Fetch them now — only for the
+    # ~50–200 Workday jobs whose titles already cleared filter_titles_only.
+    # Survivors get the full Stage 1 (description hard-stops + must-have
+    # keywords) and merge into passed_jobs so Stage 2 actually screens them.
+    wd_to_fetch = [
+        j for j in no_desc_passed if j.source.startswith("workday-")
+    ]
+    n_wd_filled = 0
+    n_wd_promoted = 0
+    if wd_to_fetch:
+        with ui.progress(
+            f"Fetching {len(wd_to_fetch)} Workday descriptions",
+            total=len(wd_to_fetch),
+        ) as advance:
+            n_wd_filled = await fetch_workday_descriptions(
+                wd_to_fetch, on_progress=advance
+            )
+        wd_filled_jobs = [
+            j for j in wd_to_fetch
+            if j.description and j.description.strip()
+        ]
+        if wd_filled_jobs:
+            wd_passed, wd_desc_rejected = stage1.filter_batch(wd_filled_jobs)
+            passed_jobs.extend(wd_passed)
+            rejected.extend(wd_desc_rejected)
+            n_wd_promoted = len(wd_passed)
+            # Remove the now-described Workday jobs from no_desc_passed so
+            # they don't double up as MAYBE in the Daily tab.
+            filled_fps = {j.fingerprint for j in wd_filled_jobs}
+            no_desc_passed = [
+                j for j in no_desc_passed if j.fingerprint not in filled_fps
+            ]
+            # Move their descriptions back into desc_jobs so they get persisted.
+            desc_jobs.extend(wd_filled_jobs)
 
     ui.phase_done(
-        f"{len(passed_jobs)} passed  ·  {len(desc_rejected)} rejected  "
-        f"·  {len(no_desc_passed)} no-desc title-passed"
+        f"{len(passed_jobs)} passed (incl. {n_wd_promoted} from Workday fetch)  ·  "
+        f"{len(desc_rejected)} rejected  ·  "
+        f"{len(no_desc_passed)} no-desc title-passed  ·  "
+        f"Workday desc filled {n_wd_filled}/{len(wd_to_fetch)}"
     )
 
     # ── Phase 7: Persist to SQLite ────────────────────────────

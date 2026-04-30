@@ -1,0 +1,1367 @@
+# Workday tenants rejected from active scraping on or before 2026-04-29.
+# Auto-discovery (sources/workday_discovery.py) skips any tenant in this file.
+# Reason codes:
+#   industry_mismatch    — wrong industry (healthcare, govt, edu, industrial, retail, etc.)
+#   low_h1b_sponsorship  — sponsors rarely / not for cloud-devops roles
+#   defense_clearance    — most roles require US-citizen clearance F1 cannot hold
+#   dead_board           — Workday board returns 404 / 422 / parse errors
+#
+# To restore a tenant: remove its entry here and add it to the
+# workday section of target_companies.yaml.
+rejected:
+- tenant: 3m
+  name: 3M
+  wd_server: wd1
+  site: Search
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: aep
+  name: American Electric Power
+  wd_server: wd1
+  site: AEPCareerSite
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: aero
+  name: The Aerospace Corporation
+  wd_server: wd5
+  site: External
+  reason: defense_clearance
+  rejected_on: '2026-04-29'
+- tenant: aes
+  name: AES Corporation
+  wd_server: wd1
+  site: aes_clean_energy
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: airliquidehr
+  name: Air Liquide
+  wd_server: wd3
+  site: AirLiquideExternalCareer
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: allegion
+  name: Allegion
+  wd_server: wd5
+  site: careers
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: allisontransmission
+  name: Allison Transmission
+  wd_server: wd1
+  site: ATI-External
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: amcor
+  name: Amcor
+  wd_server: wd5
+  site: Amcor_External_Career_Site
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: appliedis
+  name: Applied Information Sciences
+  wd_server: wd5
+  site: AIS_Careers
+  reason: low_h1b_sponsorship
+  rejected_on: '2026-04-29'
+- tenant: argonne
+  name: Argonne National Laboratory
+  wd_server: wd1
+  site: Argonne_Careers
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: ascendperformancematerials
+  name: Ascend Performance Materials
+  wd_server: wd1
+  site: ascend
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: ashealthnet
+  name: Alternate Solutions Health Network
+  wd_server: wd1
+  site: ASHN
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: astrazeneca
+  name: AstraZeneca
+  wd_server: wd3
+  site: Careers
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: athenahealth
+  name: athenahealth
+  wd_server: wd1
+  site: External
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: austincc
+  name: Austin Community College
+  wd_server: wd1
+  site: External
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: axalta
+  name: Axalta Coating Systems
+  wd_server: wd1
+  site: Axalta
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: axos
+  name: Axos Bank
+  wd_server: wd5
+  site: Axos
+  reason: low_h1b_sponsorship
+  rejected_on: '2026-04-29'
+- tenant: babelgroup
+  name: Babel
+  wd_server: wd103
+  site: es
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: baltimorecity
+  name: City of Baltimore
+  wd_server: wd1
+  site: External
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: bannerhealth
+  name: Banner Health
+  wd_server: wd108
+  site: Careers
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: bbva
+  name: BBVA
+  wd_server: wd3
+  site: BBVA
+  reason: low_h1b_sponsorship
+  rejected_on: '2026-04-29'
+- tenant: beemok
+  name: BHC
+  wd_server: wd5
+  site: BHC_Careers
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: bloomenergy
+  name: Bloom Energy
+  wd_server: wd1
+  site: BloomEnergyCareers
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: blueorigin
+  name: Blue Origin
+  wd_server: wd5
+  site: BlueOrigin
+  reason: defense_clearance
+  rejected_on: '2026-04-29'
+- tenant: bmo
+  name: BMO Financial Group
+  wd_server: wd3
+  site: External
+  reason: low_h1b_sponsorship
+  rejected_on: '2026-04-29'
+- tenant: boydcorp
+  name: Boyd Corporation
+  wd_server: wd12
+  site: Boyd_Careers
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: brambles
+  name: CHEP
+  wd_server: wd5
+  site: Brambles_Careers
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: breakthru
+  name: Breakthru Beverage Group
+  wd_server: wd5
+  site: BBG-US
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: bridgestone
+  name: Bridgestone Americas
+  wd_server: wd5
+  site: External
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: broadcom
+  name: Broadcom
+  wd_server: wd1
+  site: es
+  reason: dead_board
+  rejected_on: '2026-04-29'
+- tenant: btisolutions
+  name: BTI Solutions
+  wd_server: wd12
+  site: External
+  reason: low_h1b_sponsorship
+  rejected_on: '2026-04-29'
+- tenant: bydeluxe
+  name: Deluxe Media
+  wd_server: wd5
+  site: Deluxe_External
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: cae
+  name: CAE
+  wd_server: wd3
+  site: career
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: calix
+  name: Calix
+  wd_server: wd1
+  site: External
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: cambridgeassociates
+  name: Cambridge Associates
+  wd_server: wd5
+  site: Cambridge_Associates
+  reason: low_h1b_sponsorship
+  rejected_on: '2026-04-29'
+- tenant: carleton
+  name: Carleton College
+  wd_server: wd1
+  site: CarletonCareers
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: carmax
+  name: CarMax
+  wd_server: wd1
+  site: External
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: cecentertainment
+  name: Chuck E. Cheese
+  wd_server: wd5
+  site: CEC_Careers
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: chamberlain
+  name: Chamberlain Group
+  wd_server: wd1
+  site: Chamberlain_Group
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: childrensinstitute
+  name: Children's Institute, Inc.
+  wd_server: wd5
+  site: CII
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: cibc
+  name: CIBC
+  wd_server: wd3
+  site: search
+  reason: low_h1b_sponsorship
+  rejected_on: '2026-04-29'
+- tenant: clarios
+  name: Clarios
+  wd_server: wd5
+  site: clarioscareers
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: clearwateranalytics
+  name: Clearwater Analytics (CWAN)
+  wd_server: wd1
+  site: Clearwater_Analytics_Careers
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: cliftonlarsonallen
+  name: CliftonLarsonAllen
+  wd_server: wd1
+  site: CLA
+  reason: low_h1b_sponsorship
+  rejected_on: '2026-04-29'
+- tenant: cni
+  name: Chickasaw Nation Industries
+  wd_server: wd503
+  site: CNI
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: columbiasportswearcompany
+  name: Columbia Sportswear
+  wd_server: wd5
+  site: CSC_Careers
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: communitybrands
+  name: Momentive Software
+  wd_server: wd1
+  site: Momentive_External_Careers
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: cooley
+  name: Cooley LLP
+  wd_server: wd1
+  site: Cooley_US_LLP
+  reason: low_h1b_sponsorship
+  rejected_on: '2026-04-29'
+- tenant: coorstek
+  name: CoorsTek
+  wd_server: wd1
+  site: CoorsTekCareers
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: coreandmain
+  name: Core & Main
+  wd_server: wd1
+  site: coreandmain
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: corebridgefinancial
+  name: Corebridge
+  wd_server: wd1
+  site: CorebridgeFinancial
+  reason: low_h1b_sponsorship
+  rejected_on: '2026-04-29'
+- tenant: corpartners
+  name: Engle Martin
+  wd_server: wd5
+  site: Envista
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: costar
+  name: CoStar Group
+  wd_server: wd1
+  site: CoStarCareers
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: coxhealth
+  name: CoxHealth
+  wd_server: wd5
+  site: CoxHealth_External
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: cranecompany
+  name: Crane Aerospace & Electronics
+  wd_server: wd5
+  site: Careers
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: crc
+  name: Covenant Living Communities & Services
+  wd_server: wd1
+  site: CLExternal
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: cree
+  name: Wolfspeed
+  wd_server: wd108
+  site: EXT
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: cw
+  name: C&W Services
+  wd_server: wd1
+  site: External
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: datasite
+  name: Datasite
+  wd_server: wd1
+  site: datasite
+  reason: low_h1b_sponsorship
+  rejected_on: '2026-04-29'
+- tenant: db
+  name: Deutsche Bank
+  wd_server: wd3
+  site: DBWebsite
+  reason: low_h1b_sponsorship
+  rejected_on: '2026-04-29'
+- tenant: deluxe
+  name: Deluxe Corporation
+  wd_server: wd5
+  site: USA_CAN
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: dexcom
+  name: Dexcom
+  wd_server: wd1
+  site: Dexcom
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: dow
+  name: DOW
+  wd_server: wd1
+  site: ExternalCareers
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: draper
+  name: Draper
+  wd_server: wd5
+  site: Draper_Careers
+  reason: defense_clearance
+  rejected_on: '2026-04-29'
+- tenant: earlywarning
+  name: Early Warning Services
+  wd_server: wd5
+  site: earlywarningcareers
+  reason: low_h1b_sponsorship
+  rejected_on: '2026-04-29'
+- tenant: echo
+  name: Echo Global Logistics
+  wd_server: wd1
+  site: Echo_Logistics
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: elkay
+  name: Zurn Elkay Water Solutions
+  wd_server: wd1
+  site: Elkay_External
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: esab
+  name: ESAB
+  wd_server: wd5
+  site: esabcareers
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: essc
+  name: Easterseals Southern California
+  wd_server: wd501
+  site: ESSC_Careers
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: evergreenix
+  name: Everfox
+  wd_server: wd1
+  site: external-careers2
+  reason: defense_clearance
+  rejected_on: '2026-04-29'
+- tenant: faithtechnologies
+  name: Faith Technologies Incorporated
+  wd_server: wd1
+  site: FTI
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: ferguson
+  name: Ferguson
+  wd_server: wd1
+  site: Ferguson_Experienced
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: ferrovial
+  name: Ferrovial
+  wd_server: wd3
+  site: Ferrovial_Career_Site
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: fgcu
+  name: Florida Gulf Coast University
+  wd_server: wd5
+  site: eaglejobs
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: fifththird
+  name: Fifth Third Bank
+  wd_server: wd5
+  site: 53careers
+  reason: low_h1b_sponsorship
+  rejected_on: '2026-04-29'
+- tenant: finra
+  name: FINRA
+  wd_server: wd1
+  site: FINRA
+  reason: low_h1b_sponsorship
+  rejected_on: '2026-04-29'
+- tenant: firstam
+  name: FCT
+  wd_server: wd1
+  site: firstamericancareers
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: flextronics
+  name: Flex
+  wd_server: wd1
+  site: Careers
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: flir
+  name: Teledyne FLIR
+  wd_server: wd1
+  site: flircareers
+  reason: defense_clearance
+  rejected_on: '2026-04-29'
+- tenant: fox
+  name: Fox Corporation
+  wd_server: wd1
+  site: Domestic
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: freseniusglobal
+  name: Fresenius Kabi USA
+  wd_server: wd3
+  site: fk_careers
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: fullsteam
+  name: FullSteam LLC
+  wd_server: wd1
+  site: External
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: generac
+  name: Generac Power Systems
+  wd_server: wd5
+  site: External
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: ghc
+  name: Kaplan
+  wd_server: wd1
+  site: Kaplan_Careers
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: gi
+  name: TYLin
+  wd_server: wd1
+  site: Global_Infrastructure
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: godirect
+  name: Voya Financial
+  wd_server: wd5
+  site: voya_jobs
+  reason: low_h1b_sponsorship
+  rejected_on: '2026-04-29'
+- tenant: goodwinprocter
+  name: Goodwin Procter LLP
+  wd_server: wd5
+  site: External_Careers
+  reason: low_h1b_sponsorship
+  rejected_on: '2026-04-29'
+- tenant: grammy
+  name: The Recording Academy
+  wd_server: wd5
+  site: The_Recording_Academy_Career_Site
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: greenheckgroup
+  name: Greenheck Group
+  wd_server: wd5
+  site: External
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: haemonetics
+  name: Haemonetics Corp.
+  wd_server: wd5
+  site: HAE
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: heidelbergmaterials
+  name: Heidelberg Materials
+  wd_server: wd3
+  site: Global_HM_Career_Site
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: hexcel
+  name: Hexcel Corporation
+  wd_server: wd5
+  site: HexcelCareers
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: highmarkhealth
+  name: United Concordia Dental
+  wd_server: wd1
+  site: highmark
+  reason: low_h1b_sponsorship
+  rejected_on: '2026-04-29'
+- tenant: hitachi
+  name: Proterial
+  wd_server: wd1
+  site: hitachi
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: hklaw
+  name: Holland & Knight
+  wd_server: wd1
+  site: Holland_Knight
+  reason: low_h1b_sponsorship
+  rejected_on: '2026-04-29'
+- tenant: holmanautogroup
+  name: Holman
+  wd_server: wd1
+  site: HolmanEnterprisesCareers
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: hp
+  name: HP
+  wd_server: wd5
+  site: ExternalCareerSite
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: hysteryale
+  name: Hyster-Yale Materials Handling
+  wd_server: wd1
+  site: Hyster-YaleCareers
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: iberdrola
+  name: Iberdrola Group
+  wd_server: wd3
+  site: Iberdrola
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: ingrammicro
+  name: Ingram Micro
+  wd_server: wd5
+  site: IngramMicro
+  reason: low_h1b_sponsorship
+  rejected_on: '2026-04-29'
+- tenant: ingredion
+  name: Ingredion
+  wd_server: wd1
+  site: IngredionCareers
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: inlandimaging
+  name: Inland Imaging
+  wd_server: wd5
+  site: Inland_Imaging_Careers
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: insperity
+  name: Insperity
+  wd_server: wd12
+  site: NSP
+  reason: low_h1b_sponsorship
+  rejected_on: '2026-04-29'
+- tenant: integer
+  name: Integer
+  wd_server: wd1
+  site: External
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: integritymarketing
+  name: Integrity Marketing Group
+  wd_server: wd1
+  site: Integrity
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: interfacesystems
+  name: Interface Systems
+  wd_server: wd5
+  site: InterfaceSystemsCareers
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: irhythmtech
+  name: iRhythm Technologies
+  wd_server: wd5
+  site: iRhythm
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: jabil
+  name: Jabil
+  wd_server: wd5
+  site: Jabil_Careers
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: jackson
+  name: Jackson National Life Insurance Company
+  wd_server: wd1
+  site: Jackson_Careers
+  reason: low_h1b_sponsorship
+  rejected_on: '2026-04-29'
+- tenant: justfab
+  name: Fabletics
+  wd_server: wd1
+  site: fabletics
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: kcura
+  name: Relativity
+  wd_server: wd1
+  site: External_Career_Site
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: keybank
+  name: KeyBank
+  wd_server: wd5
+  site: External_Career_Site
+  reason: low_h1b_sponsorship
+  rejected_on: '2026-04-29'
+- tenant: kiongroup
+  name: Dematic
+  wd_server: wd3
+  site: KIONGroup
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: lazboy
+  name: La-Z-Boy
+  wd_server: wd1
+  site: LZBCareers
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: lendingclub
+  name: LendingClub
+  wd_server: wd1
+  site: External
+  reason: low_h1b_sponsorship
+  rejected_on: '2026-04-29'
+- tenant: lennar
+  name: Lennar
+  wd_server: wd1
+  site: Lennar_Jobs
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: lewisandclark
+  name: Lewis & Clark College
+  wd_server: wd5
+  site: staff
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: lithiumamericas
+  name: Lithium Americas
+  wd_server: wd108
+  site: External_Careers_SG
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: lkqcorp
+  name: LKQ Corporation
+  wd_server: wd5
+  site: ExternalCareerSite-LKQ
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: lsi
+  name: Arxada
+  wd_server: wd3
+  site: Arxada_Careers
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: lytx
+  name: Lytx
+  wd_server: wd1
+  site: Lytx
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: maersk
+  name: MAERSK
+  wd_server: wd3
+  site: Maersk_Careers
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: manulife
+  name: Manulife
+  wd_server: wd3
+  site: MFCJH_Jobs
+  reason: low_h1b_sponsorship
+  rejected_on: '2026-04-29'
+- tenant: marathonhealth
+  name: Marathon Health
+  wd_server: wd501
+  site: Marathon-Health-Careers
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: massgeneralbrigham
+  name: The Brigham and Women's Hospital, Inc.
+  wd_server: wd1
+  site: MGBExternal
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: maxar
+  name: Vantor
+  wd_server: wd1
+  site: Vantor
+  reason: defense_clearance
+  rejected_on: '2026-04-29'
+- tenant: mdtkangaroo
+  name: MiniMed
+  wd_server: wd108
+  site: MiniMedCareers
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: medline
+  name: Medline Industries
+  wd_server: wd5
+  site: Medline
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: medtronic
+  name: Medtronic
+  wd_server: wd1
+  site: MedtronicCareers
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: mhs
+  name: FORTNA
+  wd_server: wd1
+  site: Careers
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: mii
+  name: MiTek
+  wd_server: wd5
+  site: MiTek
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: modernatx
+  name: Moderna
+  wd_server: wd1
+  site: M_tx
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: montefiore
+  name: Montefiore Einstein
+  wd_server: wd12
+  site: MMC
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: montrose
+  name: Onterris
+  wd_server: wd1
+  site: MEG
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: motorolasolutions
+  name: Motorola Solutions
+  wd_server: wd5
+  site: Careers
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: mufgub
+  name: MUFG
+  wd_server: wd3
+  site: MUFG-Careers
+  reason: low_h1b_sponsorship
+  rejected_on: '2026-04-29'
+- tenant: nant
+  name: ImmunityBio
+  wd_server: wd5
+  site: ImmunityBio
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: newrez
+  name: Newrez
+  wd_server: wd1
+  site: NRZ
+  reason: low_h1b_sponsorship
+  rejected_on: '2026-04-29'
+- tenant: ngsgi
+  name: Natural Gas Services Group, Inc
+  wd_server: wd108
+  site: External
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: nidec
+  name: Nidec Motor Corporation
+  wd_server: wd1
+  site: Nidec
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: nshs
+  name: Endeavor Health
+  wd_server: wd1
+  site: ns-eeh
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: ntrs
+  name: Northern Trust Corp.
+  wd_server: wd1
+  site: northerntrust
+  reason: low_h1b_sponsorship
+  rejected_on: '2026-04-29'
+- tenant: nvent
+  name: nVent
+  wd_server: wd5
+  site: nVent
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: nwis
+  name: Nightwing
+  wd_server: wd12
+  site: NW
+  reason: defense_clearance
+  rejected_on: '2026-04-29'
+- tenant: omnionpower
+  name: OmniOn Power
+  wd_server: wd5
+  site: External
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: oneok
+  name: ONEOK
+  wd_server: wd1
+  site: ONEOK
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: ontic
+  name: Ontic Engineering and Manufacturing
+  wd_server: wd103
+  site: OnticCareers
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: oregon
+  name: Department of Administrative Services
+  wd_server: wd5
+  site: SOR_External_Career_Site
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: oshkoshcorporation
+  name: Oshkosh Defense
+  wd_server: wd5
+  site: Oshkosh
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: osv-firstunited
+  name: First United Bank
+  wd_server: wd5
+  site: FUBCareersite
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: osv-rubicon
+  name: Magnite
+  wd_server: wd5
+  site: MagniteCareers
+  reason: dead_board
+  rejected_on: '2026-04-29'
+- tenant: papedawson
+  name: Poulos & Bennett
+  wd_server: wd12
+  site: PDE
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: pbv
+  name: Pepsi Bottling Ventures
+  wd_server: wd503
+  site: external
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: philips
+  name: Philips
+  wd_server: wd3
+  site: jobs-and-careers
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: point32health
+  name: Point32Health
+  wd_server: wd5
+  site: THP
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: porch
+  name: Porch Group Media
+  wd_server: wd1
+  site: careers
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: portlandgeneral
+  name: Portland General Electric
+  wd_server: wd5
+  site: pgn
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: pretiumenterpriseservices
+  name: Progress Residential
+  wd_server: wd1
+  site: Selene
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: primetherapeutics
+  name: Prime Therapeutics
+  wd_server: wd1
+  site: PrimeTherapeuticsCareers
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: prologis
+  name: Prologis
+  wd_server: wd5
+  site: Prologis_External_Careers
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: q2ebanking
+  name: Q2ebanking
+  wd_server: wd5
+  site: Q2
+  reason: low_h1b_sponsorship
+  rejected_on: '2026-04-29'
+- tenant: qtsdatacenters
+  name: QTS
+  wd_server: wd5
+  site: qts
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: r1rcm
+  name: R1 RCM
+  wd_server: wd1
+  site: R1RCM
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: radiancetech
+  name: Radiance Technologies Inc.
+  wd_server: wd12
+  site: Radiance_External
+  reason: defense_clearance
+  rejected_on: '2026-04-29'
+- tenant: raymondjames
+  name: Raymond James
+  wd_server: wd1
+  site: RaymondJamesCareers
+  reason: low_h1b_sponsorship
+  rejected_on: '2026-04-29'
+- tenant: rbi
+  name: Restaurant Brands International
+  wd_server: wd3
+  site: RBI_External_Career_Site
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: redriver
+  name: Red River
+  wd_server: wd5
+  site: redrivercareers
+  reason: low_h1b_sponsorship
+  rejected_on: '2026-04-29'
+- tenant: rehlko
+  name: Rehlko
+  wd_server: wd12
+  site: Reh
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: resmed
+  name: Resmed
+  wd_server: wd3
+  site: ResMed_External_Careers
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: ritehite
+  name: Rite-Hite
+  wd_server: wd12
+  site: RHH
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: rockwellautomation
+  name: Rockwell Automation
+  wd_server: wd1
+  site: External_Rockwell_Automation
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: ryancompanies
+  name: Ryan Companies US, Inc.
+  wd_server: wd5
+  site: ryancompanies
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: ryansg
+  name: Ryan Specialty Group
+  wd_server: wd5
+  site: Ryan_Specialty_Career_Site
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: sandvik
+  name: Sandvik
+  wd_server: wd3
+  site: sandvik-jobs
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: sbcos
+  name: Stonebridge Companies
+  wd_server: wd1
+  site: SBCOS2
+  reason: low_h1b_sponsorship
+  rejected_on: '2026-04-29'
+- tenant: sehinc
+  name: Short Elliott Hendrickson
+  wd_server: wd12
+  site: SEH
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: sglottery
+  name: Scientific Games
+  wd_server: wd5
+  site: ScientificGamesExternalCareers
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: shi
+  name: SHI International
+  wd_server: wd12
+  site: shicareers
+  reason: low_h1b_sponsorship
+  rejected_on: '2026-04-29'
+- tenant: sierraspace
+  name: Sierra Space
+  wd_server: wd1
+  site: Sierra_Space_External_Career_Site
+  reason: defense_clearance
+  rejected_on: '2026-04-29'
+- tenant: slihrms
+  name: Linxon
+  wd_server: wd3
+  site: Linxon
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: smithnephew
+  name: Smith+Nephew
+  wd_server: wd5
+  site: External
+  reason: dead_board
+  rejected_on: '2026-04-29'
+- tenant: snc
+  name: Sierra Nevada Corporation
+  wd_server: wd1
+  site: SNC_External_Career_Site
+  reason: defense_clearance
+  rejected_on: '2026-04-29'
+- tenant: solvenergy
+  name: SOLV Energy
+  wd_server: wd1
+  site: SOLV_External_Career
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: starfish
+  name: Torch Technologies
+  wd_server: wd501
+  site: Careers
+  reason: defense_clearance
+  rejected_on: '2026-04-29'
+- tenant: statestreet
+  name: State Street
+  wd_server: wd1
+  site: Global
+  reason: low_h1b_sponsorship
+  rejected_on: '2026-04-29'
+- tenant: stblaw
+  name: Simpson Thacher & Bartlett LLP
+  wd_server: wd1
+  site: careers
+  reason: low_h1b_sponsorship
+  rejected_on: '2026-04-29'
+- tenant: stevens
+  name: Stevens Institute of Technology
+  wd_server: wd5
+  site: External
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: strayer
+  name: Strategic Education, Inc.
+  wd_server: wd1
+  site: SEI
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: stvinc
+  name: STV Group
+  wd_server: wd5
+  site: stv
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: syneoshealth
+  name: Syneos Health
+  wd_server: wd12
+  site: Syneos_Health_External_Site
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: tanger
+  name: Tanger
+  wd_server: wd108
+  site: Tanger_External_CareerSite
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: taylor
+  name: Taylor Corporation
+  wd_server: wd1
+  site: External
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: tbc
+  name: Lyric
+  wd_server: wd12
+  site: LyricCareers
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: td
+  name: TD
+  wd_server: wd3
+  site: TD_Bank_Careers
+  reason: low_h1b_sponsorship
+  rejected_on: '2026-04-29'
+- tenant: teladoc
+  name: Teladoc Health
+  wd_server: wd503
+  site: teladochealth_is_hiring
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: tempurpedic
+  name: Tempur + Sealy
+  wd_server: wd108
+  site: Tempur-Sealy-Careers
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: texascapitalbank
+  name: Texas Capital Bank
+  wd_server: wd12
+  site: Careers
+  reason: low_h1b_sponsorship
+  rejected_on: '2026-04-29'
+- tenant: theirc
+  name: International Rescue Committee
+  wd_server: wd1
+  site: External_Careers
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: theocc
+  name: Options Clearing Corporation
+  wd_server: wd5
+  site: careers
+  reason: low_h1b_sponsorship
+  rejected_on: '2026-04-29'
+- tenant: tiaa
+  name: TIAA
+  wd_server: wd1
+  site: Search
+  reason: low_h1b_sponsorship
+  rejected_on: '2026-04-29'
+- tenant: troweprice
+  name: T. Rowe Price
+  wd_server: wd5
+  site: TRowePrice
+  reason: low_h1b_sponsorship
+  rejected_on: '2026-04-29'
+- tenant: tsys
+  name: Global Payments
+  wd_server: wd1
+  site: TSYS
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: tti
+  name: Milwaukee Tool
+  wd_server: wd1
+  site: Milwaukee
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: tuftsmedicine
+  name: Tufts Medicine
+  wd_server: wd1
+  site: Jobs
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: usc
+  name: Keck Medicine of USC
+  wd_server: wd5
+  site: ExternalKeckUSCCareers
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: utaustin
+  name: University of Texas at Austin
+  wd_server: wd1
+  site: UTstaff
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: vai
+  name: Van Andel Institute
+  wd_server: wd1
+  site: VAICareers
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: vanderlande
+  name: Vanderlande Industries
+  wd_server: wd3
+  site: careers
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: vantagedc
+  name: Vantage Data Centers
+  wd_server: wd1
+  site: Vantage
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: velco
+  name: Vermont Electric Power Company
+  wd_server: wd12
+  site: VELCO
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: vfc
+  name: Timberland
+  wd_server: wd5
+  site: vfc_careers
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: vhr-epri
+  name: Electric Power Research Institute
+  wd_server: wd1
+  site: epricareers
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: vhr-genband
+  name: Ribbon Communications
+  wd_server: wd1
+  site: ribboncareers
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: washpost
+  name: The Washington Post
+  wd_server: wd5
+  site: washingtonpostcareers
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: wellington
+  name: Wellington Management
+  wd_server: wd5
+  site: External
+  reason: low_h1b_sponsorship
+  rejected_on: '2026-04-29'
+- tenant: wgu
+  name: Western Governors University
+  wd_server: wd5
+  site: External
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: williams
+  name: Williams
+  wd_server: wd5
+  site: External
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: wisconsin
+  name: University of Wisconsin-Milwaukee
+  wd_server: wd1
+  site: UW_Milwaukee
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: wonder
+  name: Wonder
+  wd_server: wd1
+  site: WG
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: woodward
+  name: Woodward, Inc.
+  wd_server: wd5
+  site: woodward
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: workhuman
+  name: Workhuman
+  wd_server: wd1
+  site: WorkhumanCareers
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: worldpay
+  name: Worldpay
+  wd_server: wd5
+  site: Worldpay_External_Careers_Site
+  reason: low_h1b_sponsorship
+  rejected_on: '2026-04-29'
+- tenant: xylem
+  name: Xylem
+  wd_server: wd5
+  site: xylem-careers
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: zayo
+  name: Zayo Group
+  wd_server: wd1
+  site: Zayo_Careers
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: zekelman
+  name: Zekelman Industries
+  wd_server: wd12
+  site: Careers
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
+- tenant: zoetis
+  name: Zoetis
+  wd_server: wd5
+  site: zoetis
+  reason: industry_mismatch
+  rejected_on: '2026-04-29'
