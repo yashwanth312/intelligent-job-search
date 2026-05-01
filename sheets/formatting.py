@@ -74,6 +74,26 @@ def _clear_banding(spreadsheet: Spreadsheet, sheet_id: int) -> None:
         pass  # No banding to clear
 
 
+def _clear_conditional_formatting(spreadsheet: Spreadsheet, sheet_id: int) -> None:
+    """Delete all conditional format rules before re-applying, preventing accumulation."""
+    try:
+        meta = spreadsheet.fetch_sheet_metadata()
+        for sheet in meta.get("sheets", []):
+            if sheet["properties"]["sheetId"] == sheet_id:
+                rules = sheet.get("conditionalFormats", [])
+                if not rules:
+                    return
+                # Delete from highest index to lowest to avoid index shifts mid-batch
+                requests = [
+                    {"deleteConditionalFormatRule": {"sheetId": sheet_id, "index": i}}
+                    for i in range(len(rules) - 1, -1, -1)
+                ]
+                spreadsheet.batch_update({"requests": requests})
+                return
+    except Exception:
+        pass
+
+
 def format_daily(spreadsheet: Spreadsheet, ws: Worksheet) -> None:
     """Format the Daily tab."""
     sheet_id = ws.id
@@ -157,10 +177,12 @@ def format_materials(spreadsheet: Spreadsheet, ws: Worksheet) -> None:
     """Format the Materials tab — generated resumes/CLs queue."""
     sheet_id = ws.id
     _clear_banding(spreadsheet, sheet_id)
+    _clear_conditional_formatting(spreadsheet, sheet_id)
     requests = []
 
     requests.append(_freeze_rows(sheet_id, 1))
     requests.append(_header_format(sheet_id, 12))
+    requests.append(_plain_data_rows(sheet_id, 12))
 
     widths = [
         (0, 100),   # Date Generated
@@ -391,6 +413,35 @@ def _row_cond_format(sheet_id: int, num_cols: int, formula: str, bg: dict) -> di
                 },
             },
             "index": 0,
+        }
+    }
+
+
+def _plain_data_rows(sheet_id: int, num_cols: int) -> dict:
+    """Reset explicit cell formatting for all data rows so insert_row inherits clean styling."""
+    return {
+        "repeatCell": {
+            "range": {
+                "sheetId": sheet_id,
+                "startRowIndex": 1,
+                "endRowIndex": 1000,
+                "startColumnIndex": 0,
+                "endColumnIndex": num_cols,
+            },
+            "cell": {
+                "userEnteredFormat": {
+                    "backgroundColor": {"red": 1.0, "green": 1.0, "blue": 1.0},
+                    "textFormat": {
+                        "bold": False,
+                        "foregroundColor": {"red": 0.0, "green": 0.0, "blue": 0.0},
+                    },
+                    "horizontalAlignment": "LEFT",
+                    "verticalAlignment": "MIDDLE",
+                    "wrapStrategy": "OVERFLOW_CELL",
+                    "padding": {"top": 2, "bottom": 2, "left": 4, "right": 4},
+                }
+            },
+            "fields": "userEnteredFormat(backgroundColor,textFormat,horizontalAlignment,verticalAlignment,wrapStrategy,padding)",
         }
     }
 

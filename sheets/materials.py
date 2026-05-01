@@ -51,3 +51,17 @@ def get_applied_jobs(ws: gspread.Worksheet) -> list[dict]:
     """Return rows where Status = 'Applied' — ready to sync to Tracker."""
     all_rows = ws.get_all_records()
     return [r for r in all_rows if str(r.get("Status", "")).strip() == "Applied"]
+
+
+def get_generated_fingerprints(ws: gspread.Worksheet) -> set[str]:
+    """Return company||title fingerprints for jobs with status 'Ready to Apply'.
+
+    Only blocks re-generation of jobs still sitting in the queue — won't prevent
+    a new opening at the same company/title from being processed months later.
+    """
+    all_rows = ws.get_all_records()
+    return {
+        f"{str(r.get('Company', '')).strip().lower()}||{str(r.get('Job Title', '')).strip().lower()}"
+        for r in all_rows
+        if str(r.get("Status", "")).strip() == "Ready to Apply"
+    }

@@ -99,6 +99,8 @@ def print_summary(counters: dict, total_elapsed: float, drive_enabled: bool) -> 
         print(f"  ⚠ PDF render failed: {counters['pdf_failed']} (HTML fallbacks written)")
     if counters['claude_failed'] > 0:
         print(f"  ✗ Claude failed:   {counters['claude_failed']}")
+    if counters.get('already_done', 0) > 0:
+        print(f"  ↩ Already done:    {counters['already_done']} (skipped)")
     print(f"  ⏱ Total time:      {fmt_dur(total_elapsed)}")
     print(f"  📂 PDFs at:        {Path('output').resolve()}")
     print(f"  📋 Next step:      open Applied tab in Google Sheets")
@@ -279,14 +281,23 @@ def main():
     drive_enabled = bool(GOOGLE_DRIVE_FOLDER_ID)
     print_header(len(apply_jobs), drive_enabled, started_at)
 
+    already_done = materials_ops.get_generated_fingerprints(applied_ws)
+
     engine = ResumeEngine(profile_path="profile.yaml")
     uploader = DriveUploader() if drive_enabled else None
     today = date.today().isoformat()
 
-    counters = {"success": 0, "local_only": 0, "pdf_failed": 0, "claude_failed": 0}
+    counters = {"success": 0, "local_only": 0, "pdf_failed": 0, "claude_failed": 0, "already_done": 0}
 
     try:
         for i, row in enumerate(apply_jobs, 1):
+            company = row.get("Company", "")
+            title = row.get("Job Title", "")
+            fingerprint = f"{company.strip().lower()}||{title.strip().lower()}"
+            if fingerprint in already_done:
+                print(f"[{i}/{len(apply_jobs)}] {company} · {title} — already generated, skipping\n")
+                counters["already_done"] += 1
+                continue
             try:
                 outcome = process_job(
                     idx=i, total=len(apply_jobs), row=row, today=today,
