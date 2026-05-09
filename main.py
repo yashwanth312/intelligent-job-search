@@ -128,7 +128,12 @@ async def run_pipeline() -> None:
     daily_ws = sheets.get_daily_sheet()
     audit_ws = sheets.get_audit_sheet()
     known_fps = db.get_recent_fingerprints(STALE_JOB_DAYS)
-    ui.phase_done(f"{len(known_fps)} known fingerprints from last {STALE_JOB_DAYS}d")
+    applied_fps = {row["job_fingerprint"] for row in db.get_all_feedback()}
+    known_fps |= applied_fps
+    ui.phase_done(
+        f"{len(known_fps)} known fingerprints "
+        f"({len(known_fps) - len(applied_fps)} recent + {len(applied_fps)} applied)"
+    )
 
     # ── Phase 2: Clear sheets ─────────────────────────────────
     ui.phase(2, "Clearing Daily + Audit tabs")
