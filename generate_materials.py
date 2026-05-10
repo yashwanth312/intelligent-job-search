@@ -45,7 +45,12 @@ BAR = "─" * 68
 
 
 def slugify(text: str) -> str:
-    return text.lower().replace(" ", "-").replace(",", "").replace(".", "")[:50]
+    import re
+    text = text.lower()
+    text = re.sub(r'[\\/:*?"<>|()\[\]{}]', "", text)  # strip Windows-invalid + brackets
+    text = re.sub(r'\s+', "-", text.strip())
+    text = re.sub(r'-+', "-", text)
+    return text[:50].rstrip("-")
 
 
 def fmt_dur(seconds: float) -> str:
