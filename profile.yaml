@@ -40,6 +40,18 @@ experiences:
       ai_infrastructure:
         title: "Junior Infrastructure Engineer"
         bullets: []
+      product_ownership:
+        title: "Product Lead"
+        bullets:
+          - "Originated the Ocklet product concept and led it end-to-end from ideation through MVP — defining target verticals (dental, home services, salons, restaurants), core feature set, and technical architecture for an AI voice agent SaaS."
+          - "Drove product decisions across the full stack: real-time voice pipeline design, multilingual support (10+ languages), Google Calendar + Outlook booking integrations, lead analytics dashboard, and a 48-hour customer onboarding model."
+      it_admin:
+        title: "IT Administrator"
+        bullets:
+          - "Administered Microsoft 365 for the team — provisioning user accounts, managing licensing, and configuring shared mailboxes (support, sales, info) with bidirectional CRM and JIRA integration for unified ticket intake."
+          - "Built Exchange Online mail flow rules to auto-classify inbound support tickets, route them to the responsible team member, and trigger auto-forwarding — eliminating manual triage and enforcing consistent ticket ownership."
+          - "Registered and managed the company domain, configuring the full DNS zone to wire Microsoft 365 Exchange with Cloudflare — including MX, SPF, DKIM, and domain verification records for reliable mail delivery and spoofing protection."
+          - "Engineered Cloudflare Workers-based dynamic environment provisioning triggered by GitHub Actions — automatically spinning up isolated test/dev environments on demand while keeping a production worker live with scoped secrets and environment variables."
     raw_context: |
       Built the company's US infrastructure from scratch. Password vault (zero-trust),
       CI/CD pipelines, AWS setup with Terraform, DNS/email security (SPF/DKIM),
@@ -52,6 +64,18 @@ experiences:
       Technologies: AWS (Cognito, EC2, S3, EKS), Terraform, Jenkins, GitHub Actions,
       Docker, React, Next.js, TypeScript, FastAPI, PostgreSQL, Supabase, Resend.
       Metrics: 40% faster deployments, 90% less manual setup, 15% cost reduction.
+
+      Also (Feb 2026 - Present): Product lead and IT/infra owner for Ocklet product.
+      Originated the product idea; led from idealization through MVP.
+      Microsoft 365: user accounts + licensing, shared mailboxes (support, sales, info)
+      connected to CRM and JIRA, Exchange Online mail flow rules (ticket routing,
+      auto-forwarding, classification).
+      Domain & DNS: purchased and manages company domain; full DNS zone configured
+      (MX, SPF, DKIM, TXT) wiring M365 + Cloudflare.
+      Cloudflare: Pages (production hosting), Workers (production worker always live
+      with scoped secrets; dynamic test/dev workers conditionally spun up via
+      GitHub Actions triggers), built-in WAF + DDoS.
+      See also: "AI Voice Agent Platform (Ocklet)" project entry for product tech stack.
 
   - company: "Texas Instruments"
     location: "Bangalore, India"
@@ -466,6 +490,10 @@ skills:
     - "Datadog"
     - "CloudWatch"
     - "ELK Stack"
+  sysadmin:
+    - "Microsoft 365 (Exchange Online, shared mailboxes, mail flow rules, user/license management)"
+    - "Cloudflare (Pages, Workers, DNS zone management, WAF)"
+    - "Domain registration and DNS administration"
   networking:
     - "TCP/IP"
     - "TLS/SSL"
