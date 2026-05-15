@@ -3,6 +3,10 @@
 credentials.json
 *.json.bak
 
+# Personal data — keep off GitHub
+profile.yaml
+workday_candidates.yaml
+
 # Database
 *.db
 

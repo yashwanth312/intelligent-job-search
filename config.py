@@ -14,12 +14,13 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # ── PERSONAL INFO ──────────────────────────────────────────
-YOUR_NAME = os.getenv("YOUR_NAME", "Yashwanth Medisetti")
-YOUR_EMAIL = os.getenv("YOUR_EMAIL", "yashwanthsaikrishna@gmail.com")
-YOUR_PHONE = os.getenv("YOUR_PHONE", "(630) 276 8408")
-YOUR_LOCATION_FALLBACK = os.getenv("YOUR_LOCATION_FALLBACK", "Chicago, IL")
-YOUR_LINKEDIN = os.getenv("YOUR_LINKEDIN", "linkedin.com/in/yashwanth-medisetti")
-YOUR_GITHUB = os.getenv("YOUR_GITHUB", "github.com/yashwanth312")
+# Set these in .env — see .env.example
+YOUR_NAME = os.getenv("YOUR_NAME", "")
+YOUR_EMAIL = os.getenv("YOUR_EMAIL", "")
+YOUR_PHONE = os.getenv("YOUR_PHONE", "")
+YOUR_LOCATION_FALLBACK = os.getenv("YOUR_LOCATION_FALLBACK", "")
+YOUR_LINKEDIN = os.getenv("YOUR_LINKEDIN", "")
+YOUR_GITHUB = os.getenv("YOUR_GITHUB", "")
 
 # ── GOOGLE INTEGRATIONS ───────────────────────────────────
 GOOGLE_SHEETS_CREDS_FILE = os.getenv("GOOGLE_SHEETS_CREDS_FILE", "credentials.json")
@@ -62,7 +63,10 @@ TARGET_TITLES = [
 
 # ── LOCATIONS ─────────────────────────────────────────────
 # Cast the widest net across US tech hubs. 24h freshness filter
-# keeps volume sane even with 17 locations.
+# keeps volume sane even with 18 locations. "United States" is a
+# national catch-all on LinkedIn/Indeed that surfaces postings in
+# secondary metros (Miami, Tampa, Houston, Phoenix, Charlotte, etc.)
+# the city-specific queries miss; dedup absorbs the overlap.
 LOCATIONS = [
     "Chicago, IL",
     "New York, NY",
@@ -80,6 +84,7 @@ LOCATIONS = [
     "Minneapolis, MN",
     "Dallas, TX",
     "Portland, OR",
+    "United States",
     "Remote",
 ]
 
