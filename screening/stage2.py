@@ -133,7 +133,7 @@ class Stage2Screen:
 
             with open(tmp_path, encoding='utf-8') as stdin_file:
                 result = subprocess.run(
-                    [CLAUDE_CLI, "-p", "--output-format", "text"],
+                    [CLAUDE_CLI, "-p", "--output-format", "text", "--model", "claude-sonnet-4-6"],
                     stdin=stdin_file,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
