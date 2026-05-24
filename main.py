@@ -113,7 +113,7 @@ def build_adapters(
     return adapters, display, li_adapter
 
 
-async def _h1b_check_with_timeout(checker: "H1BChecker", jobs: list, timeout: int = 300) -> None:
+async def _h1b_check_with_timeout(checker: "H1BChecker", jobs: list, timeout: float = 300) -> None:
     """Run H1B check with a wall-clock timeout. On timeout, log and continue with None status."""
     try:
         await asyncio.wait_for(checker.check_batch(jobs), timeout=timeout)
