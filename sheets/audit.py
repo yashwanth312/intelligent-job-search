@@ -28,5 +28,6 @@ def write_rejections(ws: gspread.Worksheet, rejections: list[FilterResult]) -> N
         ])
 
     if rows:
-        ws.append_rows(rows, value_input_option="USER_ENTERED")
+        from sheets._retry import append_rows_with_retry
+        append_rows_with_retry(ws, rows, value_input_option="USER_ENTERED")
         logger.info(f"Audit tab: wrote {len(rows)} rejections")
