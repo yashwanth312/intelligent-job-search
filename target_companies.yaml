@@ -110,8 +110,6 @@ greenhouse:
   name: Pinterest
 - token: lyft
   name: Lyft
-- token: coinbase
-  name: Coinbase
 - token: robinhood
   name: Robinhood
 - token: figma
