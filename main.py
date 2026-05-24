@@ -113,6 +113,17 @@ def build_adapters(
     return adapters, display, li_adapter
 
 
+async def _h1b_check_with_timeout(checker: "H1BChecker", jobs: list, timeout: int = 300) -> None:
+    """Run H1B check with a wall-clock timeout. On timeout, log and continue with None status."""
+    try:
+        await asyncio.wait_for(checker.check_batch(jobs), timeout=timeout)
+    except asyncio.TimeoutError:
+        logger.warning(
+            f"H1B checker timed out after {timeout}s — "
+            "all jobs proceeding with h1b_sponsor_verified=None"
+        )
+
+
 async def run_pipeline() -> None:
     ui = PipelineUI(total_phases=TOTAL_PHASES, console=console)
     ui.banner(subtitle=f"{date.today().isoformat()}  ·  freshness window: {HOURS_OLD}h")
@@ -181,7 +192,7 @@ async def run_pipeline() -> None:
     # ── Phase 5: H1B Sponsor Check + source-aware drop ───────
     ui.phase(5, "H1B Sponsor Check + source-aware drop")
     checker = H1BChecker(db)
-    await checker.check_batch(unique_jobs)
+    await _h1b_check_with_timeout(checker, unique_jobs)
     n_curated = sum(
         1 for j in unique_jobs
         if j.source.startswith(("greenhouse-", "lever-", "ashby-"))
