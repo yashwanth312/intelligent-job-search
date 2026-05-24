@@ -67,6 +67,14 @@ class TestOrchestrator:
         assert len(result.errors) == 1
         assert "Source is down" in result.errors[0]
 
+    @pytest.mark.asyncio
+    async def test_error_message_includes_adapter_name(self):
+        bad = FailingSource()  # name = "failing"
+        orchestrator = ScraperOrchestrator(adapters=[bad])
+        result = await orchestrator.scrape_all(["Job"], ["NYC"])
+        assert len(result.errors) == 1
+        assert "failing" in result.errors[0]
+
 
 class TestFilterFreshJobs:
     def _job(self, source: str, posted_at=None) -> RawJob:

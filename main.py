@@ -183,7 +183,8 @@ async def run_pipeline() -> None:
             on_source_done=tracker.mark_done,
         )
     all_scraped = scrape_result.jobs
-    ui.phase_done(f"{len(all_scraped)} unique jobs after cross-source + DB dedup")
+    error_note = f"  ·  {len(scrape_result.errors)} source error(s)" if scrape_result.errors else ""
+    ui.phase_done(f"{len(all_scraped)} unique jobs after cross-source + DB dedup{error_note}")
 
     # Queue any newly discovered Workday tenants for promotion review.
     # Discoveries don't go straight into the active scrape list — they wait
