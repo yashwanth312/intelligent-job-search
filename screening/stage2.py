@@ -8,6 +8,7 @@ import re
 import shutil
 import subprocess
 import tempfile
+import yaml
 from pathlib import Path
 from typing import Callable
 
@@ -37,8 +38,24 @@ class Stage2Screen:
     def _load_profile_summary(self) -> str:
         if self._profile_summary:
             return self._profile_summary
-        with open(self.profile_path, encoding="utf-8") as f:
-            self._profile_summary = f.read()
+
+        with open(self.profile_path) as f:
+            profile = yaml.safe_load(f)
+
+        personal = profile.get("personal", {})
+        parts = [
+            f"Name: {personal.get('name', '')}",
+            f"Visa: {personal.get('visa', '')}",
+            f"Education: {', '.join(e.get('degree', '') + ' @ ' + e.get('school', '') for e in profile.get('education', []))}",
+            f"Experience: {', '.join(e.get('company', '') + ' (' + e.get('period', '') + ')' for e in profile.get('experiences', []))}",
+            f"Certifications: {', '.join(c.get('name', '') for c in profile.get('certifications', []))}",
+        ]
+
+        skills = profile.get("skills", {})
+        for category, items in skills.items():
+            parts.append(f"Skills ({category}): {', '.join(items[:5])}")
+
+        self._profile_summary = "\n".join(parts)
         return self._profile_summary
 
     def screen_batch(

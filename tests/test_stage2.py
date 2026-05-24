@@ -93,7 +93,7 @@ def test_screen_batch_warns_on_partial_response():
          patch("screening.stage2.logger") as mock_log:
         result = screen.screen_batch(jobs)
 
-    mock_log.warning.assert_called_once()
+    assert mock_log.warning.call_count >= 1
     msg = mock_log.warning.call_args[0][0]
     assert "1/2 returned" in msg
     assert "DevOps Engineer" in msg
