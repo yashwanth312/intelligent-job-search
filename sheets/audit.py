@@ -6,6 +6,7 @@ import gspread
 
 from config import AUDIT_HEADERS
 from screening.stage1 import FilterResult
+from sheets._retry import append_rows_with_retry
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,5 @@ def write_rejections(ws: gspread.Worksheet, rejections: list[FilterResult]) -> N
         ])
 
     if rows:
-        from sheets._retry import append_rows_with_retry
         append_rows_with_retry(ws, rows, value_input_option="USER_ENTERED")
         logger.info(f"Audit tab: wrote {len(rows)} rejections")

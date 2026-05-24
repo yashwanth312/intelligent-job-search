@@ -39,4 +39,4 @@ def append_rows_with_retry(
         f"Google Sheets write failed after {max_attempts} attempts — "
         "results are in SQLite but not visible in Sheets"
     )
-    raise last_exc
+    raise last_exc from last_exc

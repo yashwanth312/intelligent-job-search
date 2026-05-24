@@ -8,6 +8,7 @@ import gspread
 
 from config import DAILY_HEADERS
 from models.job import ScreenedJob
+from sheets._retry import append_rows_with_retry
 
 logger = logging.getLogger(__name__)
 
@@ -85,7 +86,6 @@ def write_screened_jobs(ws: gspread.Worksheet, jobs: list[ScreenedJob]) -> None:
         ])
 
     if rows:
-        from sheets._retry import append_rows_with_retry
         append_rows_with_retry(ws, rows, value_input_option="USER_ENTERED")
         logger.info(f"Daily tab: wrote {len(rows)} jobs (sorted by confidence desc)")
 
