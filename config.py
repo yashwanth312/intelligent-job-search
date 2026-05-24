@@ -232,9 +232,9 @@ def validate_required_config() -> None:
     """Raise SystemExit with a clear message if required config is missing."""
     from pathlib import Path
     missing = []
-    if not YOUR_NAME:
+    if not YOUR_NAME.strip():
         missing.append("YOUR_NAME (set in .env)")
-    if not YOUR_EMAIL:
+    if not YOUR_EMAIL.strip():
         missing.append("YOUR_EMAIL (set in .env)")
     if not Path(GOOGLE_SHEETS_CREDS_FILE).exists():
         missing.append(f"GOOGLE_SHEETS_CREDS_FILE={GOOGLE_SHEETS_CREDS_FILE!r} (file not found)")

@@ -1,4 +1,6 @@
 import pytest
+from pathlib import Path
+from unittest.mock import patch
 from config import (
     TARGET_TITLES, LOCATIONS, EXCLUDE_TITLE_KEYWORDS,
     SALARY_FLOOR, SCREENING_CONFIDENCE_THRESHOLD,
@@ -37,10 +39,6 @@ class TestConfig:
         from config import H1B_CACHE_TTL_DAYS
         assert H1B_CACHE_TTL_DAYS == 30
 
-
-import pytest
-from pathlib import Path
-from unittest.mock import patch
 
 
 class TestValidateRequiredConfig:
