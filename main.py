@@ -127,7 +127,7 @@ async def _h1b_check_with_timeout(checker: "H1BChecker", jobs: list, timeout: fl
 def _dedup_daily_jobs(jobs: list["ScreenedJob"]) -> list["ScreenedJob"]:
     """Deduplicate Daily jobs by fingerprint, keeping the highest-confidence version."""
     seen: set[str] = set()
-    result: list = []
+    result: list["ScreenedJob"] = []
     for job in sorted(jobs, key=lambda j: j.confidence, reverse=True):
         if job.fingerprint not in seen:
             seen.add(job.fingerprint)
