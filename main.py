@@ -124,6 +124,21 @@ async def _h1b_check_with_timeout(checker: "H1BChecker", jobs: list, timeout: fl
         )
 
 
+def _dedup_daily_jobs(jobs: list["ScreenedJob"]) -> list["ScreenedJob"]:
+    """Deduplicate Daily jobs by fingerprint, keeping the highest-confidence version."""
+    seen: set[str] = set()
+    result: list = []
+    for job in sorted(jobs, key=lambda j: j.confidence, reverse=True):
+        if job.fingerprint not in seen:
+            seen.add(job.fingerprint)
+            result.append(job)
+        else:
+            logger.warning(
+                f"Dedup: removed duplicate daily entry for {job.company} — {job.title}"
+            )
+    return result
+
+
 async def run_pipeline() -> None:
     ui = PipelineUI(total_phases=TOTAL_PHASES, console=console)
     ui.banner(subtitle=f"{date.today().isoformat()}  ·  freshness window: {HOURS_OLD}h")
@@ -394,6 +409,7 @@ async def run_pipeline() -> None:
             risk_flags=["no_description"],
             suggested_angle="",
         ))
+    daily_jobs = _dedup_daily_jobs(daily_jobs)
     daily_ops.write_screened_jobs(daily_ws, daily_jobs)
 
     audit_ops.write_rejections(audit_ws, rejected)

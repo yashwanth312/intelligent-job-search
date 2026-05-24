@@ -29,3 +29,40 @@ async def test_h1b_timeout_calls_checker_normally_when_fast():
     checker.check_batch = AsyncMock()
     await _h1b_check_with_timeout(checker, [], timeout=5)
     checker.check_batch.assert_called_once_with([])
+
+
+def _make_screened(title, company, confidence, verdict_str, reasoning="", risk_flags=None):
+    from models.job import ScreenedJob, ScreeningVerdict
+    return ScreenedJob(
+        title=title, company=company, location="Remote",
+        url=f"https://example.com/{company.lower()}",
+        source="greenhouse-test",
+        verdict=ScreeningVerdict(verdict_str),
+        confidence=confidence,
+        reasoning=reasoning,
+        match_signals=[],
+        risk_flags=risk_flags or [],
+    )
+
+
+def test_dedup_daily_jobs_removes_lower_confidence_duplicate():
+    from main import _dedup_daily_jobs
+    screened = _make_screened("Cloud Engineer", "Acme", confidence=4, verdict_str="APPLY")
+    unscreened = _make_screened("Cloud Engineer", "Acme", confidence=1, verdict_str="MAYBE",
+                                reasoning="No JD available", risk_flags=["no_description"])
+    result = _dedup_daily_jobs([unscreened, screened])
+    assert len(result) == 1
+    assert result[0].confidence == 4
+
+
+def test_dedup_daily_jobs_passthrough_unique_jobs():
+    from main import _dedup_daily_jobs
+    job_a = _make_screened("Cloud Engineer", "Acme", confidence=4, verdict_str="APPLY")
+    job_b = _make_screened("DevOps Engineer", "Beta", confidence=3, verdict_str="MAYBE")
+    result = _dedup_daily_jobs([job_a, job_b])
+    assert len(result) == 2
+
+
+def test_dedup_daily_jobs_empty_list():
+    from main import _dedup_daily_jobs
+    assert _dedup_daily_jobs([]) == []
