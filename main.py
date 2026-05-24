@@ -118,6 +118,8 @@ async def run_pipeline() -> None:
 
     # ── Phase 1: Init ─────────────────────────────────────────
     ui.phase(1, "Initializing (profile, DB, Google creds)")
+    from config import validate_required_config
+    validate_required_config()
     if not Path("profile.yaml").exists():
         ui.error("profile.yaml not found. Run `python update_profile.py` first.")
         sys.exit(1)

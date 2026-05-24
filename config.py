@@ -52,13 +52,17 @@ TARGET_TITLES = [
     "DevOps Engineer",
     "Site Reliability Engineer",
     "Platform Engineer",
+    "DevSecOps Engineer",
     # Security
     "Security Engineer",
     "Security Analyst",
-    # AI Intersection
+    # AI / Agentic / Automation
+    "AI Engineer",
+    "AI Solutions Engineer",
+    "Automation Engineer",
+    # AI Intersection (infra)
     "MLOps Engineer",
     "AI Platform Engineer",
-    "AI Security Engineer",
 ]
 
 # ── LOCATIONS ─────────────────────────────────────────────
@@ -144,6 +148,9 @@ TITLE_DOMAIN_KEYWORDS = [
     "cloud", "devops", "security", "sre", "platform", "infrastructure",
     "mlops", "ai", "ml", "machine learning", "devsecops",
     "reliability", "kubernetes", "observability", "systems",
+    # New role categories — Greenhouse pre-filter must capture these too
+    "automation", "software", "full stack", "fullstack", "agentic",
+    "llm", "generative",
 ]
 
 # ── DESCRIPTION HARD-STOP PATTERNS ────────────────────────
@@ -171,6 +178,10 @@ REQUIRE_ONE_OF = [
     "ci/cd", "docker", "jenkins", "github actions", "ansible",
     "prometheus", "grafana", "helm", "vault", "linux", "automation",
     "mlops", "ai", "machine learning", "ml pipeline", "observability",
+    # AI-native terms — AI Engineer roles may use these instead of infra keywords
+    "llm", "openai", "agentic", "generative", "copilot", "rag",
+    "langchain", "genai", "prompt engineering", "large language model",
+    "azure openai", "gpt-4", "gpt-3", "anthropic",
 ]
 
 # ── SALARY FLOOR ──────────────────────────────────────────
@@ -215,3 +226,19 @@ TRACKER_HEADERS = [
 
 # Keep for any legacy references
 APPLIED_HEADERS = MATERIALS_HEADERS
+
+# ── STARTUP VALIDATION ────────────────────────────────────
+def validate_required_config() -> None:
+    """Raise SystemExit with a clear message if required config is missing."""
+    from pathlib import Path
+    missing = []
+    if not YOUR_NAME:
+        missing.append("YOUR_NAME (set in .env)")
+    if not YOUR_EMAIL:
+        missing.append("YOUR_EMAIL (set in .env)")
+    if not Path(GOOGLE_SHEETS_CREDS_FILE).exists():
+        missing.append(f"GOOGLE_SHEETS_CREDS_FILE={GOOGLE_SHEETS_CREDS_FILE!r} (file not found)")
+    if missing:
+        raise SystemExit(
+            "Missing required config:\n" + "\n".join(f"  • {m}" for m in missing)
+        )
