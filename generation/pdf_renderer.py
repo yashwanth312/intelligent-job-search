@@ -33,9 +33,10 @@ logger = logging.getLogger(__name__)
 TEMPLATE_PATH = Path(__file__).parent.parent / "templates" / "resume.html"
 
 # Empirical char-count budget for the contact line so it fits on one row at
-# 9.5pt Calibri across a 7.5"-wide content area. If the full line exceeds this,
-# drop GitHub first, then email — never drop name/phone/location/linkedin.
-_CONTACT_LINE_MAX_CHARS = 110
+# 9.5pt Calibri across a 7.5"-wide content area. Above this we wrap to two lines
+# (location/phone/email on top, linkedin/github on bottom) so GitHub is always
+# present — engineering applications need it.
+_CONTACT_LINE_MAX_CHARS = 120
 
 _WEASYPRINT_INSTALL_HINT = (
     "WeasyPrint can't load its native libraries (GTK3 runtime). "
@@ -70,16 +71,15 @@ def _escape_with_bold(text: str) -> str:
 
 
 def _build_contact_line(location: str) -> str:
-    """Build the header contact line. Drops GitHub then email if too long."""
+    """Build the header contact line. Single line if it fits; otherwise wraps to
+    two lines so GitHub is always present (engineering applications need it)."""
     loc = location or YOUR_LOCATION_FALLBACK
     full = f"{loc} | {YOUR_PHONE} | {YOUR_LINKEDIN} | {YOUR_EMAIL} | {YOUR_GITHUB}"
     if len(full) <= _CONTACT_LINE_MAX_CHARS:
         return html_lib.escape(full)
-    no_github = f"{loc} | {YOUR_PHONE} | {YOUR_LINKEDIN} | {YOUR_EMAIL}"
-    if len(no_github) <= _CONTACT_LINE_MAX_CHARS:
-        return html_lib.escape(no_github)
-    no_email = f"{loc} | {YOUR_PHONE} | {YOUR_LINKEDIN}"
-    return html_lib.escape(no_email)
+    line1 = " | ".join(p for p in (loc, YOUR_PHONE, YOUR_EMAIL) if p)
+    line2 = " | ".join(p for p in (YOUR_LINKEDIN, YOUR_GITHUB) if p)
+    return html_lib.escape(line1) + "<br>" + html_lib.escape(line2)
 
 
 def render_resume_pdf(resume_data: dict, output_path: Path) -> bool:

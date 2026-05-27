@@ -8,7 +8,6 @@ import re
 import shutil
 import subprocess
 import tempfile
-import yaml
 from pathlib import Path
 from typing import Callable
 
@@ -22,7 +21,7 @@ PROMPT_PATH = Path(__file__).parent.parent / "prompts" / "screening.md"
 class Stage2Screen:
     def __init__(self, profile_path: str = "profile.yaml"):
         self.profile_path = profile_path
-        self._profile_summary: str | None = None
+        self._profile: str | None = None
 
     def validate_cli(self) -> None:
         """Raise RuntimeError if the Claude CLI binary cannot be located."""
@@ -35,28 +34,12 @@ class Stage2Screen:
                 "add CLAUDE_CLI=/full/path/to/claude to your .env file."
             )
 
-    def _load_profile_summary(self) -> str:
-        if self._profile_summary:
-            return self._profile_summary
-
-        with open(self.profile_path) as f:
-            profile = yaml.safe_load(f)
-
-        personal = profile.get("personal", {})
-        parts = [
-            f"Name: {personal.get('name', '')}",
-            f"Visa: {personal.get('visa', '')}",
-            f"Education: {', '.join(e.get('degree', '') + ' @ ' + e.get('school', '') for e in profile.get('education', []))}",
-            f"Experience: {', '.join(e.get('company', '') + ' (' + e.get('period', '') + ')' for e in profile.get('experiences', []))}",
-            f"Certifications: {', '.join(c.get('name', '') for c in profile.get('certifications', []))}",
-        ]
-
-        skills = profile.get("skills", {})
-        for category, items in skills.items():
-            parts.append(f"Skills ({category}): {', '.join(items[:5])}")
-
-        self._profile_summary = "\n".join(parts)
-        return self._profile_summary
+    def _load_profile(self) -> str:
+        if self._profile:
+            return self._profile
+        with open(self.profile_path, encoding="utf-8") as f:
+            self._profile = f.read()
+        return self._profile
 
     def screen_batch(
         self,
@@ -122,7 +105,7 @@ class Stage2Screen:
             })
 
         prompt = prompt_template.replace(
-            "{{profile_summary}}", self._load_profile_summary()
+            "{{profile}}", self._load_profile()
         ).replace(
             "{{jobs_json}}", json.dumps(jobs_data, indent=2)
         )

@@ -37,7 +37,7 @@ class Stage1Filter:
                                     reason=f"Title exclusion: '{kw}' matched in '{job.title}'",
                                     stage="stage1_title")
 
-        # 2. Title domain check — at least one domain keyword
+        # 2. Title domain check — at least one domain keyword must appear in the title
         has_domain = any(
             re.search(r'\b' + re.escape(kw) + r'\b', title_lower)
             for kw in TITLE_DOMAIN_KEYWORDS
@@ -66,9 +66,12 @@ class Stage1Filter:
                                     reason=f"Description hard-stop: '{pattern}'",
                                     stage="stage1_desc")
 
-        # 5. Must-have keyword check (title already has domain keyword, so check desc too)
+        # 5. Must-have keyword check — title + description combined (word-boundary)
         combined = title_lower + " " + desc_lower
-        has_required = any(kw.lower() in combined for kw in REQUIRE_ONE_OF)
+        has_required = any(
+            re.search(r'\b' + re.escape(kw.lower()) + r'\b', combined)
+            for kw in REQUIRE_ONE_OF
+        )
         if not has_required:
             return FilterResult(job=job, passed=False,
                                 reason="No required keywords found in title or description",

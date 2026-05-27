@@ -56,13 +56,6 @@ TARGET_TITLES = [
     # Security
     "Security Engineer",
     "Security Analyst",
-    # AI / Agentic / Automation
-    "AI Engineer",
-    "AI Solutions Engineer",
-    "Automation Engineer",
-    # AI Intersection (infra)
-    "MLOps Engineer",
-    "AI Platform Engineer",
 ]
 
 # ── LOCATIONS ─────────────────────────────────────────────
@@ -137,10 +130,20 @@ STALE_JOB_DAYS = 5
 
 # ── TITLE EXCLUSIONS ──────────────────────────────────────
 EXCLUDE_TITLE_KEYWORDS = [
+    # Seniority / employment type
     "senior", "sr.", "sr ", "lead", "staff", "principal",
     "manager", "director", "vp ", "vp,", "vice president", "head of",
     "intern", "internship", "contract", "contractor",
     "part-time", "part time", "freelance", "temporary",
+    # Non-software engineering disciplines (industrial/hardware)
+    "electrical engineer", "mechanical engineer", "civil engineer",
+    "controls engineer", "building automation", "hvac",
+    "asic", "fpga",
+    # Non-IC / pre-sales roles
+    "solutions architect", "presales", "pre-sales",
+    # IT support
+    "desktop support", "direct support",
+    # Non-engineering analyst roles
 ]
 
 # ── TITLE DOMAIN KEYWORDS ─────────────────────────────────
@@ -148,15 +151,13 @@ TITLE_DOMAIN_KEYWORDS = [
     "cloud", "devops", "security", "sre", "platform", "infrastructure",
     "mlops", "ai", "ml", "machine learning", "devsecops",
     "reliability", "kubernetes", "observability", "systems",
-    # New role categories — Greenhouse pre-filter must capture these too
-    "automation", "software", "full stack", "fullstack", "agentic",
-    "llm", "generative",
 ]
 
 # ── DESCRIPTION HARD-STOP PATTERNS ────────────────────────
 EXCLUDE_DESC_PATTERNS = [
     "5+ years", "5 or more years", "6+ years", "7+ years",
     "8+ years", "9+ years", "10+ years",
+    "four or more years", "4+ years",
     "five or more years", "five+ years",
     "active clearance", "security clearance required",
     "clearance required", "top secret", "ts/sci",
@@ -178,10 +179,6 @@ REQUIRE_ONE_OF = [
     "ci/cd", "docker", "jenkins", "github actions", "ansible",
     "prometheus", "grafana", "helm", "vault", "linux", "automation",
     "mlops", "ai", "machine learning", "ml pipeline", "observability",
-    # AI-native terms — AI Engineer roles may use these instead of infra keywords
-    "llm", "openai", "agentic", "generative", "copilot", "rag",
-    "langchain", "genai", "prompt engineering", "large language model",
-    "azure openai", "gpt-4", "gpt-3", "anthropic",
 ]
 
 # ── SALARY FLOOR ──────────────────────────────────────────
