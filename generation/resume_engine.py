@@ -1,29 +1,37 @@
 """Resume + cover letter generation via Claude Code CLI.
 
 A SINGLE Claude CLI call returns both the structured resume JSON and the
-cover letter text. The prompt is piped via stdin (not argv) so neither the
-full profile.yaml nor the full job description hits Windows' ~32KB argv
-limit. ANTHROPIC_API_KEY is purged from the subprocess env so the call
-always uses the user's Max subscription via the Claude CLI session, never
-pay-per-token API credits.
+cover letter text. ANTHROPIC_API_KEY is purged from the subprocess env so the
+call always uses the user's Max subscription via the Claude CLI session,
+never pay-per-token API credits.
+
+The prompt template is split at its ``## Job Description`` / ``## LOCKED
+CONSTANTS`` headers: everything outside that span (the intro + the full
+profile.yaml vault) is constant across every job in a run and is sent via
+``--system-prompt-file`` so it's cached server-side instead of re-billed as
+cache-creation on every call; only the per-job dynamic slice (company, title,
+location, source, screening notes, description, revision feedback) is piped
+on stdin. Neither channel hits Windows' ~32KB argv limit since nothing goes
+through argv. Extended thinking is disabled for this call (see
+generation.claude_cli.run_claude) — it's ~86% of a generation call's billed
+output and is discarded, never surfaced to callers.
 """
 from __future__ import annotations
 
-import json
 import logging
-import os
-import re
-import subprocess
-import tempfile
 from pathlib import Path
 
 import yaml
 
-from config import CLAUDE_CLI
+from config import RESUME_GENERATION_MODEL, RESUME_GENERATION_TIMEOUT
+from generation.claude_cli import run_claude, extract_json
 
 logger = logging.getLogger(__name__)
 
 PROMPT_PATH = Path(__file__).parent.parent / "prompts" / "application_materials.md"
+
+_JOB_SECTION_START = "## Job Description"
+_JOB_SECTION_END = "## LOCKED CONSTANTS"
 
 
 class ResumeEngine:
@@ -31,87 +39,75 @@ class ResumeEngine:
         with open(profile_path) as f:
             self._profile_raw = f.read()
         self._profile = yaml.safe_load(self._profile_raw)
+        self._system_prompt: str | None = None
+
+    def _build_system_prompt(self) -> str:
+        """Static instructions + profile, minus the per-job dynamic slice.
+
+        Memoized — the profile and instructions don't change across jobs in a
+        run, so this is built once and reused byte-identical on every call
+        (required for the server-side prompt cache to actually hit).
+        """
+        if self._system_prompt is not None:
+            return self._system_prompt
+        template = PROMPT_PATH.read_text(encoding="utf-8")
+        before, rest = template.split(_JOB_SECTION_START, 1)
+        _job_section, after = rest.split(_JOB_SECTION_END, 1)
+        self._system_prompt = (
+            before.replace("{{profile_yaml}}", self._profile_raw)
+            + _JOB_SECTION_END + after
+        )
+        return self._system_prompt
 
     def generate(
         self, company: str, title: str, location: str,
         description: str, source: str, screening_notes: str = "",
+        revision_feedback: str = "",
     ) -> dict | None:
         """Generate resume + cover letter for one job in a single Claude call.
+
+        `revision_feedback` carries a recruiter-review punch list from a prior
+        draft (see generation.verifier). When provided, the model revises the
+        previous draft to address each fix; when empty it generates fresh.
 
         Returns a dict shaped like:
           {"resume": {...}, "decisions": {...}, "cover_letter": "..."}
         or None if the call or parse failed.
         """
         template = PROMPT_PATH.read_text(encoding="utf-8")
-        prompt = (
-            template
-            .replace("{{profile_yaml}}", self._profile_raw)
-            .replace("{{company}}", company)
-            .replace("{{title}}", title)
-            .replace("{{location}}", location)
-            .replace("{{source}}", source)
-            .replace("{{screening_notes}}", screening_notes)
-            .replace("{{description}}", description or "")
+        _before, rest = template.split(_JOB_SECTION_START, 1)
+        job_section, _after = rest.split(_JOB_SECTION_END, 1)
+        dynamic_prompt = (
+            _JOB_SECTION_START + job_section
+        ).replace(
+            "{{company}}", company
+        ).replace(
+            "{{title}}", title
+        ).replace(
+            "{{location}}", location
+        ).replace(
+            "{{source}}", source
+        ).replace(
+            "{{screening_notes}}", screening_notes
+        ).replace(
+            "{{description}}", description or ""
+        ).replace(
+            "{{revision_feedback}}", revision_feedback.strip() or "None"
         )
-        output = self._invoke_claude(prompt)
+        output = run_claude(
+            dynamic_prompt, model=RESUME_GENERATION_MODEL,
+            timeout=RESUME_GENERATION_TIMEOUT, label="Materials generation",
+            purpose="generation",
+            system_prompt=self._build_system_prompt(),
+            disable_thinking=True,
+        )
         return self._parse_response(output) if output else None
 
-    def _invoke_claude(self, prompt: str) -> str | None:
-        """Invoke Claude CLI with prompt on stdin. Forces Max subscription path."""
-        env = os.environ.copy()
-        env["CLAUDECODE"] = "1"
-        env.pop("ANTHROPIC_API_KEY", None)  # force Max subscription, not pay-per-token API
-
-        tmp_path = None
-        try:
-            with tempfile.NamedTemporaryFile(
-                mode="w", suffix=".md", delete=False, encoding="utf-8"
-            ) as tmp:
-                tmp.write(prompt)
-                tmp_path = tmp.name
-
-            with open(tmp_path, encoding="utf-8") as stdin_file:
-                result = subprocess.run(
-                    [CLAUDE_CLI, "-p", "--output-format", "text", "--model", "claude-sonnet-4-6"],
-                    stdin=stdin_file,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    timeout=300,
-                    encoding="utf-8",
-                    errors="replace",
-                    env=env,
-                )
-            if result.returncode != 0:
-                logger.error(
-                    f"Claude CLI error (rc={result.returncode}): "
-                    f"stderr={result.stderr[:500]!r}  stdout={result.stdout[:300]!r}"
-                )
-                return None
-            return result.stdout
-        except subprocess.TimeoutExpired:
-            logger.error("Claude CLI timed out during materials generation")
-            return None
-        except FileNotFoundError:
-            logger.error(f"Claude CLI not found at '{CLAUDE_CLI}'")
-            return None
-        finally:
-            if tmp_path:
-                try:
-                    os.unlink(tmp_path)
-                except OSError:
-                    pass
-
     def _parse_response(self, text: str) -> dict | None:
-        text = text.strip()
-        match = re.search(r'```(?:json)?\s*\n?(.*?)\n?```', text, re.DOTALL)
-        if match:
-            text = match.group(1).strip()
-        try:
-            data = json.loads(text)
-        except json.JSONDecodeError:
-            logger.warning(f"Failed to parse response as JSON: {text[:200]}")
+        data = extract_json(text)
+        if data is None:
+            logger.warning(f"Failed to parse response as JSON: {(text or '')[:200]}")
             return None
-
         if not isinstance(data, dict) or "resume" not in data:
             logger.warning(f"Response missing 'resume' key: {str(data)[:200]}")
             return None

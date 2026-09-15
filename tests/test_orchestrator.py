@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 
 import pytest
-from sources.orchestrator import ScraperOrchestrator, filter_fresh_jobs
+from sources.orchestrator import ScraperOrchestrator, filter_fresh_jobs, prefer_fresher
 from sources.base import SourceAdapter, SourceResult
 from models.job import RawJob
 
@@ -115,3 +115,58 @@ class TestFilterFreshJobs:
         edge = self._job("greenhouse-x", posted_at=now - timedelta(hours=24, seconds=-1))
         fresh, stale = filter_fresh_jobs([edge], hours_old=24)
         assert fresh == [edge]
+
+
+class TestPreferFresher:
+    def _job(self, source: str, posted_at=None, url: str = "https://x.com") -> RawJob:
+        return RawJob(
+            title="Cloud Engineer", company="Co", location="Remote",
+            url=url, source=source, posted_at=posted_at,
+        )
+
+    def test_fresh_beats_stale_regardless_of_order(self):
+        now = datetime.now(timezone.utc)
+        stale = self._job("greenhouse-x", posted_at=now - timedelta(days=40), url="stale")
+        fresh = self._job("linkedin", posted_at=None, url="fresh")  # trusted prefiltered source
+
+        assert prefer_fresher(stale, fresh, hours_old=24).url == "fresh"
+        assert prefer_fresher(fresh, stale, hours_old=24).url == "fresh"
+
+    def test_both_fresh_prefers_more_recent_posted_at(self):
+        now = datetime.now(timezone.utc)
+        older = self._job("greenhouse-x", posted_at=now - timedelta(hours=1), url="older")
+        newer = self._job("greenhouse-x", posted_at=now - timedelta(minutes=1), url="newer")
+        assert prefer_fresher(older, newer, hours_old=24).url == "newer"
+
+    def test_both_stale_still_returns_one_without_error(self):
+        now = datetime.now(timezone.utc)
+        a = self._job("greenhouse-x", posted_at=now - timedelta(days=40), url="a")
+        b = self._job("greenhouse-x", posted_at=now - timedelta(days=50), url="b")
+        result = prefer_fresher(a, b, hours_old=24)
+        assert result.url in ("a", "b")
+
+
+class TestOrchestratorDedupPrefersFreshness:
+    @pytest.mark.asyncio
+    async def test_stale_duplicate_does_not_shadow_fresh_one(self):
+        now = datetime.now(timezone.utc)
+        stale_gh = RawJob(
+            title="Cloud Eng", company="Acme", location="Remote",
+            url="https://gh.com/old", source="greenhouse-acme",
+            posted_at=now - timedelta(days=40),
+        )
+        fresh_li = RawJob(
+            title="Cloud Eng", company="Acme", location="Remote",
+            url="https://linkedin.com/new", source="linkedin",
+            posted_at=None,  # trusted-fresh prefiltered source
+        )
+        # Greenhouse adapter listed first, same order as build_adapters() in
+        # main.py — this used to be exactly the case that lost the fresh dupe.
+        source_a = FakeSource("greenhouse-acme", [stale_gh])
+        source_b = FakeSource("linkedin_indeed", [fresh_li])
+
+        orchestrator = ScraperOrchestrator(adapters=[source_a, source_b])
+        result = await orchestrator.scrape_all(["Cloud Eng"], ["Remote"], hours_old=24)
+
+        assert len(result.jobs) == 1
+        assert result.jobs[0].url == "https://linkedin.com/new"

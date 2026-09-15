@@ -4,9 +4,9 @@ Per-site execution model
 ------------------------
 Each site (linkedin, indeed, google) runs in its OWN thread pool with its
 OWN concurrency cap, all three pools running concurrently. LinkedIn rate-
-limits aggressively, so it gets a single worker plus a small jittered sleep
-between calls; Indeed and Google tolerate parallelism so they get more
-workers. A LinkedIn 429 storm therefore can no longer starve Indeed/Google.
+limits aggressively, so it gets a single worker gated by a shared token
+bucket; Indeed and Google tolerate parallelism so they get more workers. A
+LinkedIn 429 storm therefore can no longer starve Indeed/Google.
 
 Accumulator pattern
 -------------------
@@ -14,6 +14,18 @@ Each completed (site, title, location) appends its rows to a shared
 lock-protected buffer immediately. `scrape()` returns whatever is in the
 buffer at the end — even if the run is cancelled mid-flight, the partial
 results are preserved instead of silently discarded.
+
+Deferred descriptions
+----------------------
+LinkedIn search results never carry a full job description inline — jobspy
+fetches it with a SEPARATE per-row GET only when `linkedin_fetch_description`
+is True, which used to run at scrape time for every result (~9,000+ GETs/run,
+~0.6s each, dwarfing the actual search traffic). Descriptions are now always
+deferred: search calls come back title/company/url-only (same shape Workday
+already returns), those flow through Stage 1's title-only gate in main.py,
+and `fetch_descriptions()` below fills in descriptions only for the survivors
+that actually reach Stage 2 — same pattern as sources/workday.py's
+fetch_descriptions(), same shared rate limit as the search calls.
 """
 from __future__ import annotations
 
@@ -22,14 +34,16 @@ import datetime as dt_mod
 import logging
 import math
 import random
+import re
 import threading
-import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
+from typing import Callable
 
 from config import HOURS_OLD, RESULTS_PER_SEARCH
 from models.job import RawJob
 from sources.base import SourceAdapter, SourceResult
+from sources.rate_limiter import TokenBucket
 
 logger = logging.getLogger(__name__)
 
@@ -43,10 +57,35 @@ _SITE_CONCURRENCY = {
     "google": 3,
 }
 
-# Jittered sleep range applied BEFORE every LinkedIn call (seconds). At
-# avg ~12s spacing on a single thread we trickle ~5 req/min — well under
-# LinkedIn's unauthenticated guest cap of ~150/hour.
-_LINKEDIN_BASE_SLEEP = (8.0, 16.0)
+# Single shared rate gate for ALL LinkedIn traffic — both search calls
+# (_scrape_one) and per-job description fetches (fetch_descriptions) draw
+# from the same bucket, so total request volume to linkedin.com stays under
+# one ceiling regardless of which phase is issuing them. 45/min matches the
+# sustained rate the pipeline already ran at for hours without being blocked;
+# a real token bucket lets requests through as soon as a token is available
+# instead of a flat random.uniform(8, 16) sleep before every call.
+_linkedin_bucket = TokenBucket(rate_per_min=45)
+
+# jobspy's LinkedIn scraper sleeps `random.uniform(delay, delay + band_delay)`
+# between its OWN internal pages within a single scrape_jobs() call (class
+# attributes, default 3s/4s). Our bucket above already governs true
+# call-level pacing, so this only needs to be polite enough to avoid tripping
+# LinkedIn's own guest rate limiting, not act as the primary throttle.
+# Guarded with hasattr so a future jobspy release that renames/removes these
+# degrades to a log line, not a crash. Pin python-jobspy==1.1.82 in
+# requirements.txt so this override target doesn't silently drift.
+try:
+    from jobspy.linkedin import LinkedIn as _JobspyLinkedIn
+    if hasattr(_JobspyLinkedIn, "delay"):
+        _JobspyLinkedIn.delay = 1
+    if hasattr(_JobspyLinkedIn, "band_delay"):
+        _JobspyLinkedIn.band_delay = 1
+except Exception:
+    logger.debug("Could not override jobspy LinkedIn pacing; using library defaults", exc_info=True)
+
+# Extracts the numeric LinkedIn job id from a stored job_url of the form
+# https://www.linkedin.com/jobs/view/{job_id}
+_LINKEDIN_JOB_ID_RE = re.compile(r"/jobs/view/(\d+)")
 
 # Pool of common desktop browser User-Agents. We rotate per scrape_jobs
 # call so traffic from one IP looks like a household with multiple devices
@@ -174,10 +213,12 @@ class LinkedInIndeedAdapter(SourceAdapter):
     def _scrape_one(self, site: str, title: str, location: str) -> None:
         from jobspy import scrape_jobs
 
-        # Throttle LinkedIn between calls. Single worker + jittered sleep
-        # spaces requests far enough apart to stay under the per-IP cap.
+        # Throttle LinkedIn between calls via the shared token bucket (single
+        # worker means this naturally serializes LinkedIn's own traffic;
+        # fetch_descriptions() draws from the same bucket for the deferred
+        # per-job description fetches).
         if site == "linkedin":
-            time.sleep(random.uniform(*_LINKEDIN_BASE_SLEEP))
+            _linkedin_bucket.acquire()
 
         is_remote = location.strip().lower() == "remote"
         resolved_location = "United States" if is_remote else location
@@ -192,7 +233,10 @@ class LinkedInIndeedAdapter(SourceAdapter):
                 is_remote=is_remote,
                 country_indeed="usa",
                 enforce_annual_salary=True,
-                linkedin_fetch_description=site == "linkedin",
+                # Always deferred now — see module docstring "Deferred
+                # descriptions". fetch_descriptions() fills these in later,
+                # only for jobs that survive Stage 1's title-only gate.
+                linkedin_fetch_description=False,
                 user_agent=random.choice(_USER_AGENTS),
             )
         except Exception as e:
@@ -206,7 +250,12 @@ class LinkedInIndeedAdapter(SourceAdapter):
         for _, row in df.iterrows():
             raw_title = _safe_str(row.get("title"))
             raw_company = _safe_str(row.get("company"))
-            # Passively discover Workday tenants from direct application URLs
+            # Passively discover Workday tenants from direct application URLs.
+            # In practice job_url_direct is only ever populated when jobspy
+            # fetches full descriptions, which no longer happens here — this
+            # is now a no-op at scrape time and kept only for the (harmless)
+            # case a future jobspy version starts returning it earlier.
+            # The real discovery path is now in fetch_descriptions() below.
             direct_url = _safe_str(row.get("job_url_direct"))
             if direct_url and "myworkdayjobs.com" in direct_url and raw_company:
                 from sources.workday_discovery import extract_workday_tenant
@@ -234,3 +283,84 @@ class LinkedInIndeedAdapter(SourceAdapter):
         if these_jobs:
             with self._buffer_lock:
                 self._jobs_buffer.extend(these_jobs)
+
+    async def fetch_descriptions(
+        self,
+        jobs: list[RawJob],
+        concurrency: int = 4,
+        on_progress: Callable[[int], None] | None = None,
+    ) -> int:
+        """Fetch full descriptions for LinkedIn jobs that survived Stage 1's
+        title-only gate — mirrors sources/workday.py's fetch_descriptions().
+
+        Uses jobspy's own LinkedIn._get_job_details(), the exact method it
+        calls internally for `linkedin_fetch_description=True`, so markdown
+        formatting stays identical to what the old inline-fetch path
+        produced. Gated through the same shared token bucket as search calls
+        so total LinkedIn request volume stays under one ceiling. This is
+        also where Workday-tenant discovery now happens for LinkedIn rows
+        (job_url_direct is only ever populated by this same detail fetch).
+        """
+        targets = [
+            j for j in jobs
+            if j.source == "linkedin" and not (j.description and j.description.strip())
+        ]
+        if not targets:
+            return 0
+
+        from jobspy.linkedin import LinkedIn
+        from jobspy.model import DescriptionFormat, ScraperInput, Site
+
+        scraper = LinkedIn()
+        # _get_job_details() reads scraper_input.description_format — set it
+        # to match jobspy's own default (markdown) so output stays consistent
+        # with what the old inline-fetch path produced.
+        scraper.scraper_input = ScraperInput(
+            site_type=[Site.LINKEDIN], search_term="",
+            description_format=DescriptionFormat.MARKDOWN,
+        )
+
+        loop = asyncio.get_event_loop()
+        sem = asyncio.Semaphore(concurrency)
+
+        async def _one(job: RawJob) -> bool:
+            m = _LINKEDIN_JOB_ID_RE.search(job.url or "")
+            if not m:
+                if on_progress:
+                    on_progress(1)
+                return False
+            job_id = m.group(1)
+            async with sem:
+                _linkedin_bucket.acquire()  # blocking call, but sem already
+                # bounds how many threads can be waiting on it concurrently
+                try:
+                    details = await loop.run_in_executor(
+                        None, scraper._get_job_details, job_id
+                    )
+                except Exception as e:
+                    logger.debug(f"LinkedIn detail fetch failed for {job.url}: {e}")
+                    if on_progress:
+                        on_progress(1)
+                    return False
+            description = details.get("description") if details else None
+            direct_url = details.get("job_url_direct") if details else None
+            if direct_url and "myworkdayjobs.com" in direct_url:
+                from sources.workday_discovery import extract_workday_tenant
+                discovery = extract_workday_tenant(direct_url, job.company)
+                if discovery:
+                    with self._discovery_lock:
+                        self._discovered.setdefault(discovery["tenant"], discovery)
+            if on_progress:
+                on_progress(1)
+            if not description:
+                return False
+            job.description = description
+            return True
+
+        results = await asyncio.gather(*[_one(j) for j in targets])
+        n_filled = sum(1 for r in results if r)
+        logger.info(
+            f"LinkedIn description fetch: {n_filled}/{len(targets)} filled "
+            f"(concurrency={concurrency})"
+        )
+        return n_filled

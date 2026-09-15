@@ -65,6 +65,7 @@ def main() -> None:
         date_generated = str(row.get("Date Generated", "")).strip()
         location = str(row.get("Location", "")).strip()
         apply_link = str(row.get("Apply Link", "")).strip()
+        confidence = row.get("Screen Confidence", "")
 
         tracker_ops.add_job(
             tracker_ws,
@@ -73,6 +74,7 @@ def main() -> None:
             title=title,
             location=location,
             apply_link=apply_link,
+            confidence=confidence,
         )
         existing.add(fp)
         synced += 1

@@ -25,7 +25,8 @@ import yaml
 
 from config import (
     TARGET_TITLES, LOCATIONS, DB_FILE,
-    SCREENING_CONFIDENCE_THRESHOLD, HOURS_OLD, STALE_JOB_DAYS,
+    HOURS_OLD, STALE_JOB_DAYS,
+    SPONSORSHIP_FILTER_ENABLED,
     validate_required_config,
 )
 from db.database import Database
@@ -54,10 +55,13 @@ if sys.platform == "win32" and hasattr(sys.stdout, "reconfigure"):
 
 TOTAL_PHASES = 9
 
-# Initialize logging + rich console before anything else.
-Path("logs").mkdir(exist_ok=True)
-LOG_PATH = f"logs/run_{date.today().isoformat()}.log"
-console = install_rich_logging(file_log_path=LOG_PATH, level=logging.INFO)
+# NOTE: logging + the rich console are deliberately NOT initialized at import
+# time. This module is imported by the test suite for its helper functions
+# (_dedup_daily_jobs, build_adapters, etc.); a module-level install_rich_logging()
+# call used to attach a FileHandler to logs/run_<today>.log on every such
+# import, so running pytest interleaved real pipeline runs with test-fixture
+# log noise ("TestCo", "Source is down", ...) into the same file. See
+# run_pipeline() below, which sets this up only when the pipeline actually runs.
 logger = logging.getLogger(__name__)
 
 
@@ -124,6 +128,52 @@ async def _h1b_check_with_timeout(checker: "H1BChecker", jobs: list, timeout: fl
         )
 
 
+async def _fetch_deferred_descriptions(
+    label: str,
+    jobs_to_fetch: list,
+    fetch_coro,
+    stage1: Stage1Filter,
+    ui: "PipelineUI",
+    *, passed_jobs: list, rejected: list, no_desc_passed: list, desc_jobs: list,
+) -> tuple[int, int, list]:
+    """Fetch descriptions for title-gate survivors missing one, then run
+    Stage 1's full filter (description hard-stops + must-have keywords) on
+    whichever come back filled, merging survivors into `passed_jobs`.
+
+    `fetch_coro(jobs, on_progress=None) -> int` is either
+    sources.workday.fetch_descriptions or
+    LinkedInIndeedAdapter.fetch_descriptions — same shape, same pattern.
+
+    Mutates `passed_jobs`, `rejected`, and `desc_jobs` in place (list
+    extension). Returns (n_filled, n_promoted, updated_no_desc_passed) since
+    filtering `no_desc_passed` down requires rebinding, not mutation.
+    """
+    if not jobs_to_fetch:
+        return 0, 0, no_desc_passed
+
+    with ui.progress(
+        f"Fetching {len(jobs_to_fetch)} {label} descriptions",
+        total=len(jobs_to_fetch),
+    ) as advance:
+        n_filled = await fetch_coro(jobs_to_fetch, on_progress=advance)
+
+    filled_jobs = [j for j in jobs_to_fetch if j.description and j.description.strip()]
+    n_promoted = 0
+    if filled_jobs:
+        newly_passed, newly_rejected = stage1.filter_batch(filled_jobs)
+        passed_jobs.extend(newly_passed)
+        rejected.extend(newly_rejected)
+        n_promoted = len(newly_passed)
+        # Remove the now-described jobs from no_desc_passed so they don't
+        # double up as MAYBE in the Daily tab.
+        filled_fps = {j.fingerprint for j in filled_jobs}
+        no_desc_passed = [j for j in no_desc_passed if j.fingerprint not in filled_fps]
+        # Move their descriptions back into desc_jobs so they get persisted.
+        desc_jobs.extend(filled_jobs)
+
+    return n_filled, n_promoted, no_desc_passed
+
+
 def _dedup_daily_jobs(jobs: list["ScreenedJob"]) -> list["ScreenedJob"]:
     """Deduplicate Daily jobs by fingerprint, keeping the highest-confidence version."""
     seen: set[str] = set()
@@ -140,6 +190,12 @@ def _dedup_daily_jobs(jobs: list["ScreenedJob"]) -> list["ScreenedJob"]:
 
 
 async def run_pipeline() -> None:
+    # Initialize logging + rich console here, not at import time — see the
+    # NOTE above TOTAL_PHASES.
+    Path("logs").mkdir(exist_ok=True)
+    log_path = f"logs/run_{date.today().isoformat()}.log"
+    console = install_rich_logging(file_log_path=log_path, level=logging.INFO)
+
     ui = PipelineUI(total_phases=TOTAL_PHASES, console=console)
     ui.banner(subtitle=f"{date.today().isoformat()}  ·  freshness window: {HOURS_OLD}h")
 
@@ -155,12 +211,20 @@ async def run_pipeline() -> None:
     sheets = SheetsClient()
     daily_ws = sheets.get_daily_sheet()
     audit_ws = sheets.get_audit_sheet()
+    usage_start_id = db.get_max_claude_usage_id()
+    # Union of "first seen recently" and "screened recently" — the latter
+    # catches long-lived postings from prefiltered sources (LinkedIn/Indeed/
+    # Google) that keep resurfacing as "fresh" well past STALE_JOB_DAYS since
+    # their first sighting, which previously caused Stage 2 to re-screen the
+    # same job daily indefinitely.
     known_fps = db.get_recent_fingerprints(STALE_JOB_DAYS)
+    rescreened_fps = db.get_recently_audited_fingerprints(STALE_JOB_DAYS)
+    known_fps |= rescreened_fps
     applied_fps = {row["job_fingerprint"] for row in db.get_all_feedback()}
     known_fps |= applied_fps
     ui.phase_done(
         f"{len(known_fps)} known fingerprints "
-        f"({len(known_fps) - len(applied_fps)} recent + {len(applied_fps)} applied)"
+        f"({len(known_fps) - len(applied_fps)} recent/screened + {len(applied_fps)} applied)"
     )
 
     # ── Phase 2: Clear sheets ─────────────────────────────────
@@ -181,6 +245,7 @@ async def run_pipeline() -> None:
             TARGET_TITLES, LOCATIONS,
             known_fingerprints=known_fps,
             on_source_done=tracker.mark_done,
+            hours_old=HOURS_OLD,
         )
     all_scraped = scrape_result.jobs
     error_note = f"  ·  {len(scrape_result.errors)} source error(s)" if scrape_result.errors else ""
@@ -207,56 +272,63 @@ async def run_pipeline() -> None:
 
     # ── Phase 5: H1B Sponsor Check + source-aware drop ───────
     ui.phase(5, "H1B Sponsor Check + source-aware drop")
-    checker = H1BChecker(db)
-    await _h1b_check_with_timeout(checker, unique_jobs)
-    n_curated = sum(
-        1 for j in unique_jobs
-        if j.source.startswith(("greenhouse-", "lever-", "ashby-"))
-    )
-    n_verified = sum(1 for j in unique_jobs if j.h1b_sponsor_verified is True)
-    sponsor_kept, sponsor_dropped = partition_drops(unique_jobs)
-    n_checked = sum(1 for j in unique_jobs if j.h1b_sponsor_verified is not None)
-    n_no_history_kept = sum(
-        1 for j in sponsor_kept if j.h1b_sponsor_verified is False
-    )
-    unique_jobs = sponsor_kept  # rebind for downstream phases
+    sponsor_dropped = []
+    if not SPONSORSHIP_FILTER_ENABLED:
+        # Candidate is work-authorized and does not need sponsorship yet, so
+        # the slow h1bdata.info scrape AND the no-history drop are both skipped.
+        # Flip config.SPONSORSHIP_FILTER_ENABLED to re-enable. See config.py.
+        ui.phase_done("filter OFF — skipped (work-authorized; reclaims scrape time)")
+    else:
+        checker = H1BChecker(db)
+        await _h1b_check_with_timeout(checker, unique_jobs)
+        n_curated = sum(
+            1 for j in unique_jobs
+            if j.source.startswith(("greenhouse-", "lever-", "ashby-"))
+        )
+        n_verified = sum(1 for j in unique_jobs if j.h1b_sponsor_verified is True)
+        sponsor_kept, sponsor_dropped = partition_drops(unique_jobs)
+        n_checked = sum(1 for j in unique_jobs if j.h1b_sponsor_verified is not None)
+        n_no_history_kept = sum(
+            1 for j in sponsor_kept if j.h1b_sponsor_verified is False
+        )
+        unique_jobs = sponsor_kept  # rebind for downstream phases
 
-    # Persist dropped jobs to Audit so the funnel is auditable
-    if sponsor_dropped:
-        today_str = date.today().isoformat()
-        h1b_audit_entries = [
-            {
-                "job_fingerprint": j.fingerprint,
-                "company": j.company,
-                "title": j.title,
-                "source": j.source,
-                "stage": "stage_h1b",
-                "verdict": "REJECT",
-                "reason": "company has no H-1B sponsorship history",
-                "confidence": None,
-                "run_date": today_str,
-            }
-            for j in sponsor_dropped
-        ]
-        db.save_audit_entries_bulk(h1b_audit_entries)
+        # Persist dropped jobs to Audit so the funnel is auditable
+        if sponsor_dropped:
+            today_str = date.today().isoformat()
+            h1b_audit_entries = [
+                {
+                    "job_fingerprint": j.fingerprint,
+                    "company": j.company,
+                    "title": j.title,
+                    "source": j.source,
+                    "stage": "stage_h1b",
+                    "verdict": "REJECT",
+                    "reason": "company has no H-1B sponsorship history",
+                    "confidence": None,
+                    "run_date": today_str,
+                }
+                for j in sponsor_dropped
+            ]
+            db.save_audit_entries_bulk(h1b_audit_entries)
 
-        h1b_drop_results = [
-            FilterResult(
-                job=j,
-                passed=False,
-                reason="company has no H-1B sponsorship history",
-                stage="stage_h1b",
-            )
-            for j in sponsor_dropped
-        ]
-        audit_ops.write_rejections(audit_ws, h1b_drop_results)
+            h1b_drop_results = [
+                FilterResult(
+                    job=j,
+                    passed=False,
+                    reason="company has no H-1B sponsorship history",
+                    stage="stage_h1b",
+                )
+                for j in sponsor_dropped
+            ]
+            audit_ops.write_rejections(audit_ws, h1b_drop_results)
 
-    ui.phase_done(
-        f"{n_checked} checked  ·  {n_verified} verified  ·  "
-        f"{len(sponsor_dropped)} no-history dropped  ·  "
-        f"{n_no_history_kept} no-history kept (startup-friendly)  ·  "
-        f"{n_curated} curated skipped"
-    )
+        ui.phase_done(
+            f"{n_checked} checked  ·  {n_verified} verified  ·  "
+            f"{len(sponsor_dropped)} no-history dropped  ·  "
+            f"{n_no_history_kept} no-history kept (startup-friendly)  ·  "
+            f"{n_curated} curated skipped"
+        )
 
     # Partition jobs by whether they arrived with descriptions. Sources that
     # return descriptions inline (Greenhouse/Lever/Ashby/HN/RemoteOK + LinkedIn
@@ -277,46 +349,33 @@ async def run_pipeline() -> None:
     no_desc_passed, no_desc_rejected = stage1.filter_titles_only(no_desc_jobs)
     rejected: list[FilterResult] = list(desc_rejected) + list(no_desc_rejected)
 
-    # Workday returns no descriptions inline. Fetch them now — only for the
-    # ~50–200 Workday jobs whose titles already cleared filter_titles_only.
-    # Survivors get the full Stage 1 (description hard-stops + must-have
-    # keywords) and merge into passed_jobs so Stage 2 actually screens them.
-    wd_to_fetch = [
-        j for j in no_desc_passed if j.source.startswith("workday-")
-    ]
-    n_wd_filled = 0
-    n_wd_promoted = 0
-    if wd_to_fetch:
-        with ui.progress(
-            f"Fetching {len(wd_to_fetch)} Workday descriptions",
-            total=len(wd_to_fetch),
-        ) as advance:
-            n_wd_filled = await fetch_workday_descriptions(
-                wd_to_fetch, on_progress=advance
-            )
-        wd_filled_jobs = [
-            j for j in wd_to_fetch
-            if j.description and j.description.strip()
-        ]
-        if wd_filled_jobs:
-            wd_passed, wd_desc_rejected = stage1.filter_batch(wd_filled_jobs)
-            passed_jobs.extend(wd_passed)
-            rejected.extend(wd_desc_rejected)
-            n_wd_promoted = len(wd_passed)
-            # Remove the now-described Workday jobs from no_desc_passed so
-            # they don't double up as MAYBE in the Daily tab.
-            filled_fps = {j.fingerprint for j in wd_filled_jobs}
-            no_desc_passed = [
-                j for j in no_desc_passed if j.fingerprint not in filled_fps
-            ]
-            # Move their descriptions back into desc_jobs so they get persisted.
-            desc_jobs.extend(wd_filled_jobs)
+    # Workday and LinkedIn both return no description inline (Workday's search
+    # API never has one; LinkedIn's is deferred — see
+    # sources/linkedin_indeed.py module docstring). Fetch them now, only for
+    # jobs whose titles already cleared filter_titles_only. Survivors get the
+    # full Stage 1 pass (description hard-stops + must-have keywords) and
+    # merge into passed_jobs so Stage 2 actually screens them.
+    wd_to_fetch = [j for j in no_desc_passed if j.source.startswith("workday-")]
+    n_wd_filled, n_wd_promoted, no_desc_passed = await _fetch_deferred_descriptions(
+        "Workday", wd_to_fetch, fetch_workday_descriptions, stage1, ui,
+        passed_jobs=passed_jobs, rejected=rejected,
+        no_desc_passed=no_desc_passed, desc_jobs=desc_jobs,
+    )
+
+    li_to_fetch = [j for j in no_desc_passed if j.source == "linkedin"]
+    n_li_filled, n_li_promoted, no_desc_passed = await _fetch_deferred_descriptions(
+        "LinkedIn", li_to_fetch, li_adapter.fetch_descriptions, stage1, ui,
+        passed_jobs=passed_jobs, rejected=rejected,
+        no_desc_passed=no_desc_passed, desc_jobs=desc_jobs,
+    )
 
     ui.phase_done(
-        f"{len(passed_jobs)} passed (incl. {n_wd_promoted} from Workday fetch)  ·  "
+        f"{len(passed_jobs)} passed (incl. {n_wd_promoted} Workday + "
+        f"{n_li_promoted} LinkedIn from deferred fetch)  ·  "
         f"{len(desc_rejected)} rejected  ·  "
         f"{len(no_desc_passed)} no-desc title-passed  ·  "
-        f"Workday desc filled {n_wd_filled}/{len(wd_to_fetch)}"
+        f"Workday desc filled {n_wd_filled}/{len(wd_to_fetch)}  ·  "
+        f"LinkedIn desc filled {n_li_filled}/{len(li_to_fetch)}"
     )
 
     # ── Phase 7: Persist to SQLite ────────────────────────────
@@ -462,7 +521,23 @@ async def run_pipeline() -> None:
     if scrape_result.errors:
         stats["Source errors"] = f"{len(scrape_result.errors)} (see log)"
 
-    ui.summary(stats, top_apply=top, log_path=LOG_PATH)
+    usage_rows = db.get_claude_usage_since_id(usage_start_id)
+    if usage_rows:
+        in_tok = sum(r["input_tokens"] for r in usage_rows)
+        out_tok = sum(r["output_tokens"] for r in usage_rows)
+        cache_read = sum(r["cache_read_input_tokens"] for r in usage_rows)
+        cost = sum(r["cost_usd"] or 0 for r in usage_rows)
+        stats["Claude usage (Stage 2)"] = (
+            f"{len(usage_rows)} call(s) · {in_tok + out_tok:,} tok "
+            f"({cache_read:,} cache-read) · ~${cost:.2f} est."
+        )
+
+    ui.summary(stats, top_apply=top, log_path=log_path)
+    ui.console.print(
+        "     [dim]Cost is a local estimate, not a bill (Max plan). "
+        "Run `python usage_report.py` for cumulative usage, or `/usage` "
+        "inside an interactive `claude` session for your plan's rate-limit %.[/dim]"
+    )
 
     db.close()
 

@@ -16,8 +16,9 @@ def add_job(
     title: str,
     location: str,
     apply_link: str,
-    status: str = "Applied",
+    status: str = "",
     notes: str = "",
+    confidence: int | str = "",
 ) -> None:
     followup = (date.fromisoformat(date_applied) + timedelta(days=7)).isoformat()
 
@@ -31,10 +32,12 @@ def add_job(
         followup,       # Follow-up Date
         "No",           # Follow-up Sent
         notes,          # Notes
+        confidence,     # Confidence
     ]
-    col_a = ws.col_values(1)
-    next_row = len(col_a) + 1
-    ws.update(values=[row], range_name=f"A{next_row}:I{next_row}", value_input_option="USER_ENTERED")
+    # append_row (unlike update on an explicit range) auto-grows the sheet's
+    # grid when needed, so it doesn't hit "exceeds grid limits" once the
+    # tracker outgrows the tab's default row count.
+    ws.append_row(row, value_input_option="USER_ENTERED")
 
 
 def get_all(ws: gspread.Worksheet) -> list[dict]:

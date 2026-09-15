@@ -27,6 +27,7 @@ from config import (
     YOUR_LINKEDIN,
     YOUR_GITHUB,
 )
+from generation.ats import BULLET_CHAR, normalize_skill_items, sanitize_text
 
 logger = logging.getLogger(__name__)
 
@@ -64,22 +65,48 @@ def _write_html_fallback(html: str, pdf_path: Path) -> Path:
     return html_path
 
 
-def _escape_with_bold(text: str) -> str:
-    """HTML-escape text, then convert **foo** markers to <strong>foo</strong>."""
-    escaped = html_lib.escape(text or "")
+def _escape_with_bold(text: str, *, preserve_ampersand: bool = False) -> str:
+    """ATS-sanitize text, HTML-escape it, then convert **foo** to <strong>foo</strong>.
+
+    Sanitization must run before escaping -- afterwards the text contains
+    `&amp;` entities that the ampersand rule would mangle.
+    """
+    escaped = html_lib.escape(sanitize_text(text, preserve_ampersand=preserve_ampersand))
     return re.sub(r'\*\*([^*]+?)\*\*', r'<strong>\1</strong>', escaped)
+
+
+def _esc(text: str, *, preserve_ampersand: bool = False) -> str:
+    """Sanitize + escape a plain field carrying no bold markers."""
+    return html_lib.escape(sanitize_text(text, preserve_ampersand=preserve_ampersand))
+
+
+def _render_bullets(bullets: list) -> str:
+    """Render bullets as hanging-indent paragraphs, NOT <ul><li>.
+
+    WeasyPrint emits `<li>` markers as separately-positioned text runs that the
+    PDF content stream flushes at the end of the page, detached from their text.
+    All 619 surveyed resumes carried such orphaned glyph runs, and in 602 of
+    them the run landed inside the Skills section and split it in half -- the
+    likeliest cause of Workday failing to populate skills. Carrying the marker
+    as inline text keeps every bullet contiguous in reading order; `pdf_tags`
+    does not fix this (measured).
+    """
+    return "".join(
+        f'<p class="bullet">{BULLET_CHAR} {_escape_with_bold(b)}</p>'
+        for b in bullets or []
+    )
 
 
 def _build_contact_line(location: str) -> str:
     """Build the header contact line. Single line if it fits; otherwise wraps to
     two lines so GitHub is always present (engineering applications need it)."""
-    loc = location or YOUR_LOCATION_FALLBACK
+    loc = sanitize_text(location) or YOUR_LOCATION_FALLBACK
     full = f"{loc} | {YOUR_PHONE} | {YOUR_LINKEDIN} | {YOUR_EMAIL} | {YOUR_GITHUB}"
     if len(full) <= _CONTACT_LINE_MAX_CHARS:
-        return html_lib.escape(full)
+        return _esc(full)
     line1 = " | ".join(p for p in (loc, YOUR_PHONE, YOUR_EMAIL) if p)
     line2 = " | ".join(p for p in (YOUR_LINKEDIN, YOUR_GITHUB) if p)
-    return html_lib.escape(line1) + "<br>" + html_lib.escape(line2)
+    return _esc(line1) + "<br>" + _esc(line2)
 
 
 def render_resume_pdf(resume_data: dict, output_path: Path) -> bool:
@@ -122,7 +149,7 @@ def render_cover_letter_pdf(
     contact_line = _build_contact_line(location)
 
     body_paragraphs = [
-        f"<p>{html_lib.escape(p.strip())}</p>"
+        f"<p>{_esc(p.strip(), preserve_ampersand=True)}</p>"
         for p in cover_letter_text.split("\n\n")
         if p.strip()
     ]
@@ -130,6 +157,9 @@ def render_cover_letter_pdf(
 
     html = f"""<!DOCTYPE html>
 <html><head><meta charset="utf-8">
+<title>{_esc(YOUR_NAME, preserve_ampersand=True)} - Cover Letter - {_esc(company, preserve_ampersand=True)}</title>
+<meta name="author" content="{_esc(YOUR_NAME, preserve_ampersand=True)}">
+<meta name="description" content="Cover letter for {_esc(title, preserve_ampersand=True)}">
 <style>
   @page {{ margin: 0.75in; size: letter; }}
   body {{
@@ -157,16 +187,16 @@ def render_cover_letter_pdf(
   .recipient div {{ margin: 0; }}
   .body p {{ margin: 0 0 12px 0; text-align: justify; }}
 </style></head><body>
-<h1>{html_lib.escape(YOUR_NAME)}</h1>
+<h1>{_esc(YOUR_NAME, preserve_ampersand=True)}</h1>
 <div class="contact">{contact_line}</div>
 <div class="header-rule"></div>
 
-<div class="date">{html_lib.escape(date_str)}</div>
+<div class="date">{_esc(date_str)}</div>
 
 <div class="recipient">
   <div>Hiring Manager</div>
-  <div>{html_lib.escape(company)}</div>
-  <div>{html_lib.escape(company_loc)}</div>
+  <div>{_esc(company, preserve_ampersand=True)}</div>
+  <div>{_esc(company_loc)}</div>
 </div>
 
 <div class="body">
@@ -209,7 +239,7 @@ def _fill_template(template: str, resume_data: dict) -> str:
 
     return (
         template
-        .replace("{{name}}", html_lib.escape(YOUR_NAME))
+        .replace("{{name}}", _esc(YOUR_NAME, preserve_ampersand=True))
         .replace("{{contact_line}}", contact_line)
         .replace("{{summary}}", summary)
         .replace("{{experience}}", experience_html)
@@ -224,11 +254,13 @@ def _fill_template(template: str, resume_data: dict) -> str:
 def _render_experience(experiences: list) -> str:
     out = []
     for exp in experiences:
-        bullets = "".join(f"<li>{_escape_with_bold(b)}</li>" for b in exp.get("bullets", []))
-        title = html_lib.escape(exp.get("title", ""))
-        company = html_lib.escape(exp.get("company", ""))
-        loc = html_lib.escape(exp.get("location", ""))
-        period = html_lib.escape(exp.get("period", ""))
+        bullets = _render_bullets(exp.get("bullets", []))
+        # Titles and company names are locked identity strings cross-checked
+        # against LinkedIn, so their ampersands survive verbatim.
+        title = _esc(exp.get("title", ""), preserve_ampersand=True)
+        company = _esc(exp.get("company", ""), preserve_ampersand=True)
+        loc = _esc(exp.get("location", ""))
+        period = _esc(exp.get("period", ""))
         title_line = f"{title} | {company}" + (f", {loc}" if loc else "")
         out.append(f"""
         <div class="experience">
@@ -236,7 +268,7 @@ def _render_experience(experiences: list) -> str:
             <span class="job-title">{title_line}</span>
             <span class="dates">{period}</span>
           </div>
-          <ul>{bullets}</ul>
+          {bullets}
         </div>""")
     return "".join(out)
 
@@ -244,14 +276,18 @@ def _render_experience(experiences: list) -> str:
 def _render_education(education: list) -> str:
     out = []
     for edu in education:
-        school = html_lib.escape(edu.get("school", ""))
-        degree = html_lib.escape(edu.get("degree", ""))
+        school = _esc(edu.get("school", ""), preserve_ampersand=True)
+        degree = _esc(edu.get("degree", ""), preserve_ampersand=True)
         gpa = edu.get("gpa", "")
-        graduation = html_lib.escape(edu.get("graduation", ""))
+        graduation = _esc(edu.get("graduation", ""))
         left_parts = [school, degree]
         if gpa:
-            left_parts.append(f"GPA {html_lib.escape(str(gpa))}")
-        left = " — ".join(p for p in left_parts if p)
+            # Keep "GPA 4.0" on one line — a line break between the label and
+            # the value makes education parsers miss the GPA entirely.
+            left_parts.append(f'<span class="nowrap">GPA {_esc(str(gpa))}</span>')
+        # ASCII " - " rather than an em dash: education field extractors key off
+        # the separator, and a hyphen is the one they all agree on.
+        left = " - ".join(p for p in left_parts if p)
         out.append(f"""
         <div class="edu-row">
           <span class="edu-left">{left}</span>
@@ -261,43 +297,57 @@ def _render_education(education: list) -> str:
 
 
 def _render_skills(skills: dict) -> str:
+    """Render skills as plain "Category: a, b, c" text rows (no tables — ATS
+    parsers routinely mangle multi-column tables and drop keywords).
+
+    Items are normalized first so that every comma-delimited token stands alone
+    as a matchable skill name. Workday splits this line on commas and matches
+    each token against its taxonomy, so an un-normalized `AWS (EC2, S3)` yields
+    the unmatchable fragments `AWS (EC2` and `S3)` and silently costs the whole
+    category. See generation.ats.normalize_skill_items.
+    """
     rows = []
     for category, items in skills.items():
-        cat = html_lib.escape(str(category))
-        items_html = ", ".join(_escape_with_bold(str(i)) for i in items)
-        rows.append(f"<tr><td class='cat'>{cat}:</td><td>{items_html}</td></tr>")
+        cat = _esc(str(category))
+        items_html = ", ".join(
+            _escape_with_bold(item) for item in normalize_skill_items(items)
+        )
+        rows.append(
+            f'<p class="skill-row"><span class="skill-cat">{cat}:</span> {items_html}</p>'
+        )
     return "".join(rows)
 
 
 def _render_certifications(certifications: list) -> str:
+    """Render certs as compact single-line text rows (no tables, no credential
+    IDs). Credential IDs are long UUIDs that clutter the page and are never
+    typed by a recruiter to verify — certs are looked up by name at the issuer.
+    Format: "Name — Issuer (YYYY)"."""
     rows = []
     for cert in certifications:
-        name = html_lib.escape(cert.get("name", ""))
-        issuer = html_lib.escape(cert.get("issuer", ""))
-        cred_id = html_lib.escape(cert.get("credential_id", "") or "")
-        issued = html_lib.escape(cert.get("issued", "") or "")
-        expires = html_lib.escape(cert.get("expires", "") or "")
-        rows.append(
-            f"<tr>"
-            f"<td class='cert-name'>{name}</td>"
-            f"<td>{issuer}</td>"
-            f"<td>{cred_id}</td>"
-            f"<td>{issued}</td>"
-            f"<td>{expires}</td>"
-            f"</tr>"
-        )
+        name = _esc(cert.get("name", ""), preserve_ampersand=True)
+        issuer = _esc(cert.get("issuer", "") or "", preserve_ampersand=True)
+        issued = str(cert.get("issued", "") or "")
+        year = issued[-4:] if len(issued) >= 4 and issued[-4:].isdigit() else issued
+        line = f'<span class="cert-name">{name}</span>'
+        if issuer:
+            line += f" - {issuer}"
+        if year:
+            line += f" ({_esc(year)})"
+        rows.append(f'<div class="cert-row">{line}</div>')
     return "".join(rows)
 
 
 def _render_projects(projects: list) -> str:
     out = []
     for proj in projects:
-        bullets = "".join(f"<li>{_escape_with_bold(b)}</li>" for b in proj.get("bullets", []))
-        name = html_lib.escape(proj.get("name", ""))
+        bullets = _render_bullets(proj.get("bullets", []))
+        # Canonical project names are locked strings — keep their ampersands.
+        name = _esc(proj.get("name", ""), preserve_ampersand=True)
         out.append(f"""
         <div class="project">
           <div class="project-name">{name}</div>
-          <ul>{bullets}</ul>
+          {bullets}
         </div>""")
     return "".join(out)
 
@@ -307,10 +357,10 @@ def _render_publications(publications: list) -> str:
         return ""
     items = []
     for pub in publications:
-        title = html_lib.escape(pub.get("title", ""))
-        venue = html_lib.escape(pub.get("venue", "") or "")
-        desc = html_lib.escape(pub.get("description", "") or "")
-        venue_html = f' <span class="pub-venue">— {venue}</span>' if venue else ""
+        title = _esc(pub.get("title", ""), preserve_ampersand=True)
+        venue = _esc(pub.get("venue", "") or "", preserve_ampersand=True)
+        desc = _esc(pub.get("description", "") or "")
+        venue_html = f' <span class="pub-venue">- {venue}</span>' if venue else ""
         items.append(
             f'<div class="pub"><span class="pub-title">{title}</span>{venue_html}<div>{desc}</div></div>'
         )

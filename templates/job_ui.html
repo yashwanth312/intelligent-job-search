@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Job Pipeline</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f5f6fa;
+    --surface: #ffffff;
+    --border: #e2e6ea;
+    --text: #1a1d23;
+    --muted: #6b7280;
+    --accent: #4f46e5;
+    --accent-hover: #4338ca;
+
+    --green: #16a34a;
+    --green-bg: #f0fdf4;
+    --green-border: #bbf7d0;
+
+    --amber: #d97706;
+    --amber-bg: #fffbeb;
+    --amber-border: #fde68a;
+
+    --red: #dc2626;
+    --red-bg: #fef2f2;
+    --red-border: #fecaca;
+
+    --blue: #2563eb;
+    --blue-bg: #eff6ff;
+    --blue-border: #bfdbfe;
+
+    --gray-bg: #f9fafb;
+    --gray-border: #e5e7eb;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  header {
+    background: #1e1b4b;
+    color: #fff;
+    padding: 16px 28px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.3);
+  }
+  header .logo { font-size: 22px; }
+  header h1 { font-size: 17px; font-weight: 600; letter-spacing: -.2px; }
+  header p  { font-size: 12px; color: #a5b4fc; margin-top: 1px; }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 420px 1fr;
+    gap: 0;
+    min-height: calc(100vh - 60px);
+  }
+
+  /* ── Left panel: form ──────────────────────────────────────────── */
+  .form-panel {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 24px 20px;
+    overflow-y: auto;
+  }
+  .form-panel h2 {
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .6px;
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+  .field { margin-bottom: 14px; }
+  label {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--muted);
+    margin-bottom: 5px;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+  }
+  input[type="text"], input[type="url"], input[type="number"], textarea, select {
+    width: 100%;
+    padding: 9px 11px;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    font-size: 14px;
+    font-family: inherit;
+    color: var(--text);
+    background: var(--surface);
+    transition: border-color .15s, box-shadow .15s;
+    outline: none;
+  }
+  input:focus, textarea:focus, select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(79,70,229,.12);
+  }
+  textarea { resize: vertical; min-height: 110px; }
+  .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .hint { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+  .btn-screen {
+    width: 100%;
+    padding: 11px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 6px;
+    transition: background .15s, transform .1s;
+    letter-spacing: .2px;
+  }
+  .btn-screen:hover:not(:disabled) { background: var(--accent-hover); }
+  .btn-screen:active:not(:disabled) { transform: scale(.98); }
+  .btn-screen:disabled { opacity: .5; cursor: not-allowed; }
+
+  .btn-generate {
+    width: 100%;
+    padding: 14px;
+    background: var(--green);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 12px;
+    transition: background .15s, transform .1s;
+    display: none;
+    letter-spacing: .2px;
+    box-shadow: 0 2px 8px rgba(22,163,74,.25);
+  }
+  .btn-generate:hover:not(:disabled) { background: #15803d; box-shadow: 0 4px 12px rgba(22,163,74,.3); }
+  .btn-generate:active:not(:disabled) { transform: scale(.98); }
+  .btn-generate:disabled { opacity: .55; cursor: not-allowed; box-shadow: none; }
+
+  /* ── Right panel: pipeline output ─────────────────────────────── */
+  .output-panel {
+    padding: 24px 24px 40px;
+    overflow-y: auto;
+  }
+
+  /* ── Status log ────────────────────────────────────────────────── */
+  .status-log {
+    font-size: 12px;
+    color: var(--muted);
+    min-height: 20px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .spinner {
+    width: 14px; height: 14px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+    flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Pipeline stages ───────────────────────────────────────────── */
+  .stages { display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; }
+
+  .stage-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    display: grid;
+    grid-template-columns: 28px 1fr;
+    gap: 0 12px;
+    align-items: start;
+    opacity: .4;
+    transition: opacity .2s, border-color .2s;
+  }
+  .stage-card.active  { opacity: 1; border-color: #a5b4fc; }
+  .stage-card.done    { opacity: 1; }
+  .stage-card.passed  { border-color: var(--green-border); background: var(--green-bg); }
+  .stage-card.failed  { border-color: var(--red-border);   background: var(--red-bg);  }
+  .stage-card.warn    { border-color: var(--amber-border);  background: var(--amber-bg); }
+  .stage-card.skipped { border-color: var(--gray-border);   background: var(--gray-bg); opacity: 1; }
+
+  .stage-icon {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+    background: var(--bg);
+    border: 1.5px solid var(--border);
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .stage-card.active  .stage-icon { border-color: var(--accent); background: var(--blue-bg); }
+  .stage-card.passed  .stage-icon { border-color: var(--green); background: var(--green-bg); }
+  .stage-card.failed  .stage-icon { border-color: var(--red);   background: var(--red-bg);   }
+  .stage-card.warn    .stage-icon { border-color: var(--amber);  background: var(--amber-bg); }
+  .stage-card.skipped .stage-icon { border-color: #9ca3af; }
+
+  .stage-title {
+    font-weight: 600;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .stage-badge {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 999px;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+  }
+  .badge-pass    { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
+  .badge-fail    { background: var(--red-bg);   color: var(--red);   border: 1px solid var(--red-border);   }
+  .badge-warn    { background: var(--amber-bg); color: var(--amber); border: 1px solid var(--amber-border); }
+  .badge-skip    { background: var(--gray-bg);  color: var(--muted); border: 1px solid var(--gray-border);  }
+  .badge-running { background: var(--blue-bg);  color: var(--blue);  border: 1px solid var(--blue-border);  }
+
+  .stage-detail { font-size: 12px; color: var(--muted); margin-top: 4px; line-height: 1.4; }
+  .stage-card.failed  .stage-detail { color: var(--red);   }
+  .stage-card.warn    .stage-detail { color: var(--amber); }
+
+  /* ── Screening results ─────────────────────────────────────────── */
+  #results-section { display: none; }
+
+  .results-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+
+  .verdict-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 18px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+  .verdict-badge {
+    font-size: 15px;
+    font-weight: 800;
+    padding: 6px 18px;
+    border-radius: 999px;
+    letter-spacing: .5px;
+  }
+  .verdict-APPLY { background: var(--green-bg); color: var(--green); border: 2px solid var(--green); }
+  .verdict-MAYBE { background: var(--amber-bg); color: var(--amber); border: 2px solid var(--amber); }
+  .verdict-SKIP  { background: var(--red-bg);   color: var(--red);   border: 2px solid var(--red);   }
+
+  .confidence-block { display: flex; flex-direction: column; gap: 4px; }
+  .confidence-label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; }
+  .confidence-dots { display: flex; gap: 5px; }
+  .dot {
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--border);
+  }
+  .dot.filled { background: var(--accent); }
+  .dot.filled-green { background: var(--green); }
+
+  .section-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .6px;
+    color: var(--muted);
+    margin-bottom: 8px;
+    margin-top: 14px;
+  }
+  .section-label:first-of-type { margin-top: 0; }
+
+  .reasoning-text {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.65;
+    background: var(--gray-bg);
+    border: 1px solid var(--gray-border);
+    border-radius: 8px;
+    padding: 12px 14px;
+  }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+  .chip {
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-weight: 500;
+  }
+  .chip-green { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
+  .chip-red   { background: var(--red-bg);   color: var(--red);   border: 1px solid var(--red-border);   }
+
+  .angle-box {
+    background: linear-gradient(135deg, #eef2ff 0%, #f0fdf4 100%);
+    border: 1px solid #c7d2fe;
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-top: 4px;
+  }
+  .angle-box .angle-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .6px;
+    color: var(--accent);
+    margin-bottom: 6px;
+  }
+  .angle-text {
+    font-size: 13px;
+    color: #1e1b4b;
+    line-height: 1.6;
+    font-weight: 500;
+  }
+
+  /* ── Generation progress ───────────────────────────────────────── */
+  #gen-section { display: none; }
+
+  .gen-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .gen-card h3 {
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .6px;
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+
+  .gen-steps { display: flex; flex-direction: column; gap: 8px; }
+  .gen-step {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--muted);
+    padding: 8px 10px;
+    border-radius: 8px;
+    transition: background .15s;
+  }
+  .gen-step.active  { color: var(--blue);  background: var(--blue-bg);  }
+  .gen-step.done    { color: var(--green); background: var(--green-bg); }
+  .gen-step.warn    { color: var(--amber); background: var(--amber-bg); }
+  .gen-step.error   { color: var(--red);   background: var(--red-bg);   }
+
+  .gen-step-icon { font-size: 16px; width: 20px; text-align: center; flex-shrink: 0; }
+  .gen-step .step-spinner {
+    width: 14px; height: 14px;
+    border: 2px solid var(--blue-border);
+    border-top-color: var(--blue);
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+    flex-shrink: 0;
+  }
+
+  /* ── Generation done ───────────────────────────────────────────── */
+  .gen-done-card {
+    background: var(--green-bg);
+    border: 1px solid var(--green-border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-top: 14px;
+    display: none;
+  }
+  .gen-done-card h3 {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--green);
+    margin-bottom: 14px;
+  }
+  .link-row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .link-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    border: none;
+    transition: background .15s;
+  }
+  .link-btn-primary {
+    background: var(--green);
+    color: #fff;
+  }
+  .link-btn-primary:hover { background: #15803d; }
+  .link-btn-secondary {
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .link-btn-secondary:hover { background: var(--gray-bg); }
+
+  .score-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 12px;
+    border-radius: 999px;
+    background: #fff;
+    border: 1px solid var(--green-border);
+    color: var(--green);
+    margin-top: 12px;
+  }
+
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 300px;
+    color: var(--muted);
+    text-align: center;
+    gap: 10px;
+  }
+  .empty-state .icon { font-size: 48px; opacity: .3; }
+  .empty-state p { font-size: 13px; max-width: 260px; line-height: 1.6; }
+
+  .section-divider {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .7px;
+    color: var(--muted);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section-divider::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <span class="logo">🔍</span>
+  <div>
+    <h1>Job Search Pipeline</h1>
+    <p>Manual job injection — H1B · Stage 1 · Stage 2 · Generate Materials</p>
+  </div>
+</header>
+
+<div class="layout">
+
+  <!-- ── Left: Form ────────────────────────────────────────────── -->
+  <div class="form-panel">
+    <h2>Job Details</h2>
+    <form id="job-form" autocomplete="off">
+
+      <div class="field">
+        <label>Apply Link / URL</label>
+        <input type="url" id="url" placeholder="https://jobs.company.com/apply/12345">
+        <p class="hint">Paste the job posting URL — description will be auto-fetched if left blank below</p>
+      </div>
+
+      <div class="row-2">
+        <div class="field">
+          <label>Job Title <span style="color:var(--red)">*</span></label>
+          <input type="text" id="title" required placeholder="e.g. DevOps Engineer">
+        </div>
+        <div class="field">
+          <label>Company <span style="color:var(--red)">*</span></label>
+          <input type="text" id="company" required placeholder="e.g. Cloudflare">
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Location <span style="color:var(--red)">*</span></label>
+        <input type="text" id="location" required placeholder="e.g. New York, NY / Remote">
+      </div>
+
+      <div class="field">
+        <label>Description</label>
+        <textarea id="description" placeholder="Paste the full job description here (recommended). If blank, it will be fetched from the URL above."></textarea>
+      </div>
+
+      <div class="row-2">
+        <div class="field">
+          <label>Salary Max (USD)</label>
+          <input type="number" id="salary_max" placeholder="e.g. 150000" min="0">
+        </div>
+        <div class="field">
+          <label>Source</label>
+          <select id="source">
+            <option value="manual">manual</option>
+            <option value="linkedin">linkedin</option>
+            <option value="indeed">indeed</option>
+            <option value="referral">referral</option>
+            <option value="company-website">company-website</option>
+          </select>
+        </div>
+      </div>
+
+      <button type="submit" class="btn-screen" id="btn-screen">Screen Job</button>
+    </form>
+  </div>
+
+  <!-- ── Right: Pipeline output ────────────────────────────────── -->
+  <div class="output-panel">
+
+    <!-- Status log -->
+    <div class="status-log" id="status-log">
+      <span id="status-text" style="color:var(--muted); font-style:italic">
+        Fill in the form and click "Screen Job" to start.
+      </span>
+    </div>
+
+    <!-- Pipeline stages -->
+    <div id="pipeline-section" style="display:none;">
+      <div class="section-divider">Pipeline</div>
+      <div class="stages">
+
+        <div class="stage-card" id="stage-h1b">
+          <div class="stage-icon" id="icon-h1b">🛂</div>
+          <div>
+            <div class="stage-title">
+              H1B Sponsorship Check
+              <span class="stage-badge badge-skip" id="badge-h1b">Pending</span>
+            </div>
+            <div class="stage-detail" id="detail-h1b">Checking h1bdata.info history...</div>
+          </div>
+        </div>
+
+        <div class="stage-card" id="stage-stage1">
+          <div class="stage-icon" id="icon-stage1">⚡</div>
+          <div>
+            <div class="stage-title">
+              Stage 1 — Regex Filter
+              <span class="stage-badge badge-skip" id="badge-stage1">Pending</span>
+            </div>
+            <div class="stage-detail" id="detail-stage1">Location · Title exclusions · Domain keywords · Salary · Hard-stops · Must-have keywords</div>
+          </div>
+        </div>
+
+        <div class="stage-card" id="stage-stage2">
+          <div class="stage-icon" id="icon-stage2">🤖</div>
+          <div>
+            <div class="stage-title">
+              Stage 2 — Claude AI Screen
+              <span class="stage-badge badge-skip" id="badge-stage2">Pending</span>
+            </div>
+            <div class="stage-detail" id="detail-stage2">Profile-aware precision screening via Claude CLI</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Screening results -->
+    <div id="results-section">
+      <div class="section-divider" style="margin-top: 8px;">Screening Result</div>
+      <div class="results-card" id="results-card">
+
+        <div class="verdict-row">
+          <div class="verdict-badge" id="verdict-badge">—</div>
+          <div class="confidence-block">
+            <span class="confidence-label">Confidence</span>
+            <div class="confidence-dots" id="confidence-dots"></div>
+          </div>
+        </div>
+
+        <div class="section-label">Reasoning</div>
+        <div class="reasoning-text" id="reasoning-text"></div>
+
+        <div id="signals-block" style="display:none;">
+          <div class="section-label">Match Signals</div>
+          <div class="chips" id="match-chips"></div>
+        </div>
+
+        <div id="flags-block" style="display:none;">
+          <div class="section-label">Risk Flags</div>
+          <div class="chips" id="risk-chips"></div>
+        </div>
+
+        <div id="angle-block" style="display:none;">
+          <div class="section-label">Suggested Angle</div>
+          <div class="angle-box">
+            <div class="angle-label">Resume Strategy</div>
+            <div class="angle-text" id="angle-text"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Generate button — shown here after APPLY/MAYBE verdict -->
+      <button class="btn-generate" id="btn-generate" disabled>
+        ⚡ Generate Resume + Cover Letter
+      </button>
+    </div>
+
+    <!-- Generation section -->
+    <div id="gen-section">
+      <div class="section-divider">Material Generation</div>
+      <div class="gen-card">
+        <h3>Generation Progress</h3>
+        <div class="gen-steps" id="gen-steps"></div>
+      </div>
+      <div class="gen-done-card" id="gen-done-card">
+        <h3>✓ Ready to Apply</h3>
+        <div class="link-row" id="link-row"></div>
+        <div id="score-container"></div>
+      </div>
+    </div>
+
+    <!-- Empty state -->
+    <div class="empty-state" id="empty-state">
+      <div class="icon">📋</div>
+      <p>Paste a job posting and click <strong>Screen Job</strong> to run the full screening pipeline.</p>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+let _screeningResult = null;   // holds the screening_done event payload
+let _isRunning = false;
+
+// ── Form submit → Screen ───────────────────────────────────────────────────
+document.getElementById('job-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (_isRunning) return;
+  await runScreening();
+});
+
+document.getElementById('btn-generate').addEventListener('click', async () => {
+  if (_isRunning || !_screeningResult) return;
+  await runGeneration();
+});
+
+// ── UI helpers ─────────────────────────────────────────────────────────────
+function setStatus(msg, spinning = false) {
+  const log = document.getElementById('status-log');
+  log.innerHTML = spinning
+    ? `<div class="spinner"></div><span id="status-text">${msg}</span>`
+    : `<span id="status-text" style="color:var(--muted)">${msg}</span>`;
+}
+
+function showSection(id) {
+  document.getElementById(id).style.display = 'block';
+  document.getElementById('empty-state').style.display = 'none';
+}
+
+function setStageState(stage, state) {
+  // state: 'active' | 'passed' | 'failed' | 'warn' | 'skipped' | 'done'
+  const card = document.getElementById(`stage-${stage}`);
+  card.className = `stage-card ${state}`;
+}
+
+function setStageDetail(stage, text) {
+  document.getElementById(`detail-${stage}`).textContent = text;
+}
+
+function setStageIcon(stage, icon) {
+  document.getElementById(`icon-${stage}`).textContent = icon;
+}
+
+function setStageBadge(stage, text, cls) {
+  const el = document.getElementById(`badge-${stage}`);
+  el.textContent = text;
+  el.className = `stage-badge ${cls}`;
+}
+
+function setSpinnerIcon(stage) {
+  const icon = document.getElementById(`icon-${stage}`);
+  icon.innerHTML = '<div class="spinner" style="width:16px;height:16px;margin:auto"></div>';
+}
+
+function buildConfidenceDots(score, verdict) {
+  const container = document.getElementById('confidence-dots');
+  container.innerHTML = '';
+  const cls = verdict === 'APPLY' ? 'dot filled-green' : verdict === 'MAYBE' ? 'dot filled' : 'dot filled';
+  for (let i = 1; i <= 5; i++) {
+    const d = document.createElement('div');
+    d.className = i <= score ? cls : 'dot';
+    container.appendChild(d);
+  }
+}
+
+function buildChips(blockId, containerId, items, chipClass) {
+  const block = document.getElementById(blockId);
+  const container = document.getElementById(containerId);
+  if (!block || !container) return;          // defensive: never throw out of the handler
+  if (!items || items.length === 0) {
+    block.style.display = 'none';
+    return;
+  }
+  block.style.display = 'block';
+  container.innerHTML = '';
+  items.forEach(item => {
+    const c = document.createElement('span');
+    c.className = `chip ${chipClass}`;
+    c.textContent = item;
+    container.appendChild(c);
+  });
+}
+
+function addGenStep(id, icon, msg, state = 'active') {
+  const steps = document.getElementById('gen-steps');
+  let el = document.getElementById(`genstep-${id}`);
+  if (!el) {
+    el = document.createElement('div');
+    el.className = 'gen-step';
+    el.id = `genstep-${id}`;
+    steps.appendChild(el);
+  }
+  el.className = `gen-step ${state}`;
+  const iconHtml = state === 'active'
+    ? `<div class="step-spinner"></div>`
+    : `<span class="gen-step-icon">${icon}</span>`;
+  el.innerHTML = `${iconHtml}<span>${msg}</span>`;
+}
+
+function updateGenStep(id, icon, msg, state) {
+  addGenStep(id, icon, msg, state);
+}
+
+// ── Stream SSE from a fetch POST ───────────────────────────────────────────
+async function streamPost(url, body, onEvent) {
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(body),
+  });
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+
+  const reader = resp.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  const emit = (line) => {
+    if (line.startsWith('data: ')) {
+      try { onEvent(JSON.parse(line.slice(6))); } catch (_) {}
+    }
+  };
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop();
+    for (const line of lines) emit(line);
+  }
+  // Flush any trailing event left without a closing newline.
+  if (buffer.trim()) emit(buffer.trim());
+}
+
+// ── Run Screening ──────────────────────────────────────────────────────────
+async function runScreening() {
+  _isRunning = true;
+  _screeningResult = null;
+
+  // Reset UI
+  document.getElementById('btn-screen').disabled = true;
+  document.getElementById('btn-generate').style.display = 'none';   // explicit none
+  document.getElementById('btn-generate').disabled = true;
+  document.getElementById('results-section').style.display = 'none';
+  document.getElementById('gen-section').style.display = 'none';
+  document.getElementById('gen-done-card').style.display = 'none';
+
+  showSection('pipeline-section');
+  ['h1b', 'stage1', 'stage2'].forEach(s => {
+    setStageState(s, '');
+    setStageBadge(s, 'Pending', 'badge-skip');
+    setStageIcon(s, s === 'h1b' ? '🛂' : s === 'stage1' ? '⚡' : '🤖');
+  });
+  setStageDetail('h1b', 'Checking h1bdata.info history...');
+  setStageDetail('stage1', 'Location · Title exclusions · Domain keywords · Salary · Hard-stops · Must-have keywords');
+  setStageDetail('stage2', 'Profile-aware precision screening via Claude CLI');
+
+  setStatus('Connecting to pipeline...', true);
+
+  const body = {
+    url: document.getElementById('url').value.trim(),
+    title: document.getElementById('title').value.trim(),
+    company: document.getElementById('company').value.trim(),
+    location: document.getElementById('location').value.trim(),
+    description: document.getElementById('description').value.trim(),
+    salary_max: parseInt(document.getElementById('salary_max').value) || null,
+    source: document.getElementById('source').value,
+  };
+
+  try {
+    await streamPost('/api/screen', body, handleScreenEvent);
+  } catch (err) {
+    setStatus(`Connection error: ${err.message}`);
+  } finally {
+    _isRunning = false;
+    document.getElementById('btn-screen').disabled = false;
+  }
+}
+
+function handleScreenEvent(ev) {
+  switch (ev.type) {
+
+    case 'status':
+      setStatus(ev.message, true);
+      break;
+
+    case 'stage_start': {
+      const labels = { h1b: 'H1B Check', stage1: 'Stage 1', stage2: 'Stage 2 — AI' };
+      setStageState(ev.stage, 'active done');
+      setStageBadge(ev.stage, 'Running…', 'badge-running');
+      setSpinnerIcon(ev.stage);
+      setStatus(`Running ${labels[ev.stage] || ev.stage}...`, true);
+      break;
+    }
+
+    case 'stage_result': {
+      const { stage, outcome, detail } = ev;
+
+      if (stage === 'h1b') {
+        if (outcome === 'verified') {
+          setStageState('h1b', 'passed done');
+          setStageBadge('h1b', 'Verified', 'badge-pass');
+          setStageIcon('h1b', '✅');
+        } else if (outcome === 'dropped') {
+          setStageState('h1b', 'warn done');
+          setStageBadge('h1b', 'No History', 'badge-warn');
+          setStageIcon('h1b', '⚠️');
+        } else if (outcome === 'warn') {
+          setStageState('h1b', 'warn done');
+          setStageBadge('h1b', 'No History', 'badge-warn');
+          setStageIcon('h1b', '⚠️');
+        } else {
+          setStageState('h1b', 'skipped done');
+          setStageBadge('h1b', 'Skipped', 'badge-skip');
+          setStageIcon('h1b', '➖');
+        }
+        setStageDetail('h1b', detail);
+      }
+
+      if (stage === 'stage1') {
+        if (outcome === 'passed') {
+          setStageState('stage1', 'passed done');
+          setStageBadge('stage1', 'Passed', 'badge-pass');
+          setStageIcon('stage1', '✅');
+        } else {
+          setStageState('stage1', 'failed done');
+          setStageBadge('stage1', 'Failed', 'badge-fail');
+          setStageIcon('stage1', '❌');
+        }
+        setStageDetail('stage1', detail);
+      }
+
+      if (stage === 'stage2') {
+        const verdictMap = { apply: ['Passed', 'badge-pass', '✅'], maybe: ['Maybe', 'badge-warn', '⚠️'], skip: ['Skipped', 'badge-fail', '❌'] };
+        const [label, badgeCls, icon] = verdictMap[outcome] || ['Done', 'badge-skip', '➖'];
+        const stateMap = { apply: 'passed', maybe: 'warn', skip: 'failed' };
+        setStageState('stage2', `${stateMap[outcome] || ''} done`);
+        setStageBadge('stage2', label, badgeCls);
+        setStageIcon('stage2', icon);
+        setStageDetail('stage2',
+          ev.verdict
+            ? `${ev.verdict}  ·  Confidence ${ev.confidence}/5`
+            : (ev.detail || '')
+        );
+      }
+      break;
+    }
+
+    case 'screening_done': {
+      _screeningResult = ev;
+      const verdict = ev.verdict;
+
+      setStatus(`Screening complete — ${verdict}`);
+      showSection('results-section');
+
+      // Verdict badge
+      const badge = document.getElementById('verdict-badge');
+      badge.textContent = verdict;
+      badge.className = `verdict-badge verdict-${verdict}`;
+
+      if (verdict === 'SKIP' && ev.stage1_fail) {
+        buildConfidenceDots(0, verdict);
+        document.getElementById('reasoning-text').textContent = ev.stage1_fail;
+        document.getElementById('signals-block').style.display = 'none';
+        document.getElementById('flags-block').style.display = 'none';
+        document.getElementById('angle-block').style.display = 'none';
+      } else {
+        buildConfidenceDots(ev.confidence || 0, verdict);
+        document.getElementById('reasoning-text').textContent = ev.reasoning || '—';
+        buildChips('signals-block', 'match-chips', ev.match_signals, 'chip-green');
+        buildChips('flags-block', 'risk-chips', ev.risk_flags, 'chip-red');
+
+        if (ev.suggested_angle) {
+          document.getElementById('angle-block').style.display = 'block';
+          document.getElementById('angle-text').textContent = ev.suggested_angle;
+        } else {
+          document.getElementById('angle-block').style.display = 'none';
+        }
+      }
+
+      // Show generate button only for APPLY or MAYBE
+      if (verdict === 'APPLY' || verdict === 'MAYBE') {
+        document.getElementById('btn-generate').style.display = 'block';
+        document.getElementById('btn-generate').disabled = false;
+        document.getElementById('btn-generate').textContent =
+          verdict === 'APPLY'
+            ? '⚡ Generate Resume + Cover Letter'
+            : '⚡ Generate Materials (MAYBE — review first)';
+      }
+      break;
+    }
+
+    case 'error':
+      setStatus(`Error: ${ev.message}`);
+      break;
+  }
+}
+
+// ── Run Generation ─────────────────────────────────────────────────────────
+async function runGeneration() {
+  if (!_screeningResult) return;
+  _isRunning = true;
+  document.getElementById('btn-generate').disabled = true;
+
+  showSection('gen-section');
+  document.getElementById('gen-steps').innerHTML = '';
+  document.getElementById('gen-done-card').style.display = 'none';
+
+  setStatus('Starting material generation...', true);
+
+  const body = {
+    title: document.getElementById('title').value.trim(),
+    company: document.getElementById('company').value.trim(),
+    location: document.getElementById('location').value.trim(),
+    url: document.getElementById('url').value.trim(),
+    source: document.getElementById('source').value,
+    description: _screeningResult.description || document.getElementById('description').value.trim(),
+    confidence: _screeningResult.confidence || 3,
+    reasoning: _screeningResult.reasoning || '',
+    suggested_angle: _screeningResult.suggested_angle || '',
+    h1b_sponsor_verified: _screeningResult.h1b_sponsor_verified ?? null,
+  };
+
+  try {
+    await streamPost('/api/generate', body, handleGenEvent);
+  } catch (err) {
+    setStatus(`Connection error: ${err.message}`);
+    addGenStep('error', '❌', `Connection error: ${err.message}`, 'error');
+  } finally {
+    _isRunning = false;
+    document.getElementById('btn-generate').disabled = false;
+  }
+}
+
+function handleGenEvent(ev) {
+  const STEP_META = {
+    init:        { icon: '⚙️',  label: 'Initializing' },
+    generating:  { icon: '📝',  label: 'Generating' },
+    generated:   { icon: '✅',  label: 'Generated' },
+    pdf:         { icon: '📄',  label: 'Rendering PDFs' },
+    pdf_done:    { icon: '✅',  label: 'PDFs rendered' },
+    pdf_warn:    { icon: '⚠️',  label: 'PDF warning' },
+    drive:       { icon: '☁️',  label: 'Uploading' },
+    drive_done:  { icon: '✅',  label: 'Uploaded to Drive' },
+    drive_warn:  { icon: '⚠️',  label: 'Drive warning' },
+    record:      { icon: '📋',  label: 'Recording' },
+    recorded:    { icon: '✅',  label: 'Recorded in Sheets' },
+    record_warn: { icon: '⚠️',  label: 'Recording warning' },
+  };
+
+  switch (ev.type) {
+
+    case 'gen_progress': {
+      const isDone = ev.step.endsWith('_done') || ev.step === 'generated' || ev.step === 'recorded';
+      const isWarn = ev.step.endsWith('_warn');
+      const isActive = !isDone && !isWarn;
+      const state = isDone ? 'done' : isWarn ? 'warn' : 'active';
+      const meta = STEP_META[ev.step] || { icon: '⚙️', label: ev.step };
+      addGenStep(ev.step, meta.icon, ev.message, state);
+      setStatus(ev.message, isActive);
+      break;
+    }
+
+    case 'error':
+      addGenStep('err', '❌', ev.message, 'error');
+      setStatus(`Generation failed: ${ev.message}`);
+      break;
+
+    case 'gen_done': {
+      setStatus('Generation complete — ready to apply!');
+      const card = document.getElementById('gen-done-card');
+      card.style.display = 'block';
+      const row = document.getElementById('link-row');
+      row.innerHTML = '';
+
+      const makeLink = (href, label, primary) => {
+        const isLocalPath = !href.startsWith('http');
+        const btn = document.createElement(isLocalPath ? 'button' : 'a');
+        btn.className = `link-btn ${primary ? 'link-btn-primary' : 'link-btn-secondary'}`;
+        btn.textContent = label;
+        if (!isLocalPath) {
+          btn.href = href;
+          btn.target = '_blank';
+          btn.rel = 'noopener';
+        } else {
+          btn.title = href;
+          btn.onclick = () => {
+            const el = document.createElement('textarea');
+            el.value = href;
+            document.body.appendChild(el);
+            el.select();
+            document.execCommand('copy');
+            document.body.removeChild(el);
+            btn.textContent = '✅ Path copied!';
+            setTimeout(() => { btn.textContent = label; }, 2000);
+          };
+        }
+        row.appendChild(btn);
+      };
+
+      if (ev.resume_link) makeLink(ev.resume_link, '📄 Resume PDF', true);
+      if (ev.cl_link)     makeLink(ev.cl_link, '📝 Cover Letter', false);
+
+      const scoreContainer = document.getElementById('score-container');
+      if (ev.interview_score != null) {
+        scoreContainer.innerHTML =
+          `<div class="score-pill">🎯 Keyword coverage score: <strong>${Math.round(ev.interview_score)}/100</strong></div>`;
+      }
+      if (ev.angle_used) {
+        scoreContainer.innerHTML +=
+          `<div style="font-size:12px;color:var(--muted);margin-top:10px">
+             <strong>Angle used:</strong> ${ev.angle_used}
+           </div>`;
+      }
+      break;
+    }
+  }
+}
+</script>
+</body>
+</html>

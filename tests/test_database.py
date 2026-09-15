@@ -58,6 +58,41 @@ class TestDatabase:
         assert len(audits) == 1
         assert audits[0]["reason"] == "title contains 'senior'"
 
+    def test_get_recently_audited_fingerprints_includes_all_stages(self, db):
+        db.save_audit_entry(
+            job_fingerprint="acme||sre", company="Acme", title="SRE",
+            source="linkedin", stage="stage2_claude", verdict="APPLY",
+            reason="good match", run_date="2026-09-01",
+        )
+        result = db.get_recently_audited_fingerprints(30)
+        assert result == {"acme||sre"}
+        assert "other||job" not in result
+
+    def test_get_recently_audited_fingerprints_catches_long_lived_posting(self, db):
+        """A job first seen 10 days ago (outside STALE_JOB_DAYS=5) but
+        screened again yesterday must still count as 'known' — this is the
+        30%-re-screen bug: known_fps used to key only on first-seen."""
+        job = RawJob(
+            title="SRE", company="Acme", location="Remote",
+            url="https://example.com", source="linkedin",
+        )
+        db.save_jobs([job])
+        db.conn.execute(
+            "UPDATE jobs SET created_at = datetime('now', '-10 days') WHERE fingerprint = ?",
+            (job.fingerprint,),
+        )
+        db.conn.commit()
+        db.save_audit_entry(
+            job_fingerprint=job.fingerprint, company="Acme", title="SRE",
+            source="linkedin", stage="stage2_claude", verdict="APPLY",
+            reason="still a good match", run_date="2026-09-07",
+        )
+
+        # First-seen-only view has long since forgotten it...
+        assert job.fingerprint not in db.get_recent_fingerprints(5)
+        # ...but the audit-history view still catches it.
+        assert job.fingerprint in db.get_recently_audited_fingerprints(5)
+
     def test_save_feedback(self, db):
         db.save_feedback(
             job_fingerprint="google||cloud engineer",
@@ -107,3 +142,37 @@ class TestDatabase:
         db.save_jobs([job])
         assert db.get_url_by_fingerprint("google||devops") == "https://example.com/devops"
         assert db.get_url_by_fingerprint("unknown||job") is None
+
+
+class TestClaudeUsage:
+    def test_log_and_read_back(self, db):
+        db.log_claude_usage(
+            purpose="screening", label="Stage 2 screening", model="claude-haiku-4-5",
+            input_tokens=1000, output_tokens=200,
+            cache_creation_input_tokens=10, cache_read_input_tokens=500,
+            cost_usd=0.05, duration_ms=1234, num_turns=1,
+        )
+        rows = db.get_claude_usage_rows()
+        assert len(rows) == 1
+        assert rows[0]["purpose"] == "screening"
+        assert rows[0]["input_tokens"] == 1000
+        assert rows[0]["cost_usd"] == 0.05
+
+    def test_since_id_scopes_to_new_rows_only(self, db):
+        db.log_claude_usage(purpose="screening", label="a", model="m", input_tokens=1)
+        start_id = db.get_max_claude_usage_id()
+        db.log_claude_usage(purpose="generation", label="b", model="m", input_tokens=2)
+        db.log_claude_usage(purpose="generation", label="c", model="m", input_tokens=3)
+
+        since = db.get_claude_usage_since_id(start_id)
+        assert len(since) == 2
+        assert {r["purpose"] for r in since} == {"generation"}
+
+    def test_get_max_usage_id_zero_when_empty(self, db):
+        assert db.get_max_claude_usage_id() == 0
+
+    def test_rows_since_timestamp_filter(self, db):
+        db.log_claude_usage(purpose="verification", label="v", model="m", input_tokens=1)
+        far_future = "2999-01-01 00:00:00"
+        assert db.get_claude_usage_rows(since=far_future) == []
+        assert len(db.get_claude_usage_rows()) == 1

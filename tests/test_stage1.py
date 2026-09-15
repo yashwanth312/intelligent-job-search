@@ -22,6 +22,36 @@ class TestStage1Filter:
         result = f.filter_job(make_job())
         assert result.passed is True
 
+    def test_rejects_india_location(self):
+        f = Stage1Filter()
+        result = f.filter_job(make_job(location="Bangalore, Karnataka, India"))
+        assert result.passed is False
+        assert result.stage == "stage1_location"
+
+    @pytest.mark.parametrize("location", [
+        "Taipei",                      # Taiwan — previously uncovered
+        "Manila, Philippines",         # Philippines — previously uncovered
+        "Riyadh - MSO",                # decoded Workday URL slug format
+        "Romania - Bucharest",
+        "Vietnam, Ho_Chi_Minh_City",
+        "Malaysia, Penang",
+    ])
+    def test_rejects_previously_uncovered_non_us_locations(self, location):
+        f = Stage1Filter()
+        result = f.filter_job(make_job(location=location))
+        assert result.passed is False
+        assert result.stage == "stage1_location"
+
+    @pytest.mark.parametrize("location", [
+        "Vienna, VA",     # DC-metro suburb — collides with Vienna, Austria
+        "Melbourne, FL",  # Space Coast aerospace hub — collides with Melbourne, AU
+        "Rome, GA",
+    ])
+    def test_us_cities_sharing_names_with_foreign_cities_still_pass(self, location):
+        f = Stage1Filter()
+        result = f.filter_job(make_job(location=location))
+        assert result.passed is True
+
     def test_rejects_senior_title(self):
         f = Stage1Filter()
         result = f.filter_job(make_job(title="Senior Cloud Engineer"))
@@ -34,15 +64,92 @@ class TestStage1Filter:
         assert result.passed is False
         assert "clearance" in result.reason.lower() or "ts/sci" in result.reason.lower()
 
-    def test_rejects_no_sponsorship(self):
+    def test_no_sponsorship_follows_toggle(self):
+        """A 'we don't sponsor' JD is kept while the sponsorship filter is off
+        (candidate is work-authorized) and rejected only when it is on. The
+        effective hard-stop list in stage1 is built from the same flag, so the
+        two stay consistent."""
+        from config import SPONSORSHIP_FILTER_ENABLED
         f = Stage1Filter()
-        result = f.filter_job(make_job(description="We will not sponsor visas"))
+        result = f.filter_job(make_job(
+            description="We will not sponsor visas. AWS and Kubernetes required."
+        ))
+        if SPONSORSHIP_FILTER_ENABLED:
+            assert result.passed is False
+        else:
+            assert result.passed is True
+
+    def test_still_rejects_citizenship_requirement(self):
+        """US-citizenship requirements are always rejected, independent of the
+        sponsorship toggle — an F1 candidate cannot take a citizens-only role."""
+        f = Stage1Filter()
+        result = f.filter_job(make_job(
+            description="Must be a US citizen. AWS and Kubernetes required."
+        ))
         assert result.passed is False
 
     def test_rejects_5_plus_years(self):
         f = Stage1Filter()
         result = f.filter_job(make_job(description="Requires 5+ years of experience"))
         assert result.passed is False
+
+    def test_rejects_markdown_escaped_hyphen_range(self):
+        """jobspy renders LinkedIn/Indeed descriptions as Markdown, which
+        backslash-escapes hyphens: "4\\-6 years" instead of "4-6 years"."""
+        f = Stage1Filter()
+        result = f.filter_job(make_job(
+            description="AWS and Kubernetes required. 4\\-6 years of experience in site reliability."
+        ))
+        assert result.passed is False
+        assert "yoe" in result.reason.lower()
+
+    def test_rejects_bare_years_of_experience_no_qualifier(self):
+        """'6 years of experience' with no '+'/'minimum'/'at least' qualifier
+        was previously uncovered by any pattern."""
+        f = Stage1Filter()
+        result = f.filter_job(make_job(
+            description="AWS and Kubernetes required. 6 years of experience with cloud native technologies."
+        ))
+        assert result.passed is False
+        assert "yoe" in result.reason.lower()
+
+    def test_rejects_range_lower_bound_above_threshold(self):
+        """A numeric combo not in the old hardcoded list (e.g. 6-9) must
+        still be caught now that ranges are matched generally."""
+        f = Stage1Filter()
+        result = f.filter_job(make_job(
+            description="AWS and Kubernetes required. 6-9 years of relevant experience needed."
+        ))
+        assert result.passed is False
+
+    def test_keeps_low_end_range_spanning_below_threshold(self):
+        """"2-5 years" starts below MIN_YOE_HARD_STOP, so it's not a hard
+        4+ requirement — must not be hard-stopped."""
+        f = Stage1Filter()
+        result = f.filter_job(make_job(
+            description="AWS and Kubernetes required. 2-5 years of experience is fine."
+        ))
+        assert result.passed is True
+
+    def test_keeps_company_history_years_mention(self):
+        """"with over 26 years of experience, we..." describes the company,
+        not a job requirement — must not be hard-stopped."""
+        f = Stage1Filter()
+        result = f.filter_job(make_job(
+            description=(
+                "AWS and Kubernetes required. With over 26 years of experience, "
+                "we consistently deliver great cloud infrastructure."
+            )
+        ))
+        assert result.passed is True
+
+    def test_keeps_preferred_low_years(self):
+        """2+ years preferred stays under the hard-stop threshold."""
+        f = Stage1Filter()
+        result = f.filter_job(make_job(
+            description="AWS and Kubernetes cloud infrastructure engineer. 2+ years preferred."
+        ))
+        assert result.passed is True
 
     def test_rejects_empty_description(self):
         f = Stage1Filter()

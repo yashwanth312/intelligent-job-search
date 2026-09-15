@@ -77,9 +77,27 @@ class Database:
                 checked_at   TEXT NOT NULL
             );
 
+            CREATE TABLE IF NOT EXISTS claude_usage (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                ts TEXT DEFAULT (datetime('now')),
+                purpose TEXT NOT NULL,
+                label TEXT,
+                model TEXT,
+                input_tokens INTEGER DEFAULT 0,
+                output_tokens INTEGER DEFAULT 0,
+                cache_creation_input_tokens INTEGER DEFAULT 0,
+                cache_read_input_tokens INTEGER DEFAULT 0,
+                cost_usd REAL,
+                duration_ms INTEGER,
+                num_turns INTEGER
+            );
+
             CREATE INDEX IF NOT EXISTS idx_jobs_fingerprint ON jobs(fingerprint);
+            CREATE INDEX IF NOT EXISTS idx_jobs_created_fp ON jobs(created_at, fingerprint);
             CREATE INDEX IF NOT EXISTS idx_audit_run_date ON screening_audit(run_date);
+            CREATE INDEX IF NOT EXISTS idx_audit_created_at ON screening_audit(created_at, job_fingerprint);
             CREATE INDEX IF NOT EXISTS idx_feedback_fingerprint ON feedback(job_fingerprint);
+            CREATE INDEX IF NOT EXISTS idx_claude_usage_purpose ON claude_usage(purpose);
         """)
 
     def get_tables(self) -> list[str]:
@@ -144,6 +162,25 @@ class Database:
             (f"-{int(days)} days",),
         )
         return {row["fingerprint"] for row in cursor.fetchall()}
+
+    def get_recently_audited_fingerprints(self, days: int) -> set[str]:
+        """Return fingerprints of every job that appeared in ANY screening_audit
+        row (stage1/h1b/stage2, any verdict) in the last `days` days.
+
+        Unlike `get_recent_fingerprints` (keyed on `jobs.created_at`, i.e. when
+        a fingerprint was FIRST seen), this is keyed on when it was last
+        actually screened. A long-lived posting from a prefiltered source
+        (LinkedIn/Indeed/Google) can resurface as "fresh" every day forever;
+        without this, it falls out of the first-seen window after
+        STALE_JOB_DAYS and gets silently re-screened by Stage 2 daily even
+        though we already have a verdict for it. Union this with
+        `get_recent_fingerprints` when deciding what's safe to skip re-scraping.
+        """
+        cursor = self.conn.execute(
+            "SELECT DISTINCT job_fingerprint FROM screening_audit WHERE created_at >= datetime('now', ?)",
+            (f"-{int(days)} days",),
+        )
+        return {row["job_fingerprint"] for row in cursor.fetchall()}
 
     def save_audit_entry(
         self, job_fingerprint: str, company: str, title: str,
@@ -222,8 +259,17 @@ class Database:
         return row["url"] if row else None
 
     def get_h1b_cache(self, company_key: str) -> bool | None:
-        """Return cached verified bool if fresh (within TTL), else None."""
-        from config import H1B_CACHE_TTL_DAYS
+        """Return cached verified bool if fresh (within TTL), else None.
+
+        Positives and negatives get different TTLs on purpose. A cached True is
+        a fact about an employer's filing history and barely decays. A cached
+        False is only ever "none of the query forms we tried matched anything on
+        h1bdata.info" — which is also what a renamed entity, a decorated job-board
+        company string, or a transient site hiccup looks like. Expiring negatives
+        sooner means a wrong one self-heals in days instead of silently dropping
+        every posting from that employer for a month.
+        """
+        from config import H1B_CACHE_TTL_DAYS, H1B_NEGATIVE_CACHE_TTL_DAYS
         row = self.conn.execute(
             "SELECT verified, checked_at FROM h1b_sponsor_cache WHERE company_key = ?",
             (company_key,),
@@ -234,9 +280,26 @@ class Database:
         if checked.tzinfo is None:
             checked = checked.replace(tzinfo=timezone.utc)
         age_days = (datetime.now(timezone.utc) - checked).days
-        if age_days >= H1B_CACHE_TTL_DAYS:
+        verified = bool(row["verified"])
+        ttl = H1B_CACHE_TTL_DAYS if verified else H1B_NEGATIVE_CACHE_TTL_DAYS
+        if age_days >= ttl:
             return None
-        return bool(row["verified"])
+        return verified
+
+    def get_verified_sponsor_keys(self) -> set[str]:
+        """Return every company_key currently cached as a confirmed sponsor.
+
+        Used to let a decorated company string ("Amazon Web Services (AWS)",
+        "NVIDIA AI") inherit the verdict already earned by its parent brand
+        instead of being scraped as an unrelated employer and dropped.
+        """
+        from config import H1B_CACHE_TTL_DAYS
+        cursor = self.conn.execute(
+            "SELECT company_key FROM h1b_sponsor_cache "
+            "WHERE verified = 1 AND checked_at >= datetime('now', ?)",
+            (f"-{int(H1B_CACHE_TTL_DAYS)} days",),
+        )
+        return {row["company_key"] for row in cursor.fetchall()}
 
     def set_h1b_cache(self, company_key: str, company_raw: str, verified: bool) -> None:
         """Upsert a sponsor check result. Only call with definitive True/False, not None."""
@@ -248,3 +311,49 @@ class Database:
             (company_key, company_raw, int(verified), now),
         )
         self.conn.commit()
+
+    def log_claude_usage(
+        self, *, purpose: str, label: str, model: str,
+        input_tokens: int = 0, output_tokens: int = 0,
+        cache_creation_input_tokens: int = 0, cache_read_input_tokens: int = 0,
+        cost_usd: float | None = None, duration_ms: int | None = None,
+        num_turns: int | None = None,
+    ) -> None:
+        """Record one Claude CLI call's usage. `purpose` is a free-form tag
+        ("screening", "generation", "verification", ...) used to break down
+        cumulative usage by what the call was for."""
+        self.conn.execute(
+            """INSERT INTO claude_usage
+            (purpose, label, model, input_tokens, output_tokens,
+             cache_creation_input_tokens, cache_read_input_tokens,
+             cost_usd, duration_ms, num_turns)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (purpose, label, model, input_tokens, output_tokens,
+             cache_creation_input_tokens, cache_read_input_tokens,
+             cost_usd, duration_ms, num_turns),
+        )
+        self.conn.commit()
+
+    def get_max_claude_usage_id(self) -> int:
+        row = self.conn.execute("SELECT MAX(id) AS m FROM claude_usage").fetchone()
+        return row["m"] or 0
+
+    def get_claude_usage_since_id(self, min_id: int) -> list[dict]:
+        """Rows logged after `min_id` — pair with get_max_claude_usage_id() taken
+        before a run starts to scope usage to that run, without relying on
+        clock-format matching against SQLite's datetime('now')."""
+        cursor = self.conn.execute(
+            "SELECT * FROM claude_usage WHERE id > ? ORDER BY id", (min_id,)
+        )
+        return [dict(row) for row in cursor.fetchall()]
+
+    def get_claude_usage_rows(self, since: str | None = None) -> list[dict]:
+        """All usage rows, optionally restricted to ts >= `since`
+        (format 'YYYY-MM-DD HH:MM:SS', matching SQLite's datetime('now'))."""
+        if since:
+            cursor = self.conn.execute(
+                "SELECT * FROM claude_usage WHERE ts >= ? ORDER BY ts", (since,)
+            )
+        else:
+            cursor = self.conn.execute("SELECT * FROM claude_usage ORDER BY ts")
+        return [dict(row) for row in cursor.fetchall()]

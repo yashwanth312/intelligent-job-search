@@ -14,10 +14,10 @@ from datetime import datetime
 import aiohttp
 from bs4 import BeautifulSoup
 
-from config import TITLE_DOMAIN_KEYWORDS
+from config import EXCLUDE_TITLE_KEYWORDS, TITLE_DOMAIN_KEYWORDS
 from models.job import RawJob
 from sources._dates import parse_iso
-from sources.base import SourceAdapter, SourceResult
+from sources.base import SourceAdapter, SourceResult, scrape_boards
 
 logger = logging.getLogger(__name__)
 
@@ -25,8 +25,19 @@ GREENHOUSE_API = "https://boards-api.greenhouse.io/v1/boards"
 
 
 def _title_is_relevant(title: str) -> bool:
-    """Check if a job title matches any of our domain keywords."""
+    """Check whether a title is worth pulling from a board-style ATS.
+
+    Shared by the Greenhouse, Lever and Ashby adapters, all of which return a
+    company's entire board and have to filter client-side.
+
+    Applies BOTH halves of Stage 1's title gate — the domain allow-list and the
+    exclusion list. Skipping exclusions here let "Senior ...", "... Intern" and
+    industrial titles ("Automation Technician") into the pipeline just to be
+    rejected a phase later.
+    """
     title_lower = title.lower()
+    if any(kw in title_lower for kw in EXCLUDE_TITLE_KEYWORDS):
+        return False
     return any(
         re.search(r'\b' + re.escape(kw) + r'\b', title_lower)
         for kw in TITLE_DOMAIN_KEYWORDS
@@ -41,28 +52,22 @@ class GreenhouseAdapter(SourceAdapter):
         self.companies = companies
 
     async def scrape(self, titles: list[str], locations: list[str]) -> SourceResult:
-        jobs: list[RawJob] = []
-        errors: list[str] = []
         total_raw = 0
 
-        async with aiohttp.ClientSession() as session:
-            for company in self.companies:
-                try:
-                    company_jobs = await self._scrape_company(
-                        session, company["token"], company["name"]
-                    )
-                    total_raw += company_jobs[0]
-                    jobs.extend(company_jobs[1])
-                except Exception as e:
-                    msg = f"Greenhouse {company['name']}: {e}"
-                    logger.warning(msg)
-                    errors.append(msg)
+        async def one(session, company) -> list[RawJob]:
+            nonlocal total_raw
+            raw_count, company_jobs = await self._scrape_company(
+                session, company["token"], company["name"]
+            )
+            total_raw += raw_count
+            return company_jobs
 
+        result = await scrape_boards(self.companies, one, label="Greenhouse")
         logger.info(
-            f"Greenhouse: {len(jobs)} relevant jobs from {total_raw} total "
+            f"Greenhouse: {len(result.jobs)} relevant jobs from {total_raw} total "
             f"across {len(self.companies)} companies"
         )
-        return SourceResult(jobs=jobs, errors=errors)
+        return result
 
     async def _scrape_company(
         self, session: aiohttp.ClientSession, token: str, name: str

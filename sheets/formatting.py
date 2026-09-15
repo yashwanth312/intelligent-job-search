@@ -22,6 +22,7 @@ SKIP_RED = _rgb(255, 218, 218)      # Light red for SKIP
 REJECTED_GRAY = _rgb(240, 240, 240) # Light gray for Audit
 APPLIED_BLUE = _rgb(219, 234, 254)  # Light blue for Applied
 ROW_ALT = _rgb(248, 249, 250)       # Alternating row stripe
+NO_RESPONSE_DARK = _rgb(30, 41, 59) # slate-800 — went cold / no reply
 
 
 def format_all_sheets(spreadsheet: Spreadsheet) -> None:
@@ -98,31 +99,33 @@ def format_daily(spreadsheet: Spreadsheet, ws: Worksheet) -> None:
     """Format the Daily tab."""
     sheet_id = ws.id
     _clear_banding(spreadsheet, sheet_id)
+    _clear_conditional_formatting(spreadsheet, sheet_id)
     requests = []
 
     # Freeze header row
     requests.append(_freeze_rows(sheet_id, 1))
 
-    # Header style: dark navy bg, white bold text (15 columns)
-    requests.append(_header_format(sheet_id, 15))
+    # Header style: dark navy bg, white bold text (16 columns)
+    requests.append(_header_format(sheet_id, 16))
 
-    # Column widths — Risk Flags after Status, Sponsorship before Salary
+    # Column widths — Interview Score + Risk Flags after Status, Sponsorship before Salary
     widths = [
         (0, 160),   # Company
         (1, 220),   # Job Title
         (2, 150),   # Location
         (3, 90),    # Confidence
         (4, 90),    # Status
-        (5, 180),   # Risk Flags
-        (6, 250),   # Apply Link
-        (7, 90),    # Posted (e.g. "3h ago")
-        (8, 130),   # Source
-        (9, 300),   # AI Reasoning
-        (10, 140),  # Suggested Angle
-        (11, 180),  # Match Signals
-        (12, 130),  # Sponsorship
-        (13, 120),  # Salary Range
-        (14, 150),  # Notes
+        (5, 110),   # Interview Score
+        (6, 180),   # Risk Flags
+        (7, 250),   # Apply Link
+        (8, 90),    # Posted (e.g. "3h ago")
+        (9, 130),   # Source
+        (10, 300),  # AI Reasoning
+        (11, 140),  # Suggested Angle
+        (12, 180),  # Match Signals
+        (13, 130),  # Sponsorship
+        (14, 120),  # Salary Range
+        (15, 150),  # Notes
     ]
     for col, width in widths:
         requests.append(_col_width(sheet_id, col, width))
@@ -142,8 +145,13 @@ def format_daily(spreadsheet: Spreadsheet, ws: Worksheet) -> None:
     requests.append(_cond_format_number(sheet_id, col=3, op="NUMBER_EQ", value="3", bg=MAYBE_YELLOW))
     requests.append(_cond_format_number(sheet_id, col=3, op="NUMBER_LESS_THAN_EQ", value="2", bg=SKIP_RED))
 
+    # Conditional formatting on Interview Score column (col 5): plain 0-100
+    # int, same convention as Confidence — green >=50, red <30.
+    requests.append(_cond_format_number(sheet_id, col=5, op="NUMBER_GREATER_THAN_EQ", value="50", bg=APPLY_GREEN))
+    requests.append(_cond_format_number(sheet_id, col=5, op="NUMBER_LESS", value="30", bg=SKIP_RED))
+
     # Alternating row colors
-    requests.append(_banding(sheet_id, 15))
+    requests.append(_banding(sheet_id, 16))
 
     spreadsheet.batch_update({"requests": requests})
 
@@ -228,10 +236,11 @@ def format_tracker(spreadsheet: Spreadsheet, ws: Worksheet) -> None:
     """Format the Tracker tab — applied job pipeline."""
     sheet_id = ws.id
     _clear_banding(spreadsheet, sheet_id)
+    _clear_conditional_formatting(spreadsheet, sheet_id)
     requests = []
 
     requests.append(_freeze_rows(sheet_id, 1))
-    requests.append(_header_format(sheet_id, 9))
+    requests.append(_header_format(sheet_id, 10))
 
     widths = [
         (0, 100),   # Date Applied
@@ -243,33 +252,37 @@ def format_tracker(spreadsheet: Spreadsheet, ws: Worksheet) -> None:
         (6, 100),   # Follow-up Date
         (7, 90),    # Follow-up Sent
         (8, 220),   # Notes
+        (9, 80),    # Confidence
     ]
     for col, width in widths:
         requests.append(_col_width(sheet_id, col, width))
 
-    # Status dropdown (col 5 = column F)
+    # Status dropdown (col 5 = column F). Every row in Tracker is already an
+    # applied job, so "Applied" is implicit and omitted. "Reached out" leads —
+    # it's the only status that paints the row blue.
     requests.append(_data_validation(
         sheet_id, col=5,
-        values=["Applied", "Phone Screen", "Interview", "Offer", "Rejected", "No Response", "Withdrawn"]
+        values=["Reached out", "Phone Screen", "Interview", "Offer", "Rejected", "No Response", "Withdrawn"]
     ))
 
     # Follow-up Sent dropdown (col 7 = column H)
-    requests.append(_data_validation(sheet_id, col=7, values=["No", "Yes"]))
+    requests.append(_data_validation(sheet_id, col=7, values=["No", "Yes", "Never"]))
 
-    # Row-level colors by pipeline stage (Status in col F = index 5, formula uses $F2)
+    # Row-level colors by pipeline stage (Status in col F = index 5, formula uses $F2).
+    # A blank status (freshly synced, just "applied") stays white — no rule fires.
     row_rules = [
-        ("No Response",  _rgb(229, 231, 235)),  # gray-200   — went cold
-        ("Withdrawn",    _rgb(254, 215, 170)),  # orange-200 — you pulled out
-        ("Rejected",     _rgb(254, 202, 202)),  # red-200    — hard stop
-        ("Applied",      _rgb(191, 219, 254)),  # blue-200   — in flight
-        ("Phone Screen", _rgb(253, 230, 138)),  # amber-200  — heating up
-        ("Interview",    _rgb(221, 214, 254)),  # violet-200 — exciting
-        ("Offer",        _rgb(187, 247, 208)),  # green-200  — celebrate
+        ("Withdrawn",    _rgb(254, 215, 170), None),                # orange-200 — you pulled out
+        ("Rejected",     _rgb(254, 202, 202), None),                # red-200    — hard stop
+        ("Reached out",  _rgb(191, 219, 254), None),                # blue-200   — contacted someone
+        ("Phone Screen", _rgb(253, 230, 138), None),                # amber-200  — heating up
+        ("Interview",    _rgb(221, 214, 254), None),                # violet-200 — exciting
+        ("Offer",        _rgb(187, 247, 208), None),                # green-200  — celebrate
+        ("No Response",  NO_RESPONSE_DARK,    HEADER_FG),           # slate-800  — went cold, white text
     ]
-    for status_text, bg in row_rules:
-        requests.append(_row_cond_format(sheet_id, 9, f'=$F2="{status_text}"', bg))
+    for status_text, bg, fg in row_rules:
+        requests.append(_row_cond_format(sheet_id, 10, f'=$F2="{status_text}"', bg, fg))
 
-    requests.append(_banding(sheet_id, 9))
+    requests.append(_banding(sheet_id, 10))
 
     spreadsheet.batch_update({"requests": requests})
 
@@ -394,8 +407,14 @@ def _cond_format_number(sheet_id: int, col: int, op: str, value: str, bg: dict) 
     }
 
 
-def _row_cond_format(sheet_id: int, num_cols: int, formula: str, bg: dict) -> dict:
-    """Conditional format that colors the entire row based on a custom formula."""
+def _row_cond_format(sheet_id: int, num_cols: int, formula: str, bg: dict, fg: dict | None = None) -> dict:
+    """Conditional format that colors the entire row based on a custom formula.
+
+    fg: optional foreground (text) color — pass for dark backgrounds so text stays readable.
+    """
+    fmt: dict = {"backgroundColor": bg}
+    if fg is not None:
+        fmt["textFormat"] = {"foregroundColor": fg}
     return {
         "addConditionalFormatRule": {
             "rule": {
@@ -409,7 +428,7 @@ def _row_cond_format(sheet_id: int, num_cols: int, formula: str, bg: dict) -> di
                         "type": "CUSTOM_FORMULA",
                         "values": [{"userEnteredValue": formula}],
                     },
-                    "format": {"backgroundColor": bg},
+                    "format": fmt,
                 },
             },
             "index": 0,

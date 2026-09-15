@@ -67,22 +67,27 @@ def write_screened_jobs(ws: gspread.Worksheet, jobs: list[ScreenedJob]) -> None:
         elif job.salary_min:
             salary = f"${job.salary_min:,}+"
 
+        interview_score = (
+            job.interview_likelihood if job.interview_likelihood is not None else ""
+        )
+
         rows.append([
             job.company,                          # 0  Company
             job.title,                            # 1  Job Title
             job.location,                         # 2  Location
             job.confidence,                       # 3  Confidence
             "",                                   # 4  Status (user fills)
-            ", ".join(job.risk_flags),            # 5  Risk Flags
-            job.url,                              # 6  Apply Link
-            _humanize_posted(job.posted_at),      # 7  Posted (e.g. "3h ago")
-            job.source,                           # 8  Source
-            job.reasoning,                        # 9  AI Reasoning
-            job.suggested_angle,                  # 10 Suggested Angle
-            ", ".join(job.match_signals),         # 11 Match Signals
-            _sponsorship_label(job),              # 12 Sponsorship
-            salary,                               # 13 Salary Range
-            "",                                   # 14 Notes
+            interview_score,                      # 5  Interview Score
+            ", ".join(job.risk_flags),            # 6  Risk Flags
+            job.url,                              # 7  Apply Link
+            _humanize_posted(job.posted_at),      # 8  Posted (e.g. "3h ago")
+            job.source,                           # 9  Source
+            job.reasoning,                        # 10 AI Reasoning
+            job.suggested_angle,                  # 11 Suggested Angle
+            ", ".join(job.match_signals),         # 12 Match Signals
+            _sponsorship_label(job),              # 13 Sponsorship
+            salary,                               # 14 Salary Range
+            "",                                   # 15 Notes
         ])
 
     if rows:

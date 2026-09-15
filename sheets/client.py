@@ -25,7 +25,9 @@ class SheetsClient:
         self.creds = Credentials.from_service_account_file(
             GOOGLE_SHEETS_CREDS_FILE, scopes=SCOPES
         )
-        self.gc = gspread.authorize(self.creds)
+        # BackOffHTTPClient retries 408/429/500/502/503/504 with exponential
+        # backoff (up to 128s) instead of raising on a transient Google outage.
+        self.gc = gspread.authorize(self.creds, http_client=gspread.BackOffHTTPClient)
         self.spreadsheet = self._get_or_create_spreadsheet()
         self.drive_service = build("drive", "v3", credentials=self.creds)
 
@@ -102,9 +104,20 @@ class SheetsClient:
 
 
 def _ensure_headers(ws: gspread.Worksheet, expected: list[str]) -> None:
-    """Insert the expected header row at row 1 if it isn't already there."""
+    """Ensure the header row is present and complete; append any missing trailing columns."""
     first_row = ws.row_values(1)
-    if first_row and first_row[0] == expected[0]:
+    if not first_row or first_row[0] != expected[0]:
+        ws.insert_row(expected, index=1)
+        logger.warning(f"Restored missing header row on '{ws.title}'")
         return
-    ws.insert_row(expected, index=1)
-    logger.warning(f"Restored missing header row on '{ws.title}'")
+    if len(first_row) < len(expected):
+        new_headers = expected[len(first_row):]
+        start_col = len(first_row) + 1
+        end_col = len(expected)
+        # Expand the sheet grid if it doesn't have enough columns
+        if ws.col_count < end_col:
+            ws.resize(cols=end_col)
+        start_letter = chr(64 + start_col)
+        end_letter = chr(64 + end_col)
+        ws.update(values=[new_headers], range_name=f"{start_letter}1:{end_letter}1")
+        logger.info(f"Appended missing header(s) {new_headers} to '{ws.title}'")

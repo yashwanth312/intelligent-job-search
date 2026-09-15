@@ -1,20 +1,103 @@
-# Workday tenants rejected from active scraping on or before 2026-04-29.
+# Workday tenants rejected from active scraping.
 # Auto-discovery (sources/workday_discovery.py) skips any tenant in this file.
 # Reason codes:
-#   industry_mismatch    — wrong industry (healthcare, govt, edu, industrial, retail, etc.)
+#   industry_mismatch    — wrong industry (healthcare, govt, edu, etc.)
 #   low_h1b_sponsorship  — sponsors rarely / not for cloud-devops roles
-#   defense_clearance    — most roles require US-citizen clearance F1 cannot hold
-#   dead_board           — Workday board returns 404 / 422 / parse errors
+#   defense_clearance    — most roles require US-citizen clearance
+#   dead_board           — Workday board returns 404/422/parse errors
+#   no_domain_roles      — board is live but advertises no cloud/devops/security roles
+#   auto_validation_failed     — failed h1b + active-board checks
+#   validation_max_attempts    — hit MAX_ATTEMPTS without resolution
 #
-# To restore a tenant: remove its entry here and add it to the
-# workday section of target_companies.yaml.
+# To restore a tenant: remove its entry here and re-run promotion.
 rejected:
+- tenant: 23andme
+  name: 23andMe
+  wd_server: wd5
+  site: '23'
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: 3m
   name: 3M
   wd_server: wd1
   site: Search
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: aaamidatlantic
+  name: AAA Club Alliance
+  wd_server: wd5
+  site: AAAMidAtlantic
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: aamc
+  name: AAMC
+  wd_server: wd5
+  site: AAMC
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: aampower
+  name: Dauch
+  wd_server: wd1
+  site: AAM-Career-Site
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: accelentertainment
+  name: Accel Entertainment Gaming, LLC.
+  wd_server: wd12
+  site: AccelEntertainment_Careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: acrt
+  name: ACRT, Inc.
+  wd_server: wd1
+  site: CareerBuilder
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: acuityinternational
+  name: Acuity International
+  wd_server: wd5
+  site: External
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: adventisthealthcare
+  name: Adventist HealthCare
+  wd_server: wd1
+  site: AdventistHealthCareCareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: aenetworks
+  name: Hearst Networks EMEA
+  wd_server: wd1
+  site: AE-Careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: aep
   name: American Electric Power
   wd_server: wd1
@@ -33,42 +116,276 @@ rejected:
   site: aes_clean_energy
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: agloan
+  name: American AgCredit
+  wd_server: wd5
+  site: AmericanAgCredit
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: airliquidehr
   name: Air Liquide
   wd_server: wd3
   site: AirLiquideExternalCareer
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: airproducts
+  name: Air Products
+  wd_server: wd5
+  site: AP0001
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: aksteel
+  name: Cleveland-Cliffs
+  wd_server: wd1
+  site: careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: akumincorp
+  name: Akumin
+  wd_server: wd5
+  site: akumincareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: alamedacourts
+  name: Superior Court of California, County of Alameda
+  wd_server: wd5
+  site: alamedacourts
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: allegion
   name: Allegion
   wd_server: wd5
   site: careers
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: alliantgroup
+  name: alliantgroup
+  wd_server: wd1
+  site: alliantgroup
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: alliedsolutions
+  name: Allied Solutions
+  wd_server: wd501
+  site: Allied_External
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: allina
+  name: Allina Health
+  wd_server: wd5
+  site: External
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: allisontransmission
   name: Allison Transmission
   wd_server: wd1
   site: ATI-External
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: altaishealthsolutions
+  name: altais
+  wd_server: wd108
+  site: External
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: altamed
+  name: AltaMed Health Services
+  wd_server: wd1
+  site: Careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: alwayscompassionate
+  name: Always Compassionate Health
+  wd_server: wd1
+  site: ACHomeCare
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: ambarella
+  name: Ambarella
+  wd_server: wd108
+  site: Ambarella
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: amcn
+  name: AMC Networks
+  wd_server: wd5
+  site: amcnetworks
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: amcor
   name: Amcor
   wd_server: wd5
   site: Amcor_External_Career_Site
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: american
+  name: American University
+  wd_server: wd1
+  site: AU
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: americancentury
+  name: American Century Investments
+  wd_server: wd5
+  site: AmericanCenturyInvestments
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: americanfidelity
+  name: American Fidelity Assurance Company
+  wd_server: wd5
+  site: External
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: americanredcross
+  name: American Red Cross
+  wd_server: wd1
+  site: American_Red_Cross_Careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: amesconstruction
+  name: Ames Construction, Inc.
+  wd_server: wd12
+  site: Ames
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: amherstgroup
+  name: Amherst
+  wd_server: wd1
+  site: Amherst_Holdings_Careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: aoins
+  name: Auto-Owners Insurance
+  wd_server: wd5
+  site: Concord
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: appliedis
   name: Applied Information Sciences
   wd_server: wd5
   site: AIS_Careers
   reason: low_h1b_sponsorship
   rejected_on: '2026-04-29'
+- tenant: archwellessentials
+  name: Moder
+  wd_server: wd1
+  site: modercareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: ardentmills
+  name: Ardent Mills
+  wd_server: wd5
+  site: Ardent_Mills_LLC
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: areteir
+  name: Arete Event Staffing Firm
+  wd_server: wd1
+  site: Arete-Careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: argonne
   name: Argonne National Laboratory
   wd_server: wd1
   site: Argonne_Careers
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: arkbluecross
+  name: Arkansas Blue Cross Blue Shield
+  wd_server: wd1
+  site: ABCBS_External_Careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: armacell
+  name: Armacell
+  wd_server: wd3
+  site: career-armacell
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: arvada
+  name: City of Arvada
+  wd_server: wd5
+  site: City_of_Arvada_External_Career_Site
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: ascendperformancematerials
   name: Ascend Performance Materials
   wd_server: wd1
@@ -81,6 +398,24 @@ rejected:
   site: ASHN
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: asmglobal
+  name: Legends Global
+  wd_server: wd1
+  site: careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: astound
+  name: Astound
+  wd_server: wd108
+  site: Astound_Careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: astrazeneca
   name: AstraZeneca
   wd_server: wd3
@@ -93,30 +428,129 @@ rejected:
   site: External
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: athene
+  name: Apollo
+  wd_server: wd5
+  site: Apollo_Careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: atlanticmedia
+  name: Ballast Research
+  wd_server: wd1
+  site: Careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: atmosenergy
+  name: Atmos Energy
+  wd_server: wd5
+  site: External_Career_Site
+  reason: dead_board
+  h1b_result: None
+  board_alive: 'False'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: auroragov
+  name: City of Aurora, CO
+  wd_server: wd1
+  site: Careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: austincc
   name: Austin Community College
   wd_server: wd1
   site: External
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: autostore
+  name: autostore
+  wd_server: wd3
+  site: autostore
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: avant
+  name: AVANT LLC
+  wd_server: wd503
+  site: External_Careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: axalta
   name: Axalta Coating Systems
   wd_server: wd1
   site: Axalta
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: axiscapital
+  name: AXIS Capital
+  wd_server: wd1
+  site: axiscareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: axos
   name: Axos Bank
   wd_server: wd5
   site: Axos
   reason: low_h1b_sponsorship
   rejected_on: '2026-04-29'
+- tenant: azuria
+  name: Azuria Water Solutions
+  wd_server: wd501
+  site: Azuria_Careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: babelgroup
   name: Babel
   wd_server: wd103
   site: es
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: babson
+  name: Babson College
+  wd_server: wd1
+  site: Staff
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: baicommunications
+  name: Boldyn Networks
+  wd_server: wd3
+  site: External
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: ballardspahr
+  name: Ballard Spahr LLP
+  wd_server: wd5
+  site: Ballard_Spahr_LLP
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: baltimorecity
   name: City of Baltimore
   wd_server: wd1
@@ -129,18 +563,144 @@ rejected:
   site: Careers
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: barr
+  name: Barr Engineering
+  wd_server: wd1
+  site: BarrCareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: basecamp
+  name: ECMC Group
+  wd_server: wd1
+  site: ECMC
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: bbva
   name: BBVA
   wd_server: wd3
   site: BBVA
   reason: low_h1b_sponsorship
   rejected_on: '2026-04-29'
+- tenant: bcbsmn
+  name: Coupe
+  wd_server: wd5
+  site: coupehealth
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: bcbsnj
+  name: Horizon Blue Cross Blue Shield of New Jersey
+  wd_server: wd5
+  site: hc
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: beautyhealth
+  name: Hydrafacial
+  wd_server: wd12
+  site: BeautyHealthCareer
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: beckgroup
+  name: The Beck Group
+  wd_server: wd12
+  site: beckgroupexternal
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: becu
+  name: BECU
+  wd_server: wd1
+  site: External
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: beemok
   name: BHC
   wd_server: wd5
   site: BHC_Careers
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: benchmark
+  name: Pyramid Global Hospitality
+  wd_server: wd1
+  site: PGH_Careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: benchmarkeducation
+  name: Benchmark Education Company
+  wd_server: wd501
+  site: EXT
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: berkadia
+  name: Berkadia
+  wd_server: wd1
+  site: Berkadia
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: birch
+  name: Fusion Connect
+  wd_server: wd1
+  site: FusionCareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: bitsight
+  name: Bitsight
+  wd_server: wd1
+  site: broadbean_external
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: blattner
+  name: Blattner Company
+  wd_server: wd5
+  site: BlattnerCompany
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: bloomberg
+  name: Bloomberg Industry Group
+  wd_server: wd1
+  site: Bloombergindustrygroup_External_Career_Site
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: bloomenergy
   name: Bloom Energy
   wd_server: wd1
@@ -159,6 +719,24 @@ rejected:
   site: External
   reason: low_h1b_sponsorship
   rejected_on: '2026-04-29'
+- tenant: bonterra
+  name: Bonterra
+  wd_server: wd1
+  site: bonterratech
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: bouldercolorado
+  name: City of Boulder, CO
+  wd_server: wd1
+  site: External
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: boydcorp
   name: Boyd Corporation
   wd_server: wd12
@@ -177,24 +755,87 @@ rejected:
   site: BBG-US
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: bridgeigp
+  name: Bridge Commercial Real Estate
+  wd_server: wd1
+  site: BCRE
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: bridgestone
   name: Bridgestone Americas
   wd_server: wd5
   site: External
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: brighthorizons
+  name: Bright Horizons Family Solutions
+  wd_server: wd5
+  site: External-NorthAmerica
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: broadcom
   name: Broadcom
   wd_server: wd1
   site: es
   reason: dead_board
   rejected_on: '2026-04-29'
+- tenant: brookshires
+  name: Brookshire Grocery Company
+  wd_server: wd108
+  site: BGC
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: bsu
+  name: Ball State University
+  wd_server: wd12
+  site: External
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: btisolutions
   name: BTI Solutions
   wd_server: wd12
   site: External
   reason: low_h1b_sponsorship
   rejected_on: '2026-04-29'
+- tenant: buildertrend
+  name: Buildertrend
+  wd_server: wd108
+  site: confidentialposting
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: busey
+  name: Busey Bank
+  wd_server: wd503
+  site: busey
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: bwe
+  name: BWE
+  wd_server: wd12
+  site: BWECareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: bydeluxe
   name: Deluxe Media
   wd_server: wd5
@@ -219,6 +860,24 @@ rejected:
   site: Cambridge_Associates
   reason: low_h1b_sponsorship
   rejected_on: '2026-04-29'
+- tenant: careoregon
+  name: CareOregon
+  wd_server: wd12
+  site: CO
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: caresource
+  name: CareSource
+  wd_server: wd1
+  site: CareSource
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: carleton
   name: Carleton College
   wd_server: wd1
@@ -231,36 +890,198 @@ rejected:
   site: External
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: carters
+  name: Carter's
+  wd_server: wd1
+  site: CartersCareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: cascadia
+  name: Cascadia Health
+  wd_server: wd12
+  site: cascadiahealth
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: ccc
+  name: Altium Packaging
+  wd_server: wd5
+  site: ccc_External
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: cecentertainment
   name: Chuck E. Cheese
   wd_server: wd5
   site: CEC_Careers
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: cemstone
+  name: Cemstone
+  wd_server: wd1
+  site: CemstoneCareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: cenhud
+  name: Central Hudson
+  wd_server: wd5
+  site: cenhud
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: centier
+  name: Centier Bank
+  wd_server: wd501
+  site: centierbankcareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: cgg
+  name: GEOCOMP
+  wd_server: wd103
+  site: geocompcareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: chamberlain
   name: Chamberlain Group
   wd_server: wd1
   site: Chamberlain_Group
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: chartermfg
+  name: Charter Manufacturing
+  wd_server: wd5
+  site: Charter_Careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: chemours
+  name: Chemours
+  wd_server: wd103
+  site: es
+  reason: dead_board
+  h1b_result: None
+  board_alive: 'False'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: childrensinstitute
   name: Children's Institute, Inc.
   wd_server: wd5
   site: CII
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: childrensnational
+  name: Children's National Hospital
+  wd_server: wd108
+  site: CN_Careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: christmanco
+  name: The Christman Company
+  wd_server: wd108
+  site: careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: chrobinson
+  name: C.H. Robinson
+  wd_server: wd5
+  site: CHRobinson
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: churchdwight
+  name: Church & Dwight Co.
+  wd_server: wd1
+  site: chdcareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: churchs
+  name: Church's Texas Chicken
+  wd_server: wd1
+  site: Corporate
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: cibc
   name: CIBC
   wd_server: wd3
   site: search
   reason: low_h1b_sponsorship
   rejected_on: '2026-04-29'
+- tenant: cisive
+  name: Cisive
+  wd_server: wd108
+  site: Cisive
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: city
+  name: City Facilities Management
+  wd_server: wd1
+  site: CBES
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: clarios
   name: Clarios
   wd_server: wd5
   site: clarioscareers
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: clarkcountywashington
+  name: Clark County Washington
+  wd_server: wd1
+  site: ClarkCountyJobs
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: clearesult
+  name: CLEAResult
+  wd_server: wd1
+  site: CLEAResult_External_Careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: clearwateranalytics
   name: Clearwater Analytics (CWAN)
   wd_server: wd1
@@ -273,12 +1094,57 @@ rejected:
   site: CLA
   reason: low_h1b_sponsorship
   rejected_on: '2026-04-29'
+- tenant: clr
+  name: Continental Resources, Inc.
+  wd_server: wd5
+  site: CLR_Careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: cmu
+  name: Carnegie Mellon University
+  wd_server: wd5
+  site: CMU
+  reason: dead_board
+  h1b_result: None
+  board_alive: 'False'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: cni
   name: Chickasaw Nation Industries
   wd_server: wd503
   site: CNI
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: coffeeandbagelbrands
+  name: Bagel Brands
+  wd_server: wd1
+  site: coffeeandbagelbrands
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: colpipe
+  name: Colonial Pipeline Company
+  wd_server: wd1
+  site: Search
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: columbiabank
+  name: Columbia Bank
+  wd_server: wd108
+  site: Columbia
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: columbiasportswearcompany
   name: Columbia Sportswear
   wd_server: wd5
@@ -291,6 +1157,15 @@ rejected:
   site: Momentive_External_Careers
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: conocophillips
+  name: ConocoPhillips
+  wd_server: wd1
+  site: External
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: cooley
   name: Cooley LLP
   wd_server: wd1
@@ -315,6 +1190,15 @@ rejected:
   site: CorebridgeFinancial
   reason: low_h1b_sponsorship
   rejected_on: '2026-04-29'
+- tenant: cornerstone
+  name: Cornerstone Research
+  wd_server: wd501
+  site: CornerstoneResearch_Careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: corpartners
   name: Engle Martin
   wd_server: wd5
@@ -327,6 +1211,33 @@ rejected:
   site: CoStarCareers
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: cotality
+  name: Cotality
+  wd_server: wd115
+  site: Global
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: covetrus
+  name: Covetrus
+  wd_server: wd5
+  site: CovetrusCareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: covius
+  name: Covius
+  wd_server: wd1
+  site: CoviusCareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: coxhealth
   name: CoxHealth
   wd_server: wd5
@@ -345,24 +1256,123 @@ rejected:
   site: CLExternal
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: creationtech
+  name: Creation Technologies
+  wd_server: wd1
+  site: Creation
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: cree
   name: Wolfspeed
   wd_server: wd108
   site: EXT
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: crisprtx
+  name: CRISPR Therapeutics
+  wd_server: wd12
+  site: careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: crownholdings
+  name: Crown Holdings
+  wd_server: wd501
+  site: CrownHoldings
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: cryoport
+  name: CRYOPORT SYSTEMS
+  wd_server: wd12
+  site: external
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: csdautismservices
+  name: Center for Social Dynamics
+  wd_server: wd108
+  site: CSD_Careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: csiweb
+  name: Computer Services Inc.
+  wd_server: wd1
+  site: CSI_Careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: cspire-telapex
+  name: C Spire
+  wd_server: wd12
+  site: external-careers
+  reason: dead_board
+  h1b_result: None
+  board_alive: 'False'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: cvgrp
+  name: Commercial Vehicle Group Inc.
+  wd_server: wd5
+  site: CVG
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: cw
   name: C&W Services
   wd_server: wd1
   site: External
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: cyrusone
+  name: CyrusOne
+  wd_server: wd1
+  site: CyrusOneCareerPortal
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: datasite
   name: Datasite
   wd_server: wd1
   site: datasite
   reason: low_h1b_sponsorship
   rejected_on: '2026-04-29'
+- tenant: davidyurman
+  name: David Yurman Enterprises, LLC
+  wd_server: wd1
+  site: DavidYurmanCareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: davisconstruction
+  name: James G. Davis Construction
+  wd_server: wd501
+  site: DAVIS-Careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: db
   name: Deutsche Bank
   wd_server: wd3
@@ -375,12 +1385,93 @@ rejected:
   site: USA_CAN
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: dennys
+  name: Denny's
+  wd_server: wd1
+  site: Dennys
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: denver
+  name: City and County of Denver
+  wd_server: wd1
+  site: CCD-denver-denvergov-CSC_Jobs-Civil_service_jobs-Police_Jobs-Fire_Jobs
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: denverhealth
+  name: Denver Health
+  wd_server: wd1
+  site: DHHA-Main
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: destinationpet
+  name: Yourgi, Inc.
+  wd_server: wd5
+  site: Yourgi
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: dexcom
   name: Dexcom
   wd_server: wd1
   site: Dexcom
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: dinebrands
+  name: Dine Brands Global
+  wd_server: wd503
+  site: DineCareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: djeholdings
+  name: Edelman
+  wd_server: wd5
+  site: edelman-careers-E200
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: dmainc
+  name: DuCharme, McMillen & Associates, Inc.
+  wd_server: wd5
+  site: DMA
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: dodgeandcox
+  name: Dodge & Cox
+  wd_server: wd5
+  site: Dodgecox
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: dolese
+  name: Dolese Bros.
+  wd_server: wd1
+  site: DoleseBros
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: dow
   name: DOW
   wd_server: wd1
@@ -393,24 +1484,96 @@ rejected:
   site: Draper_Careers
   reason: defense_clearance
   rejected_on: '2026-04-29'
+- tenant: dtna
+  name: Daimler Truck North America
+  wd_server: wd5
+  site: DTNA_external
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: dutchbros
+  name: Dutch Bros Coffee
+  wd_server: wd1
+  site: DBShops
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: earlywarning
   name: Early Warning Services
   wd_server: wd5
   site: earlywarningcareers
   reason: low_h1b_sponsorship
   rejected_on: '2026-04-29'
+- tenant: ech
+  name: El Camino Health
+  wd_server: wd5
+  site: ech
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: echo
   name: Echo Global Logistics
   wd_server: wd1
   site: Echo_Logistics
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: eisneramper
+  name: EisnerAmper
+  wd_server: wd1
+  site: EisnerAmper_External
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: elkay
   name: Zurn Elkay Water Solutions
   wd_server: wd1
   site: Elkay_External
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: embarkwithus
+  name: Embark, LLC
+  wd_server: wd1
+  site: embarkcareersite
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: emerson
+  name: Emerson College
+  wd_server: wd5
+  site: Emerson_College_Staff
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: enbridge
+  name: Enbridge
+  wd_server: wd3
+  site: enbridge_careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: equiniti
+  name: Equiniti
+  wd_server: wd3
+  site: Opportunities
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: esab
   name: ESAB
   wd_server: wd5
@@ -429,12 +1592,30 @@ rejected:
   site: external-careers2
   reason: defense_clearance
   rejected_on: '2026-04-29'
+- tenant: extraspace
+  name: Extra Space Storage
+  wd_server: wd5
+  site: ESS_External
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: faithtechnologies
   name: Faith Technologies Incorporated
   wd_server: wd1
   site: FTI
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: fenwick
+  name: Fenwick & West
+  wd_server: wd1
+  site: Fenwick_External_Careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: ferguson
   name: Ferguson
   wd_server: wd1
@@ -453,6 +1634,42 @@ rejected:
   site: eaglejobs
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: fhcsd
+  name: Family Health Centers of San Diego
+  wd_server: wd1
+  site: MAIN
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: fhlbc
+  name: FHLBank Chicago
+  wd_server: wd1
+  site: Search
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: fhlbsf
+  name: FHLBank San Francisco
+  wd_server: wd5
+  site: FHLBSF
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: fieracapital
+  name: Fiera Capital
+  wd_server: wd3
+  site: Career
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: fifththird
   name: Fifth Third Bank
   wd_server: wd5
@@ -471,6 +1688,24 @@ rejected:
   site: firstamericancareers
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: fivebelow
+  name: Five Below
+  wd_server: wd1
+  site: fivebelowcareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: flexential
+  name: Flexential
+  wd_server: wd503
+  site: flexential_career
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: flextronics
   name: Flex
   wd_server: wd1
@@ -483,30 +1718,129 @@ rejected:
   site: flircareers
   reason: defense_clearance
   rejected_on: '2026-04-29'
+- tenant: fmc
+  name: FMC Corporation
+  wd_server: wd12
+  site: FMC
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: forrester
+  name: Forrester
+  wd_server: wd501
+  site: careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: fortress
+  name: Fortress Investment Group LLC
+  wd_server: wd503
+  site: Careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: fortune
+  name: FORTUNE
+  wd_server: wd108
+  site: Fortune
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: fox
   name: Fox Corporation
   wd_server: wd1
   site: Domestic
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: franklintempleton
+  name: Franklin Templeton
+  wd_server: wd5
+  site: Primary-External-1
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: freemanhealth
+  name: Ozark Center
+  wd_server: wd1
+  site: ozarkcenterscareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: freese
+  name: Freese and Nichols
+  wd_server: wd1
+  site: Freese_Nichols_External
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: freseniusglobal
   name: Fresenius Kabi USA
   wd_server: wd3
   site: fk_careers
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: fticonsulting
+  name: FTI Consulting, Inc.
+  wd_server: wd108
+  site: FTIConsultingCareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: fullsteam
   name: FullSteam LLC
   wd_server: wd1
   site: External
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: garlandtx
+  name: City of Garland, TX
+  wd_server: wd1
+  site: Garlandcareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: generac
   name: Generac Power Systems
   wd_server: wd5
   site: External
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: gensler
+  name: Gensler
+  wd_server: wd1
+  site: genslercareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: georgfischer
+  name: GEORG FISCHER
+  wd_server: wd103
+  site: GeorgFischer_Careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: ghc
   name: Kaplan
   wd_server: wd1
@@ -519,36 +1853,261 @@ rejected:
   site: Global_Infrastructure
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: gladstone
+  name: Gladstone Institutes
+  wd_server: wd503
+  site: careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: globusmedical
+  name: Globus Medical
+  wd_server: wd5
+  site: GMED_Careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: gmh
+  name: Grady Health System
+  wd_server: wd12
+  site: external_careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: gnw
+  name: CareScout
+  wd_server: wd1
+  site: CareScout
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: gobeacon
+  name: Beacon Mobility
+  wd_server: wd1
+  site: beaconmobilitycareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: godirect
   name: Voya Financial
   wd_server: wd5
   site: voya_jobs
   reason: low_h1b_sponsorship
   rejected_on: '2026-04-29'
+- tenant: gohealthuc
+  name: GoHealth Urgent Care
+  wd_server: wd12
+  site: External
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: goldcoasthealthplan
+  name: Gold Coast Health Plan
+  wd_server: wd108
+  site: GCHPCareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: goldenent
+  name: Golden Entertainment
+  wd_server: wd501
+  site: GoldenEntCareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: goodrx
+  name: GoodRx
+  wd_server: wd1
+  site: careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: goodwinprocter
   name: Goodwin Procter LLP
   wd_server: wd5
   site: External_Careers
   reason: low_h1b_sponsorship
   rejected_on: '2026-04-29'
+- tenant: goodyear
+  name: Goodyear
+  wd_server: wd1
+  site: GoodyearCareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: grammy
   name: The Recording Academy
   wd_server: wd5
   site: The_Recording_Academy_Career_Site
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: granite
+  name: Granite Construction
+  wd_server: wd1
+  site: careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: greendotca
+  name: Green Dot Public Schools
+  wd_server: wd5
+  site: CA
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: greenheckgroup
   name: Greenheck Group
   wd_server: wd5
   site: External
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: greenixpc
+  name: Greenix Pest Control
+  wd_server: wd1
+  site: Greenix
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: griffithfoods
+  name: Griffith Foods
+  wd_server: wd12
+  site: External
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: groundswell
+  name: Groundswell
+  wd_server: wd12
+  site: groundswell
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: groundworks
+  name: Groundworks
+  wd_server: wd1
+  site: Groundworks
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: guggenheiminvestment
+  name: Guggenheim Partners
+  wd_server: wd5
+  site: External
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: guidestone
+  name: GuideStone Financial Resources
+  wd_server: wd1
+  site: GuideStone
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: haemonetics
   name: Haemonetics Corp.
   wd_server: wd5
   site: HAE
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: hansoninc
+  name: Hanson Professional Services Inc.
+  wd_server: wd501
+  site: HPS
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: harborcapital
+  name: Origin Harbor Capital Solutions
+  wd_server: wd1
+  site: hc
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: hargroveepc
+  name: Hargrove Engineers + Constructors
+  wd_server: wd12
+  site: Hargrove_Careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: haynesboone
+  name: Haynes and Boone, LLP
+  wd_server: wd503
+  site: HaynesandBoone
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: hayward
+  name: Hayward Industries
+  wd_server: wd1
+  site: External
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: hcsc
+  name: Careallies
+  wd_server: wd1
+  site: HCSC_CareAllies
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: healthplanone
+  name: HealthPlanOne
+  wd_server: wd1
+  site: HPONE
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: heidelbergmaterials
   name: Heidelberg Materials
   wd_server: wd3
@@ -561,48 +2120,174 @@ rejected:
   site: HexcelCareers
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: hhmi
+  name: Howard Hughes Medical Institute
+  wd_server: wd1
+  site: External
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: highmarkhealth
   name: United Concordia Dental
   wd_server: wd1
   site: highmark
   reason: low_h1b_sponsorship
   rejected_on: '2026-04-29'
+- tenant: hilcoglobal
+  name: Hilco Global
+  wd_server: wd1
+  site: Hilco_Global_Careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: hillenbrand
+  name: Coperion
+  wd_server: wd3
+  site: Global
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: hitachi
   name: Proterial
   wd_server: wd1
   site: hitachi
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: hitt
+  name: HITT Contracting
+  wd_server: wd503
+  site: HITT
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: hklaw
   name: Holland & Knight
   wd_server: wd1
   site: Holland_Knight
   reason: low_h1b_sponsorship
   rejected_on: '2026-04-29'
+- tenant: hntb
+  name: HNTB Corporation
+  wd_server: wd5
+  site: HNTB_Careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: holmanautogroup
   name: Holman
   wd_server: wd1
   site: HolmanEnterprisesCareers
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: horizonmedia
+  name: Horizon Media, Inc.
+  wd_server: wd1
+  site: CareerOpportunities
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: hp
   name: HP
   wd_server: wd5
   site: ExternalCareerSite
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: hq
+  name: Securian Financial
+  wd_server: wd12
+  site: Securian_External
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: huntelec
+  name: Hunt Electric Corporation
+  wd_server: wd501
+  site: HuntElectric_Careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: hysteryale
   name: Hyster-Yale Materials Handling
   wd_server: wd1
   site: Hyster-YaleCareers
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: ia
+  name: iA Groupe financier / iA Financial Group
+  wd_server: wd3
+  site: Professional_US
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: iberdrola
   name: Iberdrola Group
   wd_server: wd3
   site: Iberdrola
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: icmarc
+  name: MissionSquare Retirement
+  wd_server: wd108
+  site: MissionSquare
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: ielfreight
+  name: Integrity Express Logistics
+  wd_server: wd1
+  site: external
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: ifg
+  name: King's Hawaiian
+  wd_server: wd1
+  site: KH
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: imh
+  name: Intermountain Health
+  wd_server: wd108
+  site: IntermountainCareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: independencepetgroup
+  name: Independence Pet Holdings
+  wd_server: wd12
+  site: Careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: ingrammicro
   name: Ingram Micro
   wd_server: wd5
@@ -615,6 +2300,15 @@ rejected:
   site: IngredionCareers
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: inizio
+  name: Inizio Engage
+  wd_server: wd3
+  site: CSO
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: inlandimaging
   name: Inland Imaging
   wd_server: wd5
@@ -633,6 +2327,15 @@ rejected:
   site: External
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: integralads
+  name: Integral Ad Science
+  wd_server: wd1
+  site: IAScareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: integritymarketing
   name: Integrity Marketing Group
   wd_server: wd1
@@ -645,12 +2348,48 @@ rejected:
   site: InterfaceSystemsCareers
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: interstate
+  name: Interstate Batteries
+  wd_server: wd1
+  site: InterstateBatteries-Careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: invenergyllc
+  name: Invenergy
+  wd_server: wd1
+  site: invenergycareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: ioausa
+  name: Insurance Office of America
+  wd_server: wd5
+  site: IOA_Careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: irhythmtech
   name: iRhythm Technologies
   wd_server: wd5
   site: iRhythm
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: ivyrehab
+  name: Ivy Rehab Network
+  wd_server: wd5
+  site: Ivy_Rehab
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: jabil
   name: Jabil
   wd_server: wd5
@@ -663,12 +2402,102 @@ rejected:
   site: Jackson_Careers
   reason: low_h1b_sponsorship
   rejected_on: '2026-04-29'
+- tenant: jacksonhealthcare
+  name: Jackson Healthcare
+  wd_server: wd1
+  site: careers-jacksonhealthcare
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: jas
+  name: JAS Worldwide
+  wd_server: wd1
+  site: jascareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: jbtm
+  name: JBT Marel
+  wd_server: wd108
+  site: JBT_Marel_Career_Site
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: jefferson
+  name: Jefferson County Colorado
+  wd_server: wd5
+  site: External
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: jeffersonhealth
+  name: Thomas Jefferson University & Jefferson Health
+  wd_server: wd5
+  site: ThomasJeffersonExternal
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: johnsonbrothers
+  name: Johnson Brothers
+  wd_server: wd5
+  site: JohnsonBrothers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: jpi
+  name: JPI
+  wd_server: wd1
+  site: JPIcareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: jsx
+  name: JSX
+  wd_server: wd503
+  site: JSX_Careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: justfab
   name: Fabletics
   wd_server: wd1
   site: fabletics
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: k2services
+  name: Opensity solutions
+  wd_server: wd503
+  site: Opensity
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: kbi
+  name: Kontoor Brands
+  wd_server: wd5
+  site: Kontoor
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: kcura
   name: Relativity
   wd_server: wd1
@@ -687,12 +2516,48 @@ rejected:
   site: KIONGroup
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: kmkp
+  name: KACE
+  wd_server: wd1
+  site: KACECareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: kokosing
+  name: Kokosing Construction
+  wd_server: wd5
+  site: Kokosing_External_Career_Site
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: kslaw
+  name: King & Spalding
+  wd_server: wd1
+  site: careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: lazboy
   name: La-Z-Boy
   wd_server: wd1
   site: LZBCareers
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: learfield
+  name: Learfield
+  wd_server: wd5
+  site: Learfield
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: lendingclub
   name: LendingClub
   wd_server: wd1
@@ -711,6 +2576,51 @@ rejected:
   site: staff
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: lgi
+  name: The Lauridsen Group
+  wd_server: wd5
+  site: LGI_Careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: lifefitness
+  name: Life Fitness / Hammer Strength
+  wd_server: wd1
+  site: searchLFN
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: lilly
+  name: Eli Lilly
+  wd_server: wd5
+  site: LLY
+  reason: dead_board
+  h1b_result: None
+  board_alive: 'False'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: linklogistics
+  name: Link Logistics Real Estate
+  wd_server: wd5
+  site: Link
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: lithia
+  name: Lithia & Driveway
+  wd_server: wd504
+  site: LithiaCareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: lithiumamericas
   name: Lithium Americas
   wd_server: wd108
@@ -723,12 +2633,30 @@ rejected:
   site: ExternalCareerSite-LKQ
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: logsite
+  name: Surefox North America
+  wd_server: wd12
+  site: Surefox
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: lsi
   name: Arxada
   wd_server: wd3
   site: Arxada_Careers
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: lsu
+  name: Louisiana State University
+  wd_server: wd1
+  site: LSU
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: lytx
   name: Lytx
   wd_server: wd1
@@ -753,12 +2681,30 @@ rejected:
   site: Marathon-Health-Careers
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: marylandconnect
+  name: University of Baltimore
+  wd_server: wd1
+  site: UBaltCareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: massgeneralbrigham
   name: The Brigham and Women's Hospital, Inc.
   wd_server: wd1
   site: MGBExternal
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: material
+  name: MATERIAL
+  wd_server: wd1
+  site: Material_External_Career_Site
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: maxar
   name: Vantor
   wd_server: wd1
@@ -771,6 +2717,15 @@ rejected:
   site: MiniMedCareers
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: medela
+  name: Medela Medizintechnik GmbH & Co. Handels KG
+  wd_server: wd103
+  site: Medela_Careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: medline
   name: Medline Industries
   wd_server: wd5
@@ -783,6 +2738,51 @@ rejected:
   site: MedtronicCareers
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: megger
+  name: Megger
+  wd_server: wd3
+  site: MeggerCareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: meijer
+  name: Fresh Thyme Market
+  wd_server: wd5
+  site: Fresh_Thyme_Support_and_Distribution_External_Career_Site
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: mercyhealth
+  name: Mercyhealth
+  wd_server: wd1
+  site: mercyhealthcareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: methode
+  name: Methode Electronics, Inc.
+  wd_server: wd5
+  site: methode
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: metmuseum
+  name: The Metropolitan Museum of Art
+  wd_server: wd5
+  site: metmuseumcareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: mhs
   name: FORTNA
   wd_server: wd1
@@ -795,6 +2795,15 @@ rejected:
   site: MiTek
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: mines
+  name: COLORADO SCHOOL OF MINES
+  wd_server: wd1
+  site: Mines_Careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: modernatx
   name: Moderna
   wd_server: wd1
@@ -813,30 +2822,192 @@ rejected:
   site: MEG
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: morganlewis
+  name: Morgan Lewis
+  wd_server: wd5
+  site: morganlewis
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: motiva
+  name: Motiva Enterprises LLC
+  wd_server: wd1
+  site: MotivaCareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: motorolasolutions
   name: Motorola Solutions
   wd_server: wd5
   site: Careers
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: msiexpress
+  name: MSI Express, Inc
+  wd_server: wd5
+  site: MSI_Express_External_Careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: msigna
+  name: Mitsui Sumitomo Insurance Group
+  wd_server: wd5
+  site: gbl
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: mufgub
   name: MUFG
   wd_server: wd3
   site: MUFG-Careers
   reason: low_h1b_sponsorship
   rejected_on: '2026-04-29'
+- tenant: multco
+  name: Multnomah County, OR
+  wd_server: wd1
+  site: Multco_Jobs
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: mwaa
+  name: Metropolitan Washington Airports Authority
+  wd_server: wd1
+  site: MWAA
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: mwe
+  name: McDermott Will & Schulte
+  wd_server: wd5
+  site: mwe_careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: mycts
+  name: Creative Testing Solutions
+  wd_server: wd1
+  site: CTS
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: mydpr
+  name: DPR Construction
+  wd_server: wd5
+  site: '11212017'
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: nant
   name: ImmunityBio
   wd_server: wd5
   site: ImmunityBio
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: napaanesthesia
+  name: North American Partners in Anesthesia
+  wd_server: wd1
+  site: NAPA_Careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: ncnu
+  name: AAA Mountain West Group
+  wd_server: wd1
+  site: AAA_NCNU_Careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: nebraskamed
+  name: Nebraska Medicine
+  wd_server: wd5
+  site: NM
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: neogen
+  name: Neogen Corporation
+  wd_server: wd5
+  site: neogencareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: newbelgium
+  name: New Belgium Brewing Company
+  wd_server: wd108
+  site: NBBCareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: newbraunfels
+  name: The City of New Braunfels
+  wd_server: wd12
+  site: CONB
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: newrez
   name: Newrez
   wd_server: wd1
   site: NRZ
   reason: low_h1b_sponsorship
   rejected_on: '2026-04-29'
+- tenant: nexperia
+  name: Nexperia Germany GmbH
+  wd_server: wd3
+  site: careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: nexstar
+  name: Nexstar Media Group, Inc.
+  wd_server: wd5
+  site: nexstar
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: nglenergypartners
+  name: NGL Energy Partners
+  wd_server: wd5
+  site: jobs
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: ngsgi
   name: Natural Gas Services Group, Inc
   wd_server: wd108
@@ -849,6 +3020,51 @@ rejected:
   site: Nidec
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: nio
+  name: NIO
+  wd_server: wd3
+  site: NIO_Careers
+  reason: dead_board
+  h1b_result: None
+  board_alive: 'False'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: nortekinc
+  name: Nortek
+  wd_server: wd503
+  site: NortekDCC
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: novoco
+  name: NOVOGRADAC & COMPANY
+  wd_server: wd108
+  site: Novogradac
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: nphosting
+  name: FirstDay Foundation
+  wd_server: wd5
+  site: FDFCareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: nshe
+  name: University of Nevada, Reno
+  wd_server: wd1
+  site: UNR-external
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: nshs
   name: Endeavor Health
   wd_server: wd1
@@ -873,24 +3089,105 @@ rejected:
   site: NW
   reason: defense_clearance
   rejected_on: '2026-04-29'
+- tenant: oaktree
+  name: Oaktree Capital Management
+  wd_server: wd1
+  site: Oaktree
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: oceanspray
+  name: Ocean Spray
+  wd_server: wd5
+  site: OceanSprayJobs
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: oldrepublic
+  name: Old Republic International
+  wd_server: wd1
+  site: oldrepublictitle
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: olympiawa
+  name: City of Olympia, WA
+  wd_server: wd503
+  site: External
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: omnionpower
   name: OmniOn Power
   wd_server: wd5
   site: External
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: onedigital
+  name: OneDigital
+  wd_server: wd5
+  site: OneDigital
+  reason: dead_board
+  h1b_result: None
+  board_alive: 'False'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: onemagnify
+  name: OneMagnify
+  wd_server: wd5
+  site: OneMagnify_Careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: oneok
   name: ONEOK
   wd_server: wd1
   site: ONEOK
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: onni
+  name: Onni Group
+  wd_server: wd10
+  site: Onni_External_Careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: onterris
+  name: Onterris
+  wd_server: wd1
+  site: ONT
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: ontic
   name: Ontic Engineering and Manufacturing
   wd_server: wd103
   site: OnticCareers
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: orchidortho
+  name: Orchid Orthopedic Solutions
+  wd_server: wd5
+  site: Careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: oregon
   name: Department of Administrative Services
   wd_server: wd5
@@ -903,42 +3200,267 @@ rejected:
   site: Oshkosh
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: ossur
+  name: Össur
+  wd_server: wd3
+  site: OssurCareersGlobal
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: osu
+  name: The Ohio State University
+  wd_server: wd1
+  site: OSUCareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: osv-a10networks
+  name: A10 Networks
+  wd_server: wd503
+  site: A10CareerSite
+  reason: dead_board
+  h1b_result: None
+  board_alive: 'False'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: osv-bioventus
+  name: Bioventus
+  wd_server: wd501
+  site: External
+  reason: dead_board
+  h1b_result: None
+  board_alive: 'False'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: osv-bsb
+  name: Bangor Savings Bank
+  wd_server: wd503
+  site: BSB
+  reason: dead_board
+  h1b_result: None
+  board_alive: 'False'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: osv-cfainstitute
+  name: CFA Institute
+  wd_server: wd5
+  site: Careers
+  reason: dead_board
+  h1b_result: None
+  board_alive: 'False'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: osv-firstunited
   name: First United Bank
   wd_server: wd5
   site: FUBCareersite
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: osv-freemason
+  name: Grand Lodge, Masonic Homes & Acacia Creek
+  wd_server: wd5
+  site: MOC
+  reason: dead_board
+  h1b_result: None
+  board_alive: 'False'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: osv-rubicon
   name: Magnite
   wd_server: wd5
   site: MagniteCareers
   reason: dead_board
   rejected_on: '2026-04-29'
+- tenant: otis
+  name: OTIS
+  wd_server: wd5
+  site: REC_Ext_Gateway
+  reason: dead_board
+  h1b_result: None
+  board_alive: 'False'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: ovintiv
+  name: Ovintiv
+  wd_server: wd3
+  site: ovintivcareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: oxford
+  name: Lilly Pulitzer
+  wd_server: wd5
+  site: LillyPulitzer
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: pacificsource
+  name: PacificSource Health Plans
+  wd_server: wd5
+  site: PacificSource
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: packsize
+  name: YRH - PACKSIZE LLC
+  wd_server: wd108
+  site: Packsize_Careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: pacs
+  name: PACS
+  wd_server: wd108
+  site: pacs
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: papedawson
   name: Poulos & Bennett
   wd_server: wd12
   site: PDE
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: pbk
+  name: PBK Architects
+  wd_server: wd5
+  site: PBK
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: pbv
   name: Pepsi Bottling Ventures
   wd_server: wd503
   site: external
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: penncolor
+  name: Penn E&R
+  wd_server: wd5
+  site: Penn-Environmental-Remediation
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: penncommunitybank
+  name: Penn Community Bank
+  wd_server: wd501
+  site: ExternalCareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: pennmutual
+  name: Penn Mutual
+  wd_server: wd1
+  site: _penn-careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: petersonholding
+  name: Peterson Caterpillar
+  wd_server: wd1
+  site: PetersonJobs
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: pgatoursuperstore
+  name: PGA TOUR Superstore
+  wd_server: wd12
+  site: PGAT_SS
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: phcgroup
+  name: Epredia
+  wd_server: wd3
+  site: PHCNA_Careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: philips
   name: Philips
   wd_server: wd3
   site: jobs-and-careers
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: phreesia
+  name: Phreesia
+  wd_server: wd1
+  site: Phreesia
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: pillsburylaw
+  name: Pillsbury Winthrop Shaw Pittman
+  wd_server: wd5
+  site: External
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: pitneybowes
+  name: Pitney Bowes
+  wd_server: wd1
+  site: PBCareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: pjm
+  name: PJM Interconnection, LLC
+  wd_server: wd5
+  site: pjmcareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: point32health
   name: Point32Health
   wd_server: wd5
   site: THP
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: poolcorp
+  name: POOLCORP
+  wd_server: wd1
+  site: POOLCORP
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: porch
   name: Porch Group Media
   wd_server: wd1
@@ -951,6 +3473,24 @@ rejected:
   site: pgn
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: premera
+  name: Premera Blue Cross
+  wd_server: wd5
+  site: premera
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: pressganey
+  name: Press Ganey
+  wd_server: wd1
+  site: Careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: pretiumenterpriseservices
   name: Progress Residential
   wd_server: wd1
@@ -963,24 +3503,69 @@ rejected:
   site: PrimeTherapeuticsCareers
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: printpack
+  name: Printpack Inc
+  wd_server: wd1
+  site: printpackcareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: progleasing
+  name: Progressive Leasing
+  wd_server: wd5
+  site: ProgLeasingCareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: prologis
   name: Prologis
   wd_server: wd5
   site: Prologis_External_Careers
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: purposebrands
+  name: Purpose Brands
+  wd_server: wd503
+  site: purposebrands
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: q2ebanking
   name: Q2ebanking
   wd_server: wd5
   site: Q2
   reason: low_h1b_sponsorship
   rejected_on: '2026-04-29'
+- tenant: qbe
+  name: QBE
+  wd_server: wd3
+  site: QBE-Careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: qtsdatacenters
   name: QTS
   wd_server: wd5
   site: qts
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: quakerhoughton
+  name: Quaker Houghton
+  wd_server: wd108
+  site: External
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: r1rcm
   name: R1 RCM
   wd_server: wd1
@@ -993,12 +3578,39 @@ rejected:
   site: Radiance_External
   reason: defense_clearance
   rejected_on: '2026-04-29'
+- tenant: rakuten
+  name: Rakuten Global
+  wd_server: wd1
+  site: RakutenAmericas
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: rand
+  name: RAND Corporation
+  wd_server: wd5
+  site: External_Career_Site
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: raymondjames
   name: Raymond James
   wd_server: wd1
   site: RaymondJamesCareers
   reason: low_h1b_sponsorship
   rejected_on: '2026-04-29'
+- tenant: rayonier
+  name: Rayonier Inc
+  wd_server: wd501
+  site: Rayonier_Careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: rbi
   name: Restaurant Brands International
   wd_server: wd3
@@ -1017,12 +3629,48 @@ rejected:
   site: Reh
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: repay
+  name: REPAY
+  wd_server: wd1
+  site: REPAYCareers
+  reason: dead_board
+  h1b_result: None
+  board_alive: 'False'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: resmed
   name: Resmed
   wd_server: wd3
   site: ResMed_External_Careers
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: reworld
+  name: Reworld
+  wd_server: wd5
+  site: External
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: rhodes
+  name: RHODES COLLEGE
+  wd_server: wd5
+  site: Rhodes_Careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: risepoint
+  name: Risepoint
+  wd_server: wd503
+  site: Risepoint
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: ritehite
   name: Rite-Hite
   wd_server: wd12
@@ -1035,6 +3683,15 @@ rejected:
   site: External_Rockwell_Automation
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: rrhs
+  name: Rochester Regional Health
+  wd_server: wd5
+  site: RRH
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: ryancompanies
   name: Ryan Companies US, Inc.
   wd_server: wd5
@@ -1047,54 +3704,324 @@ rejected:
   site: Ryan_Specialty_Career_Site
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: saia
+  name: Saia LTL Freight
+  wd_server: wd1
+  site: SaiaCareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: saif
+  name: SAIF CORPORATION
+  wd_server: wd5
+  site: SAIF
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: saintlukes
+  name: Saint Luke's
+  wd_server: wd1
+  site: saintlukeshealthcareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: salinasvalleyhealth
+  name: Salinas Valley Health
+  wd_server: wd5
+  site: SalinasValleyHealth
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: sallie-mae
+  name: Sallie Mae
+  wd_server: wd5
+  site: Careers
+  reason: dead_board
+  h1b_result: None
+  board_alive: 'False'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: sandvik
   name: Sandvik
   wd_server: wd3
   site: sandvik-jobs
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: sasllc
+  name: CHSGa
+  wd_server: wd1
+  site: Careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: sasser
+  name: CF Rail Services
+  wd_server: wd108
+  site: Sasser
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: savista
+  name: Savista
+  wd_server: wd1
+  site: ODS-C
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: sbasite
+  name: SBA Communications
+  wd_server: wd5
+  site: SBA_Communications_Careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: sbcos
   name: Stonebridge Companies
   wd_server: wd1
   site: SBCOS2
   reason: low_h1b_sponsorship
   rejected_on: '2026-04-29'
+- tenant: schumacher
+  name: SCP Health
+  wd_server: wd1
+  site: corporate-careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: scj
+  name: SC Johnson Lifestyle Brands
+  wd_server: wd5
+  site: External_Career_Site_Lifestyle_Brands
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: searhc
+  name: SouthEast Alaska Regional Health Consortium
+  wd_server: wd5
+  site: SEARHC
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: securityhunter
+  name: Securityhunter, Inc.
+  wd_server: wd501
+  site: securityhuntercareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: sedgwick
+  name: Sedgwick
+  wd_server: wd1
+  site: Sedgwick
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: sehinc
   name: Short Elliott Hendrickson
   wd_server: wd12
   site: SEH
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: sekologistics
+  name: SEKO Logistics
+  wd_server: wd503
+  site: Seko_Logistics
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: selinc
+  name: Schweitzer Engineering Laboratories
+  wd_server: wd1
+  site: SEL
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: sglottery
   name: Scientific Games
   wd_server: wd5
   site: ScientificGamesExternalCareers
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: shell
+  name: Shell
+  wd_server: wd3
+  site: shellcareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: shepherd
+  name: Shepherd Center
+  wd_server: wd5
+  site: ShepherdCenter
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: shhotelsandresorts
+  name: 1 Hotels
+  wd_server: wd12
+  site: SHG
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: shi
   name: SHI International
   wd_server: wd12
   site: shicareers
   reason: low_h1b_sponsorship
   rejected_on: '2026-04-29'
+- tenant: shipt
+  name: Shipt
+  wd_server: wd1
+  site: Shipt_External
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: sierraspace
   name: Sierra Space
   wd_server: wd1
   site: Sierra_Space_External_Career_Site
   reason: defense_clearance
   rejected_on: '2026-04-29'
+- tenant: silvercross
+  name: Silver Cross Hospital
+  wd_server: wd5
+  site: SilverCrossCareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: simmonsbank
+  name: Simmons Bank
+  wd_server: wd5
+  site: SimmonsCareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: simonsfoundation
+  name: Simons Foundation
+  wd_server: wd1
+  site: simonsfoundationcareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: skadden
+  name: Skadden, Arps, Slate, Meagher & Flom LLP & Affiliates
+  wd_server: wd5
+  site: Skadden_Careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: skookum
+  name: Tessera
+  wd_server: wd1
+  site: careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: slihrms
   name: Linxon
   wd_server: wd3
   site: Linxon
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: slrconsulting
+  name: SLR Consulting
+  wd_server: wd103
+  site: SLRCareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: sluhn
+  name: St. Luke's University Health Network
+  wd_server: wd1
+  site: SLUHN
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: smartcare
+  name: Smart Care Solutions
+  wd_server: wd5
+  site: Smart_Care
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: smiledoctors
+  name: Smile Doctors
+  wd_server: wd108
+  site: SD
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: smithnephew
   name: Smith+Nephew
   wd_server: wd5
   site: External
   reason: dead_board
   rejected_on: '2026-04-29'
+- tenant: snapfinance
+  name: Snap Finance
+  wd_server: wd1
+  site: Snap_External_Careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: snc
   name: Sierra Nevada Corporation
   wd_server: wd1
@@ -1107,12 +4034,111 @@ rejected:
   site: SOLV_External_Career
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: som
+  name: Skidmore, Owings & Merrill
+  wd_server: wd5
+  site: External
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: sonyglobal
+  name: Sony
+  wd_server: wd1
+  site: SonyGlobalCareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: southshorehealth
+  name: South Shore Health
+  wd_server: wd5
+  site: SSH_Careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: spectrumcontrol
+  name: Spectrum Control
+  wd_server: wd1
+  site: SpectrumControl
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: spencerstuart
+  name: Spencer Stuart
+  wd_server: wd5
+  site: Spencer_Stuart_External_Careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: spicergroup
+  name: Spicer Group
+  wd_server: wd504
+  site: External
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: spu
+  name: Seattle Pacific University
+  wd_server: wd12
+  site: SPU
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: sralab
+  name: Shirley Ryan Ability Lab
+  wd_server: wd1
+  site: SRAlabCareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: srsdistribution
+  name: Heritage Pool Supply Group
+  wd_server: wd1
+  site: Heritage-Pool
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: standard
+  name: The Standard Insurance
+  wd_server: wd1
+  site: Search
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: starfish
   name: Torch Technologies
   wd_server: wd501
   site: Careers
   reason: defense_clearance
   rejected_on: '2026-04-29'
+- tenant: stars
+  name: STARS Behavioral Health Group
+  wd_server: wd1
+  site: Search
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: statestreet
   name: State Street
   wd_server: wd1
@@ -1125,30 +4151,84 @@ rejected:
   site: careers
   reason: low_h1b_sponsorship
   rejected_on: '2026-04-29'
+- tenant: stem
+  name: Stem Inc
+  wd_server: wd12
+  site: StemInc
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: stevens
   name: Stevens Institute of Technology
   wd_server: wd5
   site: External
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: stormontvail
+  name: Stormont Vail Health
+  wd_server: wd1
+  site: SVH
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: strayer
   name: Strategic Education, Inc.
   wd_server: wd1
   site: SEI
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: structural
+  name: Structural Group
+  wd_server: wd12
+  site: STRUCTURALTECHNOLOGIESCAREERS
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: stvinc
   name: STV Group
   wd_server: wd5
   site: stv
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: suffolkcountyny
+  name: SUFFOLK COUNTY
+  wd_server: wd1
+  site: Suffolkcounty1
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: swinerton
+  name: Swinerton
+  wd_server: wd1
+  site: Swinerton_External_Career
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: syneoshealth
   name: Syneos Health
   wd_server: wd12
   site: Syneos_Health_External_Site
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: talkingrain
+  name: Talking Rain Beverage Company
+  wd_server: wd1
+  site: TR
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: tanger
   name: Tanger
   wd_server: wd108
@@ -1191,30 +4271,147 @@ rejected:
   site: Careers
   reason: low_h1b_sponsorship
   rejected_on: '2026-04-29'
+- tenant: theclaremontcolleges
+  name: The Claremont Colleges
+  wd_server: wd1
+  site: TCCS_Careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: theirc
   name: International Rescue Committee
   wd_server: wd1
   site: External_Careers
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: thejacksonlaboratory
+  name: The Jackson Laboratory
+  wd_server: wd503
+  site: External_JAX
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: theocc
   name: Options Clearing Corporation
   wd_server: wd5
   site: careers
   reason: low_h1b_sponsorship
   rejected_on: '2026-04-29'
+- tenant: therapybrands
+  name: Ensora Health
+  wd_server: wd1
+  site: EnsoraHealth
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: tiaa
   name: TIAA
   wd_server: wd1
   site: Search
   reason: low_h1b_sponsorship
   rejected_on: '2026-04-29'
+- tenant: topgolf
+  name: Topgolf
+  wd_server: wd501
+  site: TopgolfCareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: transwestern
+  name: Transwestern
+  wd_server: wd1
+  site: TWCareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: travelers
+  name: Simply Business
+  wd_server: wd5
+  site: SimplyBusinesssExternal
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: treehouse
+  name: TreeHouse Foods
+  wd_server: wd1
+  site: TreeHouseCareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: tricon
+  name: Tricon Residential
+  wd_server: wd3
+  site: tricon
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: trimedx
+  name: TRIMEDX
+  wd_server: wd1
+  site: TMX
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: troweprice
   name: T. Rowe Price
   wd_server: wd5
   site: TRowePrice
   reason: low_h1b_sponsorship
   rejected_on: '2026-04-29'
+- tenant: trsil
+  name: Teachers Retirement System of the State of Illinois
+  wd_server: wd12
+  site: Careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: trustage
+  name: TruStage
+  wd_server: wd1
+  site: TruStage
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: trustmark
+  name: Trustmark Companies
+  wd_server: wd1
+  site: trustmarkcareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: ts
+  name: Tishman Speyer
+  wd_server: wd5
+  site: tishmanspeyer
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: tsys
   name: Global Payments
   wd_server: wd1
@@ -1227,12 +4424,93 @@ rejected:
   site: Milwaukee
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: ttmtech
+  name: TTM Technologies
+  wd_server: wd5
+  site: jobs
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: tucsonaz
+  name: City of Tucson
+  wd_server: wd1
+  site: Tucson_Talent
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: tuftsmedicine
   name: Tufts Medicine
   wd_server: wd1
   site: Jobs
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: tutorperini
+  name: Five Star Electric
+  wd_server: wd12
+  site: external
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: tvc
+  name: The Vancouver Clinic
+  wd_server: wd1
+  site: TVC
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: ulse
+  name: UL Standards & Engagement
+  wd_server: wd5
+  site: ulsecareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: uniphore
+  name: Uniphore
+  wd_server: wd503
+  site: Uniphore
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: unitedfidelity
+  name: United Fidelity Bank
+  wd_server: wd12
+  site: External
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: univision
+  name: Univision Communications Inc
+  wd_server: wd1
+  site: External
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: upbound
+  name: Acima Leasing
+  wd_server: wd501
+  site: Acima
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: usc
   name: Keck Medicine of USC
   wd_server: wd5
@@ -1257,6 +4535,15 @@ rejected:
   site: careers
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: vantage
+  name: Vantage Specialty Chemicals
+  wd_server: wd1
+  site: Vantage_Careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: vantagedc
   name: Vantage Data Centers
   wd_server: wd1
@@ -1269,6 +4556,33 @@ rejected:
   site: VELCO
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: verdantas
+  name: Verdantas
+  wd_server: wd108
+  site: Verdantas
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: veritone
+  name: Veritone
+  wd_server: wd1
+  site: Veritone_Career_Site
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: vertexinc
+  name: Vertex
+  wd_server: wd1
+  site: VertexInc
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: vfc
   name: Timberland
   wd_server: wd5
@@ -1287,12 +4601,147 @@ rejected:
   site: ribboncareers
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: vhr-otsuka
+  name: ReCor Medical
+  wd_server: wd1
+  site: RecorExternal
+  reason: dead_board
+  h1b_result: None
+  board_alive: 'False'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: vhr-unither
+  name: United Therapeutics
+  wd_server: wd5
+  site: External
+  reason: dead_board
+  h1b_result: None
+  board_alive: 'False'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: vhr-wescom
+  name: WESCOM CREDIT UNION
+  wd_server: wd5
+  site: WescomCareers
+  reason: dead_board
+  h1b_result: None
+  board_alive: 'False'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: viatris
+  name: Viatris
+  wd_server: wd5
+  site: External
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: vibrant
+  name: Vibrant Emotional Health
+  wd_server: wd5
+  site: VEH_EXTERNAL_CAREER_SITE
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: virtus
+  name: Virtus Investment Partners, Inc.
+  wd_server: wd5
+  site: VirtusCareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: volarisgroup
+  name: Volaris Group Inc.
+  wd_server: wd3
+  site: Volaris
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: vsp
+  name: VSP Vision
+  wd_server: wd1
+  site: VSPVisionCareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: vumc
+  name: Vanderbilt Health
+  wd_server: wd1
+  site: vumccareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: wacounty
+  name: Washington County, OR
+  wd_server: wd12
+  site: Careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: wasatchproperty
+  name: MarketStar
+  wd_server: wd1
+  site: MarketStarCareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: washpost
   name: The Washington Post
   wd_server: wd5
   site: washingtonpostcareers
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: wattswater
+  name: Watts Water Technologies
+  wd_server: wd5
+  site: External
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: waynefarms
+  name: Wayne-Sanderson Farms
+  wd_server: wd1
+  site: WayneFarms
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: wealthenhancement
+  name: Wealth Enhancement Group
+  wd_server: wd1
+  site: WEG_Careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: weldgov
+  name: Weld County, CO
+  wd_server: wd5
+  site: WeldCountyCareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: wellington
   name: Wellington Management
   wd_server: wd5
@@ -1305,24 +4754,69 @@ rejected:
   site: External
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: whoi
+  name: Woods Hole Oceanographic Institution
+  wd_server: wd5
+  site: WHOI-External
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: williams
   name: Williams
   wd_server: wd5
   site: External
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: wilsonco
+  name: Wilson & Company, Inc., Engineers & Architects
+  wd_server: wd5
+  site: Careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: wisconsin
   name: University of Wisconsin-Milwaukee
   wd_server: wd1
   site: UW_Milwaukee
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: wit
+  name: Wentworth Institute of Technology
+  wd_server: wd1
+  site: WIT
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: withum
+  name: WithumSmith+Brown
+  wd_server: wd108
+  site: Withum_Careers_Page
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: wonder
   name: Wonder
   wd_server: wd1
   site: WG
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: woodmac
+  name: Wood Mackenzie
+  wd_server: wd3
+  site: woodmaccareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: woodward
   name: Woodward, Inc.
   wd_server: wd5
@@ -1341,12 +4835,57 @@ rejected:
   site: Worldpay_External_Careers_Site
   reason: low_h1b_sponsorship
   rejected_on: '2026-04-29'
+- tenant: wsfsbank
+  name: WSFS Bank
+  wd_server: wd1
+  site: wsfscareers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: wwecorp
+  name: WWE
+  wd_server: wd5
+  site: wwecorp
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: wynd
+  name: Travel + Leisure Co.
+  wd_server: wd5
+  site: External
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
+- tenant: xpel
+  name: XPEL
+  wd_server: wd5
+  site: XPEL_Careers
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: xylem
   name: Xylem
   wd_server: wd5
   site: xylem-careers
   reason: industry_mismatch
   rejected_on: '2026-04-29'
+- tenant: yeticoolers
+  name: YETI
+  wd_server: wd5
+  site: YETI
+  reason: no_domain_roles
+  h1b_result: None
+  board_alive: 'True'
+  domain_hits: 0
+  rejected_on: '2026-09-13'
 - tenant: zayo
   name: Zayo Group
   wd_server: wd1

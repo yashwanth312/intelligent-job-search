@@ -1,10 +1,25 @@
 # target_companies.yaml
-# Greenhouse/Lever/Ashby company board tokens for direct API scraping.
-# All companies verified to have active Greenhouse boards AND are known H-1B sponsors.
-# Token is the URL slug: https://boards-api.greenhouse.io/v1/boards/{token}/jobs
+# Direct-ATS board tokens. Every entry responded 200 with at least one live
+# posting when it was added.
 #
-# Last verified: 2026-04-17 (79 valid boards from 196 tested)
-# To re-verify: python scripts/verify_greenhouse_tokens.py
+#   greenhouse       https://boards-api.greenhouse.io/v1/boards/{token}/jobs
+#   lever            https://api.lever.co/v0/postings/{token}
+#   ashby            https://api.ashbyhq.com/posting-api/job-board/{token}
+#   workday          {tenant}.{wd_server}.myworkdayjobs.com/wday/cxs/{tenant}/{site}/jobs
+#
+# Tokens are matched case-insensitively by these APIs — do not add a casing
+# variant of a token already present, it just scrapes the same board twice.
+# Quote any token that YAML would otherwise read as a number or a boolean
+# ("8451", "Yes"); every consumer expects a string.
+#
+# Last expanded: 2026-09-13 — 268 -> ~1,190 boards. Direct ATS is the cheaper,
+# fresher, less contested channel than LinkedIn (which supplied ~90% of
+# applications in the 2026-04→09 cohort); see the "Seven Callbacks" audit.
+#
+# To grow the list:   python scripts/discover_ats_boards.py --limit 4000 --apply
+# Workday tenants:    python scripts/promote_workday_candidates.py
+# To re-verify:       python scripts/verify_greenhouse_tokens.py
+#                     python scripts/verify_lever_ashby_tokens.py
 
 greenhouse:
   # ── AI / ML Companies ──────────────────────────────────────
@@ -171,6 +186,1037 @@ greenhouse:
 - token: masterclass
   name: MasterClass
 
+  # ── Added 2026-05-27: security-heavy mid-market (validated live) ──
+- token: tenableinc
+  name: Tenable
+- token: expel
+  name: Expel
+- token: veracode
+  name: Veracode
+- token: tanium
+  name: Tanium
+- token: censys
+  name: Censys
+- token: cribl
+  name: Cribl
+- token: temporaltechnologies
+  name: Temporal
+- token: affirm
+  name: Affirm
+  # ── Added 2026-05-27 (batch 2, validated live via boards-api) ──
+- token: netskope
+  name: Netskope
+- token: dragos
+  name: Dragos
+- token: hightouch
+  name: Hightouch
+- token: sigmacomputing
+  name: Sigma Computing
+- token: hextechnologies
+  name: Hex
+- token: endorlabs
+  name: Endor Labs
+- token: honeycomb
+  name: Honeycomb
+- token: bishopfox
+  name: Bishop Fox
+- token: descope
+  name: Descope
+- token: saltsecurity
+  name: Salt Security
+- token: runzero
+  name: runZero
+- token: cybereason
+  name: Cybereason
+- token: akuity
+  name: Akuity
+- token: sourcegraph91
+  name: Sourcegraph
+- token: pulumicorporation
+  name: Pulumi
+  # ── Added 2026-09-13: infrastructure-first boards (live-validated) ──
+- token: canonical
+  name: Canonical (Ubuntu)
+- token: nebius
+  name: Nebius
+- token: purestorage
+  name: Pure Storage
+- token: coinbase
+  name: Coinbase
+- token: vast
+  name: VAST Data
+- token: scaleai
+  name: Scale AI
+- token: rubrik
+  name: Rubrik
+- token: faire
+  name: Faire
+- token: neo4j
+  name: Neo4j
+- token: mercury
+  name: Mercury
+- token: jfrog
+  name: JFrog
+- token: backblaze
+  name: Backblaze
+- token: singlestore
+  name: SingleStore
+- token: carta
+  name: Carta
+- token: minio
+  name: MinIO
+- token: dremio
+  name: Dremio
+- token: streamnative
+  name: StreamNative
+  # ── Auto-discovered by scripts/discover_ats_boards.py ──
+- token: speechify
+  name: "Speechify"
+- token: andurilindustries
+  name: "Anduril Industries"
+- token: spacex
+  name: "SpaceX"
+- token: AccentureFederalServices
+  name: "Accenture Federal Services"
+- token: captivation
+  name: "Captivation Software"
+- token: Xai
+  name: "SpaceXAI"
+- token: Capco
+  name: Capco
+- token: Avepoint
+  name: "AvePoint"
+- token: esri
+  name: "Esri"
+- token: northpointtechnology
+  name: "North Point Technology"
+- token: rocketlab
+  name: "Rocket Lab Corporation"
+- token: point72
+  name: "Point72"
+- token: VeeamSoftware
+  name: "Veeam Software"
+- token: Axon
+  name: Axon
+- token: ASTSpaceMobile
+  name: "AST SpaceMobile"
+- token: Valtech
+  name: Valtech
+- token: scoutmotors
+  name: "Scout Motors"
+- token: Nuro
+  name: Nuro
+- token: alphasense
+  name: "AlphaSense"
+- token: Wayve
+  name: Wayve
+- token: TwoSixTechnologies
+  name: "Two Six Technologies"
+- token: TowerResearchCapital
+  name: "Tower Research Capital"
+- token: ALTENTechnologyUSA
+  name: "ALTEN Technology USA"
+- token: AllenIntegratedSolutions
+  name: "Allen Integrated Solutions"
+- token: waymo
+  name: "Waymo"
+- token: futuresecureai
+  name: "Future Secure AI"
+- token: ensono
+  name: "Ensono"
+- token: gotion
+  name: "Gotion, Inc."
+- token: five9
+  name: "Five9"
+- token: gruve
+  name: "Gruve"
+- token: Netbrain
+  name: "NetBrain"
+- token: formlabs
+  name: "Formlabs"
+- token: vardaspace
+  name: "Varda Space Industries"
+- token: vailexa
+  name: "Vailexa"
+- token: worldquant
+  name: "WorldQuant"
+- token: flix
+  name: "Flix"
+- token: trace3
+  name: "Trace3"
+- token: AlarmCom
+  name: "Alarm.com"
+- token: NiCE
+  name: "NICE"
+- token: machindustries
+  name: "Mach Industries"
+- token: Hasbro
+  name: Hasbro
+- token: torcrobotics
+  name: "Torc Robotics"
+- token: coreone
+  name: "Core One"
+- token: super
+  name: "Super Technologies"
+- token: 66degrees
+  name: 66degrees
+- token: Klaviyo
+  name: Klaviyo
+- token: Roku
+  name: Roku
+- token: catonetworks
+  name: "Cato Networks"
+- token: intercom
+  name: "Fin"
+- token: Verkada
+  name: Verkada
+- token: Adyen
+  name: Adyen
+- token: neuralink
+  name: "Neuralink"
+- token: Divergent
+  name: Divergent
+- token: intersystems
+  name: "InterSystems"
+- token: Appian
+  name: "Appian Corporation"
+- token: Tenstorrent
+  name: Tenstorrent
+- token: upstart
+  name: "Upstart"
+- token: SimpliSafe
+  name: SimpliSafe
+- token: Coupang
+  name: Coupang
+- token: oscar
+  name: "Oscar Health"
+- token: Spire
+  name: Spire
+- token: impact
+  name: "impact.com"
+- token: Commvault
+  name: Commvault
+- token: carvana
+  name: "Carvana"
+- token: Lightmatter
+  name: Lightmatter
+- token: redwoodmaterials
+  name: "Redwood Materials"
+- token: Kaseya
+  name: "Kaseya Careers"
+- token: Kalshi
+  name: Kalshi
+- token: Virtu
+  name: "Virtu Financial"
+- token: ENSCO
+  name: "ENSCO, Inc."
+- token: cresta
+  name: "Cresta"
+- token: AllenControlSystems
+  name: "Allen Control Systems"
+- token: riotgames
+  name: "Riot Games"
+- token: Avride
+  name: Avride
+- token: Cargurus
+  name: "CarGurus"
+- token: zoominfo
+  name: "ZoomInfo Technologies LLC"
+- token: silvus
+  name: "Silvus Technologies"
+- token: Braze
+  name: Braze
+- token: guidepointsecurity
+  name: "GuidePoint Security"
+- token: motional
+  name: "Motional"
+- token: MuonSpace
+  name: "Muon Space"
+- token: latitude
+  name: "Latitude AI"
+- token: PeakEnergy
+  name: "Peak Energy"
+- token: devrev
+  name: "DevRev"
+- token: scopely
+  name: "Scopely"
+- token: Myriad360
+  name: Myriad360
+- token: Agoda
+  name: Agoda
+- token: formic
+  name: "Formic"
+- token: FlowTraders
+  name: "Flow Traders"
+- token: anaplan
+  name: "Anaplan"
+- token: Nintendo
+  name: Nintendo
+- token: IdMe
+  name: "ID.me"
+- token: Otter
+  name: Otter
+- token: Heygen
+  name: "HeyGen"
+- token: kentik
+  name: "Kentik"
+- token: xometry
+  name: "Xometry"
+- token: rockstargames
+  name: "Rockstar Games"
+- token: truveta
+  name: "Truveta"
+- token: LogicMonitor
+  name: LogicMonitor
+- token: IronBowTechnologies
+  name: "Iron Bow Technologies"
+- token: vulcanelements
+  name: "Vulcan Elements"
+- token: Tulip
+  name: "Tulip Interfaces"
+- token: pantheon
+  name: "Pantheon Systems, Inc"
+- token: fictiv
+  name: "Fictiv"
+- token: CapstoneInvestmentAdvisors
+  name: "Capstone Investment Advisors"
+- token: GibsonDunn
+  name: "Gibson Dunn"
+- token: Dialpad
+  name: Dialpad
+- token: Blend
+  name: Blend
+- token: further
+  name: "Further"
+- token: Evolver
+  name: Evolver
+- token: coalition
+  name: "Coalition, Inc."
+- token: Project44
+  name: "project44"
+- token: RhombusPower
+  name: "Rhombus Power, Inc."
+- token: memx
+  name: "MEMX"
+- token: GCMGrosvenor
+  name: "GCM Grosvenor"
+- token: Space
+  name: "Space Programs"
+- token: nasuni
+  name: "Nasuni"
+- token: millenniumprintgroup
+  name: "Millennium Print Group"
+- token: hunterdouglas
+  name: "Hunter Douglas"
+- token: Convera
+  name: Convera
+- token: Woolpert
+  name: Woolpert
+- token: thoughtworks
+  name: "Thoughtworks"
+- token: Natera
+  name: Natera
+- token: CLEAR
+  name: "CLEAR - Corporate"
+- token: Otterai
+  name: "Otter.ai"
+- token: BlackDuck
+  name: "Black Duck Software, Inc."
+- token: atomicmachines
+  name: "Atomic Machines"
+- token: pingidentity
+  name: "Ping Identity"
+- token: Bandwidth
+  name: Bandwidth
+- token: iterable
+  name: "Iterable"
+- token: EpicGames
+  name: "Epic Games"
+- token: ridgeline
+  name: "Ridgeline"
+- token: AkunaCapital
+  name: "Akuna Capital"
+- token: tebra
+  name: "Tebra"
+- token: HiveWatch
+  name: HiveWatch
+- token: aviatrix
+  name: "Aviatrix"
+- token: SbEnergy
+  name: "SB Energy"
+- token: quantifind
+  name: "Quantifind"
+- token: peloton
+  name: "Peloton"
+- token: engine
+  name: "Engine"
+- token: DigiCert
+  name: DigiCert
+- token: cognitiv
+  name: "Cognitiv"
+- token: clearstreet
+  name: "Clear Street"
+- token: Axle
+  name: Axle
+- token: asteralabs
+  name: "Astera Labs"
+- token: mixpanel
+  name: "Mixpanel"
+- token: Kargo
+  name: Kargo
+- token: BotAuto
+  name: "Bot Auto"
+- token: WilliamBlair
+  name: "William Blair"
+- token: Sonatus
+  name: Sonatus
+- token: Quince
+  name: Quince
+- token: oliver
+  name: "OLIVER Agency"
+- token: Octus
+  name: Octus
+- token: Gallup
+  name: Gallup
+- token: Branch
+  name: Branch
+- token: Verifone
+  name: Verifone
+- token: Via
+  name: Via
+- token: toshibaglobalcommercesolutions
+  name: "Toshiba Global Commerce Solutions - External"
+- token: stackadapt
+  name: "StackAdapt"
+- token: StackAV
+  name: "Stack AV"
+- token: schonfeld
+  name: "Schonfeld"
+- token: Parallel
+  name: "Parallel Systems"
+- token: olsson
+  name: "Olsson"
+- token: icarus
+  name: "Icarus"
+- token: BeyondTrust
+  name: BeyondTrust
+- token: Air
+  name: Air
+- token: wasabi
+  name: "Wasabi Technologies"
+- token: ToyotaConnected
+  name: "Toyota Connected North America"
+- token: togetherwork
+  name: "TogetherWork"
+- token: tabapay
+  name: "TabaPay"
+- token: redcellpartners
+  name: "Red Cell Partners"
+- token: Range
+  name: Range
+- token: Knowbe4
+  name: "KnowBe4"
+- token: genevatrading
+  name: "Geneva Trading"
+- token: FlatironHealth
+  name: "Flatiron Health"
+- token: Echo
+  name: "Echo Neurotechnologies"
+- token: dlrgroup
+  name: "DLR Group"
+- token: coherehealth
+  name: "Cohere Health"
+- token: Brave
+  name: Brave
+- token: YesEnergy
+  name: "Yes Energy"
+- token: XairaTherapeutics
+  name: "Xaira Therapeutics"
+- token: Workato
+  name: Workato
+- token: twistbioscience
+  name: "Twist Bioscience"
+- token: synerg
+  name: "Syner-G"
+- token: StitchFix
+  name: "Stitch Fix"
+- token: Prove
+  name: Prove
+- token: parloa
+  name: "Parloa"
+- token: nortal
+  name: "Nortal"
+- token: MonsterEnergy
+  name: "Monster Energy"
+- token: mitratech
+  name: "Mitratech"
+- token: metrostarsystems
+  name: "MetroStar"
+- token: kodiak
+  name: "Kodiak"
+- token: Krafton
+  name: "KRAFTON"
+- token: horizonsurgicalsystems
+  name: "Horizon Surgical Systems, Inc."
+- token: GeoStabilizationInternational
+  name: "GeoStabilization International"
+- token: Enthought
+  name: Enthought
+- token: cloudbeds
+  name: "Cloudbeds"
+- token: AtlasAir
+  name: "Atlas Air"
+- token: AquaticCapitalManagement
+  name: "Aquatic Capital Management"
+- token: AppLovin
+  name: AppLovin
+- token: accordion
+  name: "Accordion"
+- token: abacusinsights
+  name: "Abacus Insights"
+- token: 10aLabs
+  name: "10a Labs"
+- token: Wikimedia
+  name: "Wikimedia Foundation"
+- token: valaratomics
+  name: "Valar Atomics"
+- token: tripadvisor
+  name: "Tripadvisor"
+- token: symphony
+  name: "Symphony Communication Services"
+- token: storable
+  name: "Storable"
+- token: apex
+  name: "Apex Eye"
+- token: General
+  name: "General Interest"
+- token: charles
+  name: charles
+- token: System
+  name: System
+- token: new
+  name: "Sonja Inc."
+- token: shield
+  name: "S.H.I.E.L.D."
+- token: Linkedin
+  name: "LI Test Company"
+- token: lilasciences
+  name: "Lila Sciences"
+- token: SamsungSemiconductor
+  name: "Samsung Semiconductor"
+- token: Tetra
+  name: Tetra
+- token: Lpl
+  name: "Little People's Landing"
+- token: flex
+  name: "Flex"
+- token: David
+  name: "DAVID"
+- token: apptronik
+  name: "Apptronik"
+- token: NinjaTrader
+  name: NinjaTrader
+- token: Iris
+  name: "Iris North America"
+- token: fanduel
+  name: "FanDuel"
+- token: turing
+  name: "Turing"
+- token: allied
+  name: "Allied Mechanical"
+- token: Elsevier
+  name: Elsevier
+- token: Archer
+  name: "Archer Veterinary Clinic"
+- token: Spectrum
+  name: Spectrum
+- token: Mcafee
+  name: "McAfee Heating and Air Conditioning"
+- token: koch
+  name: "Koch Mechanical"
+- token: zetaglobal
+  name: "Zeta Global"
+- token: ViantTechnology
+  name: "Viant Technology"
+- token: ionq
+  name: "IonQ"
+- token: Future
+  name: Future
+- token: crunchyroll
+  name: "Crunchyroll, LLC"
+- token: WesternUnion
+  name: "Western Union"
+- token: Sterling
+  name: "Sterling Brands"
+- token: Guidepoint
+  name: Guidepoint
+- token: lincoln
+  name: "Lincoln Property Company through LinkedIn"
+- token: Orca
+  name: "ORCA Service Technologies"
+- token: tract
+  name: "Tract"
+- token: Prolific
+  name: Prolific
+- token: ObsidianSecurity
+  name: "Obsidian Security"
+- token: Nooks
+  name: Nooks
+- token: EnterpriseSolutions
+  name: "Enterprise Solutions"
+- token: collibra
+  name: "Collibra"
+- token: armada
+  name: "Armada"
+- token: Zocdoc
+  name: Zocdoc
+- token: Revel
+  name: Revel
+- token: cambridgemobiletelematics
+  name: "Cambridge Mobile Telematics"
+- token: wise
+  name: "Wise Worksite Field Sales"
+- token: Talent
+  name: "Slice Talent Community"
+- token: pmg
+  name: "PMG"
+- token: galaxy
+  name: "Galaxy Integrated Technologies"
+- token: Checkr
+  name: Checkr
+- token: attentive
+  name: "Attentive"
+- token: Nexhealth
+  name: "NexHealth"
+- token: Fox
+  name: "Fox Creek Veterinary Hospital - Wildwood"
+- token: UnitedStates
+  name: "capSpire - US"
+- token: smartsheet
+  name: "Smartsheet"
+- token: polaris
+  name: "Polaris"
+- token: National
+  name: "NATIONAL"
+- token: kikoff
+  name: "Kikoff"
+- token: justworks
+  name: "Justworks"
+- token: '8451'
+  name: '84.51'
+- token: tatari
+  name: "Tatari"
+- token: OneTrust
+  name: OneTrust
+- token: Disco
+  name: "DISCO"
+- token: torq
+  name: "Torq"
+- token: seer
+  name: "Seer Inc."
+- token: SecurityScorecard
+  name: SecurityScorecard
+- token: seatgeek
+  name: "SeatGeek"
+- token: Radar
+  name: "RADAR"
+- token: Moloco
+  name: Moloco
+- token: International
+  name: "UpWork International"
+- token: IxlLearning
+  name: "IXL Learning"
+- token: gemini
+  name: "Gemini"
+- token: everlaw
+  name: "Everlaw"
+- token: Clearwater
+  name: Clearwater
+- token: celonis
+  name: "Celonis"
+- token: Ziprecruiter
+  name: "ZipRecruiter"
+- token: warp
+  name: "Warp"
+- token: Tubi
+  name: "Archrival Agents | Tubi"
+- token: Loenbro
+  name: Loenbro
+- token: Hover
+  name: Hover
+- token: Drivewealth
+  name: "DriveWealth"
+- token: ALTRUIST
+  name: "Altruist"
+- token: vestmark
+  name: "Vestmark, Inc."
+- token: uberfreight
+  name: "Uber Freight"
+- token: Thrive
+  name: "THRIVE"
+- token: Spencer
+  name: "Spencer Animal Hospital"
+- token: qualtrics
+  name: "Qualtrics"
+- token: Public
+  name: Public
+- token: profound
+  name: "ProFound"
+- token: Motive
+  name: Motive
+- token: mavenclinic
+  name: "Maven Clinic"
+- token: Genius
+  name: "Invite-Only Job Board"
+- token: geniussports
+  name: "Genius Sports"
+- token: Fireblocks
+  name: Fireblocks
+- token: Figure
+  name: "Figure Lending"
+- token: Encore
+  name: Encore
+- token: doppel
+  name: "Doppel"
+- token: athena
+  name: "Athena Group Advisors"
+- token: ark
+  name: "Ark Veterinary Hospital & Urgent Care"
+- token: amca
+  name: "Amca"
+- token: alpaca
+  name: "Alpaca"
+- token: Align
+  name: "A-LIGN External"
+- token: agilityrobotics
+  name: "Agility Robotics"
+- token: eclinicalsolutions
+  name: "eClinical Solutions"
+- token: YouCom
+  name: "You.com"
+- token: VERISIGN
+  name: "Verisign"
+- token: thrivemarket
+  name: "Thrive Market"
+- token: redapt
+  name: "Redapt"
+- token: peak
+  name: "Peak Physical Therapy - Upstream"
+- token: Paradigm
+  name: Paradigm
+- token: pdi
+  name: "Polyphony Digital"
+- token: optimal
+  name: "Optimal Market Technologies, LLC"
+- token: liberate
+  name: "Liberate"
+- token: indigo
+  name: "Indigo"
+- token: himarley
+  name: "Hi Marley"
+- token: goodwin
+  name: "Goodwin"
+- token: foratravel
+  name: "Fora"
+- token: crexi
+  name: "Crexi"
+- token: concentric
+  name: "Concentric"
+- token: CodeAndTheory
+  name: "Code and Theory"
+- token: Beyond
+  name: Beyond
+- token: beyondfinance
+  name: "Beyond Finance"
+- token: BeaconBiosignals
+  name: "Beacon Biosignals"
+- token: array
+  name: "Array"
+- token: abacus
+  name: "ABACUS"
+- token: Aqr
+  name: "AQR"
+- token: vestwell
+  name: "Vestwell"
+- token: underdog
+  name: "Underdog"
+- token: typeface
+  name: "Typeface"
+- token: Taskrabbit
+  name: Taskrabbit
+- token: solarwinds
+  name: "SolarWinds"
+- token: rumble
+  name: "Rumble - Career Page"
+- token: reltio
+  name: "Reltio"
+- token: Raft
+  name: "Raft Company Website"
+- token: Relex
+  name: "RELEX Solutions"
+- token: quanata
+  name: "Quanata"
+- token: Psiquantum
+  name: "PsiQuantum"
+- token: outrider
+  name: "Outrider"
+- token: northside
+  name: "Northside Veterinary Clinic"
+- token: life360
+  name: "Life360"
+- token: KAYAK
+  name: KAYAK
+- token: integra
+  name: "Integra FEC"
+- token: Federato
+  name: Federato
+- token: FarmCreditBankofTexas
+  name: "Farm Credit Bank of Texas"
+- token: found
+  name: "Found"
+- token: druva
+  name: "Druva"
+- token: Corelight
+  name: "Job Board"
+- token: ConstantContact
+  name: "Constant Contact"
+- token: clever
+  name: "Clever"
+- token: Beam
+  name: "Bridge to Enter Advanced Mathematics (BEAM)"
+- token: Afresh
+  name: Afresh
+- token: Tastytrade
+  name: "tastytrade"
+- token: wilsonelser
+  name: "Wilson Elser - Business & Legal Professionals"
+- token: technology
+  name: "Relai"
+- token: Setpoint
+  name: Setpoint
+- token: sendbird
+  name: "Sendbird"
+- token: Ses
+  name: "SES Construction"
+- token: perpay
+  name: "Perpay - Career's Page"
+- token: pathai
+  name: "PathAI"
+- token: NaughtyDog
+  name: "Naughty Dog"
+- token: mochihealth
+  name: "Mochi Health"
+- token: Mesh
+  name: Mesh
+- token: LogicGate
+  name: LogicGate
+- token: inovalon
+  name: "Inovalon"
+- token: hyperproof
+  name: "Hyperproof"
+- token: HealthVerity
+  name: HealthVerity
+- token: harvard
+  name: "Birch Hill - Harvard University"
+- token: Gradial
+  name: Gradial
+- token: GoFundMe
+  name: GoFundMe
+- token: ghost
+  name: "Ghost"
+- token: gavindebeckerassociates
+  name: "Gavin de Becker & Associates"
+- token: garnerhealth
+  name: "Garner Health"
+- token: fourseasons
+  name: "Four Seasons Garage Doors"
+- token: Flip
+  name: Flip
+- token: carbon
+  name: "Carbon, Inc."
+- token: bitgo
+  name: "BitGo"
+- token: BabelStreet
+  name: "Babel Street"
+- token: amplitude
+  name: "Amplitude"
+- token: Amount
+  name: "FIS® Amount™"
+- token: albedo
+  name: "Albedo"
+- token: Agero
+  name: Agero
+- token: 6sense
+  name: 6sense
+- token: 10Beauty
+  name: 10Beauty
+- token: Yes
+  name: Yes
+- token: workstream
+  name: "Workstream"
+- token: visualconcepts
+  name: "Visual Concepts"
+- token: Videoamp
+  name: "VideoAmp Careers Website"
+- token: veriff
+  name: "Veriff"
+- token: Upwork
+  name: Upwork
+- token: Upbound
+  name: Upbound
+- token: TurbineOne
+  name: TurbineOne
+- token: Synack
+  name: Synack
+- token: step
+  name: "Step"
+- token: StableKernel
+  name: "Stable Kernel"
+- token: sagesure
+  name: "SageSure"
+- token: Sas
+  name: "Superior Alarm Systems"
+- token: rewardsnetwork
+  name: "Rewards Network"
+- token: resilience
+  name: "Resilience"
+- token: RadixArk
+  name: RadixArk
+- token: Realm
+  name: Realm
+- token: Qualia
+  name: Qualia
+- token: Prolaio
+  name: Prolaio
+- token: panicbutton
+  name: "Panic Button"
+- token: PDTPartners
+  name: "PDT Partners"
+- token: nexamp
+  name: "Nexamp"
+- token: Metropolis
+  name: Metropolis
+- token: Mas
+  name: "Midwest Applied Solutions"
+- token: lucidsoftware
+  name: "Lucid Software"
+- token: link
+  name: "LINK"
+- token: Koddi
+  name: Koddi
+- token: keystone
+  name: "Keystone"
+- token: Ketch
+  name: Ketch
+- token: inflectionai
+  name: "Inflection AI"
+- token: HolderConstruction
+  name: "Holder Construction"
+- token: HiddenLayer
+  name: HiddenLayer
+- token: hazel
+  name: "Hazel Health"
+- token: Gumgum
+  name: "GumGum"
+- token: geotab
+  name: "Geotab"
+- token: Forward
+  name: Forward
+- token: fervoenergy
+  name: "Fervo Energy"
+- token: eulerity
+  name: "Eulerity"
+- token: Enova
+  name: "Enova International"
+- token: EnergySolutions
+  name: "Energy Solutions - USA"
+- token: dynotherapeutics
+  name: "Dyno Therapeutics"
+- token: diligent
+  name: "Diligent Services"
+- token: DiligentRobotics
+  name: "Diligent Robotics"
+- token: Current
+  name: Current
+- token: courierhealth
+  name: "Courier Health"
+- token: CoStar
+  name: "Co–Star"
+- token: Camp
+  name: "CAMP"
+- token: BuildOps
+  name: BuildOps
+- token: brady
+  name: "Brady Services"
+- token: BracebridgeCapital
+  name: "Bracebridge Capital"
+- token: Boingo
+  name: Boingo
+- token: behavox
+  name: "Behavox"
+- token: avathon
+  name: "Avathon"
+- token: AssemblyAI
+  name: AssemblyAI
+- token: ArriveLogistics
+  name: "Arrive Logistics"
+- token: ApexCompanies
+  name: "Apex Companies"
+- token: alliance
+  name: "Alliance"
+- token: Alixpartners
+  name: "AlixPartners"
+- token: Alameda
+  name: "Alameda Veterinary Clinic"
+- token: AcuityMD
+  name: AcuityMD
+- token: karat
+  name: "Karat"
+- token: Wight
+  name: "Wight & Company"
+- token: weave
+  name: "Weave"
+- token: Vumedi
+  name: "Vumedi Inc."
+- token: vulncheck
+  name: "VulnCheck"
+- token: Voxel51
+  name: Voxel51
+- token: voio
+  name: "Voio"
+- token: victory
+  name: "Victory Creative Group"
+- token: Verve
+  name: Verve
+- token: velir
+  name: "Velir"
+- token: vaxcyte
+  name: "Vaxcyte"
+- token: upgrade
+  name: "Upgrade"
+- token: unqork
+  name: "Unqork"
+- token: usi
+  name: "United Services, Inc."
+- token: TwinHealth
+  name: "Twin Health"
+- token: trivelta
+  name: "Trivelta"
+- token: thorn
+  name: "Thorn"
+- token: thea
+  name: "Théa"
+- token: Taxbit
+  name: Taxbit
+- token: Taboola
+  name: Taboola
+- token: TIFIN
+  name: TIFIN
+- token: syndio
+  name: "Syndio"
+- token: Superior
+  name: "Superior Animal Hospital & Boarding Suites"
+
 lever:
   # Verified 2026-04-17 — 7 valid boards from 132 tested
 - token: palantir
@@ -187,6 +1233,213 @@ lever:
   name: Neon
 - token: anyscale
   name: Anyscale
+  # ── Added 2026-05-27 (validated live) ──
+- token: jumpcloud
+  name: JumpCloud
+- token: sonatype
+  name: Sonatype
+- token: tinybird
+  name: Tinybird
+  # ── Added 2026-09-13: infrastructure-first boards (live-validated) ──
+- token: scaleway
+  name: Scaleway
+  # ── Auto-discovered by scripts/discover_ats_boards.py ──
+- token: jobgether
+  name: "Jobgether"
+- token: veeva
+  name: "Veeva"
+- token: zoox
+  name: "Zoox"
+- token: extremenetworks
+  name: "Extremenetworks"
+- token: SpaceSystemsIntegration
+  name: "Space Systems Integration"
+- token: synergyecp
+  name: "Synergyecp"
+- token: shieldai
+  name: "Shieldai"
+- token: CesiumAstro
+  name: "Cesium Astro"
+- token: loftorbital
+  name: "Loftorbital"
+- token: waabi
+  name: "Waabi"
+- token: xsolla
+  name: "Xsolla"
+- token: ttecdigital
+  name: "Ttecdigital"
+- token: sprymethods
+  name: "Sprymethods"
+- token: saviynt
+  name: "Saviynt"
+- token: pditechnologies
+  name: "Pditechnologies"
+- token: provectus
+  name: "Provectus"
+- token: brightmachines
+  name: "Brightmachines"
+- token: hermeus
+  name: "Hermeus"
+- token: reply
+  name: "Reply"
+- token: walkme
+  name: "Walkme"
+- token: atomcomputing
+  name: "Atomcomputing"
+- token: Aprio
+  name: Aprio
+- token: coalfire
+  name: "Coalfire"
+- token: bounteous
+  name: "Bounteous"
+- token: parallelwireless
+  name: "Parallelwireless"
+- token: bosonai
+  name: "Bosonai"
+- token: wachter
+  name: "Wachter"
+- token: tkda
+  name: "Tkda"
+- token: linkedin
+  name: "Linkedin"
+- token: Flex
+  name: Flex
+- token: zeta
+  name: "Zeta"
+- token: gridware
+  name: "Gridware"
+- token: floqast
+  name: "Floqast"
+- token: smarsh
+  name: "Smarsh"
+- token: matchgroup
+  name: "Matchgroup"
+- token: greenlight
+  name: "Greenlight"
+- token: aircall
+  name: "Aircall"
+- token: wealthfront
+  name: "Wealthfront"
+- token: pointclickcare
+  name: "Pointclickcare"
+- token: BestEgg
+  name: "Best Egg"
+- token: standtogether
+  name: "Standtogether"
+- token: picklerobot
+  name: "Picklerobot"
+- token: includedhealth
+  name: "Includedhealth"
+- token: cimgroup
+  name: "Cimgroup"
+- token: weride
+  name: "Weride"
+- token: topazlabs
+  name: "Topazlabs"
+- token: telligen
+  name: "Telligen"
+- token: capital
+  name: "Capital"
+- token: blue
+  name: "Blue"
+- token: metlife
+  name: "Metlife"
+- token: brilliant
+  name: "Brilliant"
+- token: bloom
+  name: "Bloom"
+- token: career
+  name: "Career"
+- token: arcadia
+  name: "Arcadia"
+- token: aledade
+  name: "Aledade"
+- token: mainspringenergy
+  name: "Mainspringenergy"
+- token: AIFund
+  name: AIFund
+- token: relay
+  name: "Relay"
+- token: pivotal
+  name: "Pivotal"
+- token: healthcare
+  name: "Healthcare"
+- token: finch
+  name: "Finch"
+- token: engine
+  name: "Engine"
+- token: tact
+  name: "Tact"
+- token: nextech
+  name: "Nextech"
+- token: ladders
+  name: "Ladders"
+- token: artera
+  name: "Artera"
+- token: azul
+  name: "Azul"
+- token: voltai
+  name: "Voltai"
+- token: pyka
+  name: "Pyka"
+- token: outreach
+  name: "Outreach"
+- token: oliverwyman
+  name: "Oliverwyman"
+- token: integrate
+  name: "Integrate"
+- token: Grid
+  name: Grid
+- token: basis
+  name: "Basis"
+- token: syntax
+  name: "Syntax"
+- token: super
+  name: "Super Technologies"
+- token: perforce
+  name: "Perforce"
+- token: goodleap
+  name: "Goodleap"
+- token: disqo
+  name: "Disqo"
+- token: coupa
+  name: "Coupa"
+- token: voltus
+  name: "Voltus"
+- token: until
+  name: "Until"
+- token: objective
+  name: "Objective"
+- token: luxurypresence
+  name: "Luxurypresence"
+- token: Ketch
+  name: Ketch
+- token: intenseye
+  name: "Intenseye"
+- token: innodata
+  name: "Innodata"
+- token: horizon
+  name: "Horizon"
+- token: arrivelogistics
+  name: "Arrivelogistics"
+- token: agiloft
+  name: "Agiloft"
+- token: activecampaign
+  name: "Activecampaign"
+- token: wpromote
+  name: "Wpromote"
+- token: worldwidemissioncritical
+  name: "Worldwidemissioncritical"
+- token: walkerconsultants
+  name: "Walkerconsultants"
+- token: vesync
+  name: "Vesync"
+- token: TrilogyFederal
+  name: "Trilogy Federal"
+- token: trellis
+  name: "Trellis"
+- token: tag
+  name: "Tag"
 
 ashby:
   # Verified 2026-04-17 — 20 valid boards from 57 tested
@@ -230,6 +1483,646 @@ ashby:
   name: Runway
 - token: prefect
   name: Prefect
+  # ── Added 2026-05-27: security/devops mid-market (validated live) ──
+- token: 1password
+  name: 1Password
+- token: hackerone
+  name: HackerOne
+- token: material
+  name: Material Security
+- token: goteleport
+  name: Teleport
+- token: kong
+  name: Kong
+- token: astronomer
+  name: Astronomer
+- token: confluent
+  name: Confluent
+  # ── Added 2026-05-27 (batch 2, validated live) ──
+- token: sentry
+  name: Sentry
+- token: coder
+  name: Coder
+- token: opal
+  name: Opal Security
+- token: atlan
+  name: Atlan
+- token: stytch
+  name: Stytch
+- token: oso
+  name: Oso
+- token: montecarlodata
+  name: Monte Carlo
+- token: depot
+  name: Depot
+- token: opslevel
+  name: OpsLevel
+  # ── Added 2026-09-13: infrastructure-first boards (live-validated) ──
+- token: crusoe
+  name: Crusoe Energy
+- token: snowflake
+  name: Snowflake
+- token: temporal
+  name: Temporal
+- token: langchain
+  name: LangChain
+- token: baseten
+  name: Baseten
+- token: docker
+  name: Docker
+- token: fireworks
+  name: Fireworks AI
+- token: runpod
+  name: RunPod
+- token: e2b
+  name: E2B
+- token: railway
+  name: Railway
+- token: browserbase
+  name: Browserbase
+- token: resend
+  name: Resend
+- token: influxdata
+  name: InfluxData
+- token: inngest
+  name: Inngest
+  # ── Auto-discovered by scripts/discover_ats_boards.py ──
+- token: AirApps
+  name: "Air Apps"
+- token: Applied
+  name: Applied
+- token: fluidstack
+  name: "Fluidstack"
+- token: cerebras
+  name: "Cerebras"
+- token: legora
+  name: "Legora"
+- token: Clickhouse
+  name: Clickhouse
+- token: skydio
+  name: "Skydio"
+- token: saronic
+  name: "Saronic"
+- token: Wayve
+  name: Wayve
+- token: ThinkingMachines
+  name: "Thinking Machines"
+- token: Mercor
+  name: Mercor
+- token: whoop
+  name: "Whoop"
+- token: sierra
+  name: "Sierra"
+- token: Vultr
+  name: Vultr
+- token: maintainx
+  name: "Maintainx"
+- token: harvey
+  name: "Harvey"
+- token: deepgram
+  name: "Deepgram"
+- token: etched
+  name: "Etched"
+- token: gamma
+  name: "Gamma"
+- token: uipath
+  name: "Uipath"
+- token: WorkOS
+  name: "Work OS"
+- token: Replit
+  name: Replit
+- token: Airwallex
+  name: Airwallex
+- token: Braintrust
+  name: Braintrust
+- token: voleon
+  name: "Voleon"
+- token: Serval
+  name: Serval
+- token: twenty
+  name: "Twenty"
+- token: doppel
+  name: "Doppel"
+- token: Kalshi
+  name: Kalshi
+- token: lumilens
+  name: "Lumilens"
+- token: Arena
+  name: Arena
+- token: Andromeda
+  name: Andromeda
+- token: radiant
+  name: "Radiant"
+- token: Qumulo
+  name: Qumulo
+- token: sesame
+  name: "Sesame"
+- token: SageCare
+  name: "Sage Care"
+- token: assorthealth
+  name: "Assorthealth"
+- token: Cartesia
+  name: Cartesia
+- token: Volta
+  name: Volta
+- token: Rivet
+  name: Rivet
+- token: kustomer
+  name: "Kustomer"
+- token: SPAN
+  name: SPAN
+- token: poolside
+  name: "Poolside"
+- token: Sunday
+  name: Sunday
+- token: illumio
+  name: "Illumio"
+- token: Reducto
+  name: Reducto
+- token: cape
+  name: "Cape"
+- token: plaud
+  name: "Plaud"
+- token: Antares
+  name: Antares
+- token: todyl
+  name: "Todyl"
+- token: Ibotta
+  name: Ibotta
+- token: Distyl
+  name: Distyl
+- token: harmonic
+  name: "Harmonic"
+- token: writer
+  name: "Writer"
+- token: socure
+  name: "Socure"
+- token: outtake
+  name: "Outtake"
+- token: Thumbtack
+  name: Thumbtack
+- token: Hex
+  name: Hex
+- token: dexmate
+  name: "Dexmate"
+- token: imprint
+  name: "Imprint"
+- token: Tennr
+  name: Tennr
+- token: matx
+  name: "Matx"
+- token: Chariot
+  name: Chariot
+- token: VirtaHealth
+  name: "Virta Health"
+- token: vinci
+  name: "Vinci"
+- token: Perk
+  name: Perk
+- token: uncountable
+  name: "Uncountable"
+- token: decagon
+  name: "Decagon"
+- token: webai
+  name: "Webai"
+- token: Cribl
+  name: Cribl
+- token: abridge
+  name: "Abridge"
+- token: Cube
+  name: Cube
+- token: resolution
+  name: "Resolution"
+- token: iterable
+  name: "Iterable"
+- token: formenergy
+  name: "Formenergy"
+- token: blissway
+  name: "Blissway"
+- token: mapbox
+  name: "Mapbox"
+- token: HiveWatch
+  name: HiveWatch
+- token: anrok
+  name: "Anrok"
+- token: Hightouch
+  name: Hightouch
+- token: Forus
+  name: Forus
+- token: Astera
+  name: Astera
+- token: pylon
+  name: "Pylon"
+- token: Parafin
+  name: Parafin
+- token: dimensional
+  name: "Dimensional"
+- token: Boom
+  name: Boom
+- token: Aerovect
+  name: Aerovect
+- token: tiger
+  name: "Tiger"
+- token: Paradigm
+  name: Paradigm
+- token: delinea
+  name: "Delinea"
+- token: Chalk
+  name: Chalk
+- token: BeaconSoftware
+  name: "Beacon Software"
+- token: PhysicalIntelligence
+  name: "Physical Intelligence"
+- token: Parallel
+  name: "Parallel Systems"
+- token: LiveKit
+  name: "Live Kit"
+- token: Flint
+  name: Flint
+- token: Camunda
+  name: Camunda
+- token: Treeswift
+  name: Treeswift
+- token: speak
+  name: "Speak"
+- token: roboflow
+  name: "Roboflow"
+- token: Riveron
+  name: Riveron
+- token: Picogrid
+  name: Picogrid
+- token: mirage
+  name: "Mirage"
+- token: arcade
+  name: "Arcade"
+- token: Alchemy
+  name: Alchemy
+- token: Teamworks
+  name: Teamworks
+- token: Substack
+  name: Substack
+- token: Salient
+  name: Salient
+- token: radai
+  name: "Radai"
+- token: Quantcast
+  name: Quantcast
+- token: Persona
+  name: Persona
+- token: Paxos
+  name: Paxos
+- token: Nabla
+  name: Nabla
+- token: MeridianLink
+  name: "Meridian Link"
+- token: litmus
+  name: "Litmus"
+- token: latent
+  name: "Latent"
+- token: hazel
+  name: "Hazel Health"
+- token: gimlet
+  name: "Gimlet"
+- token: Fullstory
+  name: Fullstory
+- token: Counsel
+  name: Counsel
+- token: clark
+  name: "Clark"
+- token: Arrive
+  name: Arrive
+- token: Aaru
+  name: Aaru
+- token: Tachyon
+  name: Tachyon
+- token: Plaid
+  name: Plaid
+- token: quanta
+  name: "Quanta"
+- token: inherent
+  name: "Inherent"
+- token: commure
+  name: "Commure"
+- token: Constellation
+  name: Constellation
+- token: Lightspeed
+  name: Lightspeed
+- token: novo
+  name: "Novo"
+- token: eli
+  name: "Eli"
+- token: Odyssey
+  name: Odyssey
+- token: Pure
+  name: Pure
+- token: sift
+  name: "Sift"
+- token: SentiLink
+  name: "Senti Link"
+- token: circle
+  name: "Circle"
+- token: hatch
+  name: "Hatch"
+- token: Parker
+  name: Parker
+- token: Vantage
+  name: Vantage
+- token: traba
+  name: "Traba"
+- token: Orca
+  name: "ORCA Service Technologies"
+- token: Nooks
+  name: Nooks
+- token: atomic
+  name: "Atomic"
+- token: Revel
+  name: Revel
+- token: quantum
+  name: "Quantum"
+- token: headway
+  name: "Headway"
+- token: Fullstack
+  name: Fullstack
+- token: Compa
+  name: Compa
+- token: hopper
+  name: "Hopper"
+- token: suno
+  name: "Suno"
+- token: strava
+  name: "Strava"
+- token: assured
+  name: "Assured"
+- token: stealth
+  name: "Stealth"
+- token: Confido
+  name: Confido
+- token: vapi
+  name: "Vapi"
+- token: Valon
+  name: Valon
+- token: atlas
+  name: "Atlas"
+- token: savvy
+  name: "Savvy"
+- token: rowan
+  name: "Rowan"
+- token: Radar
+  name: "RADAR"
+- token: plenful
+  name: "Plenful"
+- token: Patreon
+  name: Patreon
+- token: liquid
+  name: "Liquid"
+- token: warp
+  name: "Warp"
+- token: Skylo
+  name: Skylo
+- token: Relay
+  name: Relay
+- token: lunar
+  name: "Lunar"
+- token: Haus
+  name: Haus
+- token: finch
+  name: "Finch"
+- token: Brunswick
+  name: Brunswick
+- token: Avoca
+  name: Avoca
+- token: depthfirst
+  name: "Depthfirst"
+- token: zello
+  name: "Zello"
+- token: Tabs
+  name: Tabs
+- token: Stellar
+  name: Stellar
+- token: Solstice
+  name: Solstice
+- token: semperis
+  name: "Semperis"
+- token: profound
+  name: "ProFound"
+- token: kestra
+  name: "Kestra"
+- token: Flock
+  name: Flock
+- token: Eagle
+  name: Eagle
+- token: ditto
+  name: "Ditto"
+- token: Ashby
+  name: Ashby
+- token: arlo
+  name: "Arlo"
+- token: ambiencehealthcare
+  name: "Ambiencehealthcare"
+- token: SpotOn
+  name: "Spot On"
+- token: Quartermaster
+  name: Quartermaster
+- token: OpenGov
+  name: "Open Gov"
+- token: indigo
+  name: "Indigo"
+- token: fieldguide
+  name: "Fieldguide"
+- token: Conversion
+  name: Conversion
+- token: chartahealth
+  name: "Chartahealth"
+- token: Cedar
+  name: Cedar
+- token: betterup
+  name: "Betterup"
+- token: arch
+  name: "Arch"
+- token: upguard
+  name: "Upguard"
+- token: Tenex
+  name: Tenex
+- token: Sieve
+  name: Sieve
+- token: Raft
+  name: "Raft Company Website"
+- token: Olympus
+  name: Olympus
+- token: nubank
+  name: "Nubank"
+- token: KAYAK
+  name: KAYAK
+- token: Furtherai
+  name: Furtherai
+- token: further
+  name: "Further"
+- token: Foundation
+  name: Foundation
+- token: found
+  name: "Found"
+- token: envoy
+  name: "Envoy"
+- token: edra
+  name: "Edra"
+- token: Crosby
+  name: Crosby
+- token: Company
+  name: Company
+- token: Blacksmith
+  name: Blacksmith
+- token: BeaconAI
+  name: "Beacon AI"
+- token: Wilson
+  name: Wilson
+- token: Voxel
+  name: Voxel
+- token: Vorto
+  name: Vorto
+- token: vivid
+  name: "Vivid"
+- token: vitalize
+  name: "Vitalize"
+- token: titan
+  name: "Titan"
+- token: phoenix
+  name: "Phoenix"
+- token: Stand
+  name: Stand
+- token: scribe
+  name: "Scribe"
+- token: Range
+  name: Range
+- token: prelude
+  name: "Prelude"
+- token: posh
+  name: "Posh"
+- token: Orum
+  name: Orum
+- token: Neurophos
+  name: Neurophos
+- token: neara
+  name: "Neara"
+- token: Mesh
+  name: Mesh
+- token: llamaindex
+  name: "Llamaindex"
+- token: junipersquare
+  name: "Junipersquare"
+- token: inovalon
+  name: "Inovalon"
+- token: inferact
+  name: "Inferact"
+- token: Handshake
+  name: Handshake
+- token: human
+  name: "Human"
+- token: ghost
+  name: "Ghost"
+- token: fonzi
+  name: "Fonzi"
+- token: Flip
+  name: Flip
+- token: coinflow
+  name: "Coinflow"
+- token: camber
+  name: "Camber"
+- token: Brellium
+  name: Brellium
+- token: phia
+  name: "Phia"
+- token: Zip
+  name: Zip
+- token: zeno
+  name: "Zeno"
+- token: zefr
+  name: "Zefr"
+- token: Ultra
+  name: Ultra
+- token: tango
+  name: "Tango"
+- token: Stable
+  name: Stable
+- token: Spade
+  name: Spade
+- token: Rilla
+  name: Rilla
+- token: RadixArk
+  name: RadixArk
+- token: poshmark
+  name: "Poshmark"
+- token: Polar
+  name: Polar
+- token: Pilgrim
+  name: Pilgrim
+- token: paragon
+  name: "Paragon"
+- token: nuna
+  name: "Nuna"
+- token: miro
+  name: "Miro"
+- token: maybern
+  name: "Maybern"
+- token: Madhive
+  name: Madhive
+- token: Luminai
+  name: Luminai
+- token: lightspark
+  name: "Lightspark"
+- token: Knowtex
+  name: Knowtex
+- token: HaydenAi
+  name: "Hayden Ai"
+- token: gainsight
+  name: "Gainsight"
+- token: element84
+  name: "Element84"
+- token: Convey
+  name: Convey
+- token: Conduit
+  name: Conduit
+- token: collective
+  name: "Collective"
+- token: certifid
+  name: "Certifid"
+- token: bureau
+  name: "Bureau"
+- token: brinc
+  name: "Brinc"
+- token: axion
+  name: "Axion"
+- token: Aurelian
+  name: Aurelian
+- token: Atticus
+  name: Atticus
+- token: aries
+  name: "Aries"
+- token: Antithesis
+  name: Antithesis
+- token: Angi
+  name: Angi
+- token: witnessai
+  name: "Witnessai"
+- token: weave
+  name: "Weave"
+- token: Valinor
+  name: Valinor
+- token: Unlearn
+  name: Unlearn
+- token: wonderful
+  name: "Wonderful"
+- token: Tensec
+  name: Tensec
+- token: techtorch
+  name: "Techtorch"
+- token: talkiatry
+  name: "Talkiatry"
+- token: Take2
+  name: Take2
+- token: swap
+  name: "Swap"
+- token: stream
+  name: "Stream"
 
 workday:
 - tenant: crowdstrike
@@ -376,3 +2269,471 @@ workday:
   wd_server: wd5
   site: MorningstarDBRS
   name: Morningstar
+# ── Added 2026-05-27: security/devops Workday tenants (boards validated live; curated from the discovery queue) ──
+- tenant: qualys
+  wd_server: wd5
+  site: Careers
+  name: Qualys
+- tenant: proofpoint
+  wd_server: wd5
+  site: ProofpointCareers
+  name: Proofpoint
+- tenant: optiv
+  wd_server: wd5
+  site: Optiv_Careers
+  name: Optiv
+- tenant: bb
+  wd_server: wd3
+  site: BlackBerry
+  name: BlackBerry
+- tenant: kyndryl
+  wd_server: wd5
+  site: KyndrylProfessionalCareers
+  name: Kyndryl
+- tenant: dxctechnology
+  wd_server: wd1
+  site: DXCJobs
+  name: DXC Technology
+- tenant: pax8inc
+  wd_server: wd12
+  site: Pax8Careers
+  name: Pax8
+- tenant: goto
+  wd_server: wd5
+  site: GoToCareers
+  name: GoTo
+- tenant: transunion
+  wd_server: wd5
+  site: TransUnion
+  name: TransUnion
+- tenant: trimble
+  wd_server: wd1
+  site: TrimbleCareers
+  name: Trimble
+- tenant: quantiphi
+  wd_server: wd1
+  site: Careers_at_Quantiphi
+  name: Quantiphi
+- tenant: uniphore
+  wd_server: wd503
+  site: Uniphore
+  name: Uniphore
+# ── Added 2026-05-27 (batch 3): promote-queue tenants with >=10 live domain roles (dry-run validated) ──
+- tenant: advanceauto
+  wd_server: wd5
+  site: AdvanceExternalCareers
+  name: Advance Auto Parts
+- tenant: ag
+  wd_server: wd3
+  site: Airbus
+  name: Airbus
+- tenant: alcon
+  wd_server: wd5
+  site: careers_alcon
+  name: Alcon
+- tenant: avav
+  wd_server: wd1
+  site: AVAV
+  name: AeroVironment
+- tenant: bbh
+  wd_server: wd5
+  site: BBH
+  name: Brown Brothers Harriman
+- tenant: brandeis
+  wd_server: wd5
+  site: Jobs
+  name: Brandeis University
+- tenant: candescent
+  wd_server: wd501
+  site: Hiring
+  name: Candescent
+- tenant: capgroup
+  wd_server: wd1
+  site: capitalgroupcareers
+  name: Capital Group
+- tenant: ciena
+  wd_server: wd5
+  site: Careers
+  name: Ciena
+- tenant: cmegroup
+  wd_server: wd1
+  site: cme_careers
+  name: CME Group
+- tenant: crowe
+  wd_server: wd12
+  site: External_Careers
+  name: Crowe LLP
+- tenant: datarobot
+  wd_server: wd1
+  site: DataRobot_External_Careers
+  name: DataRobot
+- tenant: ddcdine
+  wd_server: wd501
+  site: DDC_Careers
+  name: Dine Development Corporation
+- tenant: dentsuaegis
+  wd_server: wd3
+  site: DAN_GLOBAL
+  name: Dentsu
+- tenant: edwards
+  wd_server: wd5
+  site: EdwardsCareers
+  name: Edwards Lifesciences
+- tenant: entrust
+  wd_server: wd1
+  site: EntrustCareers
+  name: Entrust Corporation
+- tenant: finastra
+  wd_server: wd3
+  site: FINC
+  name: Finastra
+- tenant: gapinc
+  wd_server: wd1
+  site: GAPINC
+  name: GPS Services, Inc.
+- tenant: gartner
+  wd_server: wd5
+  site: EXT
+  name: Gartner
+- tenant: generalmotors
+  wd_server: wd5
+  site: Careers_GM
+  name: General Motors (GM)
+- tenant: genesys
+  wd_server: wd1
+  site: Genesys
+  name: Genesys
+- tenant: gilead
+  wd_server: wd1
+  site: gileadcareers
+  name: Gilead Sciences
+- tenant: goodyear
+  wd_server: wd1
+  site: GoodyearCareers
+  name: Goodyear
+- tenant: healthcare
+  wd_server: wd1
+  site: Search
+  name: Solventum
+- tenant: huntington
+  wd_server: wd12
+  site: HNBcareers
+  name: Huntington Bank
+- tenant: huron
+  wd_server: wd1
+  site: huroncareers
+  name: Huron Consulting Group
+- tenant: jda
+  wd_server: wd5
+  site: JDA_Careers
+  name: Blue Yonder
+- tenant: logicalis
+  wd_server: wd3
+  site: LogicalisCareers
+  name: Logicalis
+- tenant: lseg
+  wd_server: wd3
+  site: Careers
+  name: LSEG (London Stock Exchange Group)
+- tenant: mimecast
+  wd_server: wd5
+  site: Mimecast-Careers
+  name: Mimecast
+- tenant: pfizer
+  wd_server: wd1
+  site: PfizerCareers
+  name: Pfizer
+- tenant: pyebarkerfire
+  wd_server: wd1
+  site: PB_V2
+  name: Pye-Barker Fire & Safety
+- tenant: qbe
+  wd_server: wd3
+  site: QBE-Careers
+  name: QBE
+- tenant: rackspace
+  wd_server: wd1
+  site: External
+  name: Rackspace Technology
+- tenant: relx
+  wd_server: wd3
+  site: LexisNexisLegal
+  name: LexisNexis Legal & Professional
+- tenant: sailpoint
+  wd_server: wd1
+  site: SailPoint
+  name: SailPoint Technologies
+- tenant: sonyglobal
+  wd_server: wd1
+  site: SonyGlobalCareers
+  name: Sony
+- tenant: swift
+  wd_server: wd3
+  site: Join-Swift
+  name: Swift
+- tenant: transamerica
+  wd_server: wd5
+  site: US
+  name: Transamerica
+- tenant: uchicago
+  wd_server: wd5
+  site: External
+  name: The University of Chicago
+- tenant: umb
+  wd_server: wd1
+  site: UMBExternal
+  name: UMB Financial Corporation
+- tenant: umiami
+  wd_server: wd1
+  site: UMCareerStaff
+  name: University of Miami
+- tenant: westernalliancebank
+  wd_server: wd5
+  site: WAB
+  name: Western Alliance Bank
+- tenant: wk
+  wd_server: wd3
+  site: External
+  name: Wolters Kluwer
+- tenant: zendesk
+  wd_server: wd1
+  site: zendesk
+  name: Zendesk
+
+
+- tenant: aveva
+  wd_server: wd3
+  site: ETAP_Careers
+  name: Etap
+- tenant: boseallaboutme
+  wd_server: wd503
+  site: Bose_Careers
+  name: Bose
+- tenant: rb
+  wd_server: wd5
+  site: FRS
+  name: Federal Reserve Bank of Philadelphia
+- tenant: mpc
+  wd_server: wd1
+  site: MPCCareers
+  name: Marathon Petroleum
+- tenant: copart
+  wd_server: wd12
+  site: Copart
+  name: Copart, Inc
+- tenant: magnitudesoftware
+  wd_server: wd1
+  site: External
+  name: Insight Software
+- tenant: hiscox
+  wd_server: wd3
+  site: Hiscox_External_Site
+  name: Hiscox
+- tenant: aristocrat
+  wd_server: wd3
+  site: AristocratExternalCareersSite
+  name: Aristocrat
+- tenant: skechers
+  wd_server: wd5
+  site: One-career-site
+  name: Skechers
+- tenant: mtb
+  wd_server: wd5
+  site: MTB
+  name: M&T Bank
+- tenant: arrowstreetcapital
+  wd_server: wd5
+  site: Arrowstreet
+  name: Arrowstreet Capital LP
+- tenant: gsk
+  wd_server: wd5
+  site: GSKCareers
+  name: GSK
+- tenant: issgovernance
+  wd_server: wd1
+  site: ISScareers
+  name: Institutional Shareholder Services
+- tenant: graybar
+  wd_server: wd1
+  site: Careers
+  name: Graybar
+- tenant: bigcommerce
+  wd_server: wd12
+  site: Commerce
+  name: Commerce
+- tenant: mizuho
+  wd_server: wd1
+  site: mizuhoamericas
+  name: Mizuho Bank
+- tenant: calistacorp
+  wd_server: wd1
+  site: Yulista
+  name: Yulista Management Services
+- tenant: gogo
+  wd_server: wd503
+  site: careers
+  name: Gogo Business Aviation
+- tenant: factset
+  wd_server: wd108
+  site: FactSetCareers
+  name: FactSet
+- tenant: smithfieldfoods
+  wd_server: wd1
+  site: Careers
+  name: Smithfield Foods
+- tenant: invesco
+  wd_server: wd1
+  site: IVZ
+  name: Invesco
+- tenant: veradigm
+  wd_server: wd12
+  site: VR
+  name: Veradigm
+- tenant: psu
+  wd_server: wd1
+  site: PSU_Staff
+  name: Penn State University
+- tenant: epicorsoftware
+  wd_server: wd5
+  site: epicorjobs
+  name: Epicor Software
+- tenant: genpt
+  wd_server: wd1
+  site: Careers
+  name: Motion
+- tenant: nelnet
+  wd_server: wd1
+  site: MyNelnet
+  name: Nelnet
+- tenant: harriscomputer
+  wd_server: wd3
+  site: '1'
+  name: Harris Computer
+- tenant: pru
+  wd_server: wd5
+  site: Careers
+  name: Prudential
+- tenant: o9solutions
+  wd_server: wd5
+  site: o9SolutionsExternal
+  name: o9 Solutions
+- tenant: outsystems
+  wd_server: wd503
+  site: OutSystems
+  name: OutSystems
+- tenant: hrhub
+  wd_server: wd3
+  site: Euronext_Career_Page
+  name: Euronext
+- tenant: pacificlife
+  wd_server: wd1
+  site: PacificLifeCareers
+  name: Pacific Life
+- tenant: novaspect
+  wd_server: wd501
+  site: External_Careers_SG
+  name: Novaspect
+- tenant: cgm
+  wd_server: wd3
+  site: cgm
+  name: CompuGroup Medical
+- tenant: moog
+  wd_server: wd5
+  site: MOOG_External_Career_Site
+  name: Moog, Inc
+- tenant: cnx
+  wd_server: wd1
+  site: external_global
+  name: Concentrix
+- tenant: lplfinancial
+  wd_server: wd1
+  site: External
+  name: LPL Financial
+- tenant: guidehouse
+  wd_server: wd1
+  site: External
+  name: Guidehouse
+- tenant: campbellsoup
+  wd_server: wd5
+  site: ExternalCareers_GlobalSite
+  name: Campbell's
+- tenant: burlington
+  wd_server: wd5
+  site: BurlingtonCareers
+  name: Burlington Stores
+- tenant: aresmgmt
+  wd_server: wd1
+  site: External
+  name: Ares Management
+- tenant: bah
+  wd_server: wd1
+  site: BAH_Jobs
+  name: Booz Allen Hamilton
+- tenant: ssctech
+  wd_server: wd1
+  site: SSCTechnologies
+  name: SS&C
+- tenant: cubic
+  wd_server: wd1
+  site: cubic_USA_careers
+  name: Cubic Corporation
+- tenant: unitytech
+  wd_server: wd1
+  site: Unity
+  name: Unity Technologies
+- tenant: fractal
+  wd_server: wd1
+  site: Careers
+  name: Fractal Analytics
+- tenant: pciservices
+  wd_server: wd1
+  site: External
+  name: PCI Pharma Services
+- tenant: orionsteel
+  wd_server: wd5
+  site: externalcareers
+  name: Orion Steel Group
+- tenant: assurant
+  wd_server: wd1
+  site: Assurant_Careers
+  name: Assurant
+- tenant: tmhcc
+  wd_server: wd108
+  site: External
+  name: Tokio Marine HCC
+- tenant: dimensional
+  wd_server: wd5
+  site: DFA_Careers
+  name: Dimensional Fund Advisors
+- tenant: seminolehardrock
+  wd_server: wd503
+  site: seminolehardrockcareers
+  name: Hard Rock International
+- tenant: ntst
+  wd_server: wd1
+  site: Careers
+  name: Netsmart Technologies
+- tenant: fronius
+  wd_server: wd3
+  site: Job_Board
+  name: Fronius
+- tenant: genmills
+  wd_server: wd1
+  site: GMI_External_Careers
+  name: General Mills
+- tenant: zillow
+  wd_server: wd5
+  site: Zillow_Group_External
+  name: Zillow
+- tenant: sabre
+  wd_server: wd1
+  site: SabreJobs
+  name: Sabre
+- tenant: modmed
+  wd_server: wd501
+  site: ModMed12
+  name: Modernizing Medicine, Inc.
+- tenant: valeo
+  wd_server: wd3
+  site: valeo_jobs
+  name: Valeo

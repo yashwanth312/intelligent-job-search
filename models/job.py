@@ -43,3 +43,7 @@ class ScreenedJob(RawJob):
     match_signals: list[str] = Field(default_factory=list)
     risk_flags: list[str] = Field(default_factory=list)
     suggested_angle: str = ""
+    # Probability (0-100) of landing an interview after the resume is
+    # customized per suggested_angle. None when not assessed by Claude
+    # (e.g. no-description fallback jobs) — renders as a blank cell.
+    interview_likelihood: int | None = Field(default=None, ge=0, le=100)

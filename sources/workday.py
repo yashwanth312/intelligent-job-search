@@ -10,7 +10,7 @@ import aiohttp
 from bs4 import BeautifulSoup
 
 from models.job import RawJob
-from sources._dates import parse_iso
+from sources._dates import parse_workday_relative
 from sources.base import SourceAdapter, SourceResult
 
 logger = logging.getLogger(__name__)
@@ -25,6 +25,42 @@ _DETAIL_URL_RE = re.compile(
 
 # Minimum extracted text length to consider a Workday description usable.
 _MIN_DESC_LENGTH = 50
+
+# Workday's search API collapses multi-location postings to a useless
+# "N Locations" string in locationsText (e.g. "2 Locations"). The public job
+# URL always encodes one concrete location as the path segment right after
+# "job/" though — e.g. ".../job/India---Gurgaon/Field-Service-..._JR335049"
+# decodes to "India - Gurgaon". Fall back to decoding that slug whenever
+# locationsText itself carries no usable location, so Stage 1's location
+# filter has something to check instead of silently waving these through.
+_N_LOCATIONS_RE = re.compile(r'^\s*\d+\s+locations?\s*$', re.I)
+_LOCATION_SLUG_RE = re.compile(r'^/?job/([^/]+)/')
+_DASH_RUN_RE = re.compile(r'-{3}|-')
+
+
+def _decode_location_slug(slug: str) -> str:
+    """"United-Kingdom---London" -> "United Kingdom - London".
+
+    Workday's URL slugs use "-" for spaces within a name and "---" as the
+    separator between distinct location components — both must be handled
+    in one pass over the original string, since resolving "---" first and
+    then blindly replacing "-" with " " would eat the just-inserted dash.
+    """
+    return _DASH_RUN_RE.sub(
+        lambda m: " - " if m.group(0) == "---" else " ", slug
+    ).strip()
+
+
+def _resolve_location(locations_text: str, external_path: str) -> str:
+    text = (locations_text or "").strip()
+    if text and not _N_LOCATIONS_RE.match(text):
+        return text
+    m = _LOCATION_SLUG_RE.match(external_path or "")
+    if m:
+        decoded = _decode_location_slug(m.group(1))
+        if decoded:
+            return decoded
+    return text
 
 _HEADERS = {
     "Content-Type": "application/json",
@@ -106,11 +142,13 @@ class WorkdayAdapter(SourceAdapter):
                 jobs.append(RawJob(
                     title=posting.get("title", ""),
                     company=name,
-                    location=posting.get("locationsText", ""),
+                    location=_resolve_location(
+                        posting.get("locationsText", ""), external_path
+                    ),
                     description=None,
                     url=f"{job_url_base}/{external_path}",
                     source=f"workday-{tenant}",
-                    posted_at=parse_iso(posting.get("postedOn")),
+                    posted_at=parse_workday_relative(posting.get("postedOn")),
                 ))
             if err == "__422__":
                 logger.warning(

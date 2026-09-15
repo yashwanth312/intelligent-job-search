@@ -10,6 +10,12 @@ from models.job import ScreenedJob
 
 logger = logging.getLogger(__name__)
 
+_HEADERS = [
+    "Date Generated", "Company", "Job Title", "Location",
+    "Resume Link", "Cover Letter Link", "Apply Link", "Angle Used",
+    "Screen Confidence", "Source", "Status", "Notes",
+]
+
 
 def add_job(
     ws: gspread.Worksheet,
@@ -43,13 +49,13 @@ def add_job(
 
 def get_apply_ready_jobs(ws: gspread.Worksheet) -> list[dict]:
     """Return rows where Status = 'Ready to Apply' (jobs awaiting generation)."""
-    all_rows = ws.get_all_records()
+    all_rows = ws.get_all_records(expected_headers=_HEADERS)
     return [r for r in all_rows if str(r.get("Status", "")).strip() == "Ready to Apply"]
 
 
 def get_applied_jobs(ws: gspread.Worksheet) -> list[dict]:
     """Return rows where Status = 'Applied' — ready to sync to Tracker."""
-    all_rows = ws.get_all_records()
+    all_rows = ws.get_all_records(expected_headers=_HEADERS)
     return [r for r in all_rows if str(r.get("Status", "")).strip() == "Applied"]
 
 
@@ -59,7 +65,7 @@ def get_generated_fingerprints(ws: gspread.Worksheet) -> set[str]:
     Only blocks re-generation of jobs still sitting in the queue — won't prevent
     a new opening at the same company/title from being processed months later.
     """
-    all_rows = ws.get_all_records()
+    all_rows = ws.get_all_records(expected_headers=_HEADERS)
     return {
         f"{str(r.get('Company', '')).strip().lower()}||{str(r.get('Job Title', '')).strip().lower()}"
         for r in all_rows

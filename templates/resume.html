@@ -1,5 +1,7 @@
 <!DOCTYPE html>
 <html><head><meta charset="utf-8">
+<title>{{name}} - Resume</title>
+<meta name="author" content="{{name}}">
 <style>
   @page { margin: 0.5in; size: letter; }
   body {
@@ -50,10 +52,23 @@
   }
   .job-title { font-weight: 700; font-size: 10.5pt; color: #222; }
   .dates { font-size: 9.5pt; color: #555; white-space: nowrap; }
-  ul { margin: 2px 0 8px 0; padding-left: 18px; }
-  li { margin-bottom: 2px; font-size: 10pt; }
-  .experience { margin-bottom: 6px; }
-  .project { margin-bottom: 4px; }
+
+  /* Bullets are hanging-indent paragraphs, NOT <ul><li>. WeasyPrint flushes
+     <li> markers to the end of the page as detached text runs, which corrupts
+     the PDF reading order an ATS parses (measured on 619 resumes: the orphaned
+     glyph run landed inside the Skills section in 97% of them). Carrying the
+     marker as inline text keeps each bullet contiguous. Visual output is
+     identical. See generation/ats.py and generation/pdf_renderer.py. */
+  .bullet {
+    margin: 0 0 2px 0;
+    padding-left: 14px;
+    text-indent: -14px;
+    font-size: 10pt;
+  }
+  /* Absorbs the trailing margin the removed <ul> used to contribute, so
+     inter-entry spacing matches the previous layout. */
+  .experience { margin-bottom: 14px; }
+  .project { margin-bottom: 12px; }
   .project-name { font-weight: 700; font-size: 10.5pt; color: #222; }
 
   /* ── Education ── */
@@ -65,45 +80,18 @@
     font-size: 10pt;
   }
   .edu-left { font-weight: 700; }
+  .nowrap { white-space: nowrap; }
   .edu-date { color: #555; white-space: nowrap; font-size: 9.5pt; }
 
-  /* ── Skills table ── */
-  table.skills, table.certs {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 10pt;
-    margin: 2px 0 4px 0;
-  }
-  table.skills td {
-    padding: 3px 6px;
-    vertical-align: top;
-  }
-  table.skills td.cat {
-    width: 25%;
-    font-weight: 700;
-    color: #222;
-    white-space: nowrap;
-  }
+  /* ── Skills (ATS-safe text rows — no tables) ── */
+  .skills { margin: 2px 0 4px 0; }
+  .skill-row { margin: 0 0 3px 0; font-size: 10pt; }
+  .skill-cat { font-weight: 700; color: #222; }
 
-  /* ── Certifications table ── */
-  table.certs {
-    margin-top: 4px;
-  }
-  table.certs th, table.certs td {
-    border: 0.75px solid #BBB;
-    padding: 4px 8px;
-    font-size: 9.5pt;
-    text-align: left;
-    vertical-align: middle;
-  }
-  table.certs th {
-    background: #F2F4F8;
-    color: #1F3864;
-    font-weight: 700;
-    text-transform: none;
-    font-size: 9.5pt;
-  }
-  table.certs td.cert-name { font-weight: 700; }
+  /* ── Certifications (ATS-safe text rows — no tables) ── */
+  .certs { margin: 2px 0 4px 0; }
+  .cert-row { margin: 0 0 3px 0; font-size: 10pt; }
+  .cert-name { font-weight: 700; }
 
   /* ── Publications ── */
   .pub { margin-bottom: 6px; font-size: 10pt; }
@@ -126,19 +114,10 @@
 {{education}}
 
 <h2>Skills</h2>
-<table class="skills">{{skills}}</table>
+<div class="skills">{{skills}}</div>
 
 <h2>Certifications</h2>
-<table class="certs">
-  <tr>
-    <th>Certification</th>
-    <th>Issuing Organization</th>
-    <th>Credential ID</th>
-    <th>Issued</th>
-    <th>Expires</th>
-  </tr>
-  {{certifications}}
-</table>
+<div class="certs">{{certifications}}</div>
 
 <h2>Projects</h2>
 {{projects}}

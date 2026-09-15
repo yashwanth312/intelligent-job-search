@@ -6,6 +6,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 from typing import Callable
 
+from config import HOURS_OLD as _DEFAULT_HOURS_OLD
 from models.job import RawJob
 from sources.base import SourceAdapter, SourceResult
 
@@ -18,6 +19,41 @@ logger = logging.getLogger(__name__)
 # passes hours_old to LinkedIn/Indeed/Google). For jobs from these sources
 # with no parsed posted_at, we trust the source and keep them.
 _PREFILTERED_SOURCES = {"linkedin", "indeed", "google"}
+
+
+def _is_fresh(job: RawJob, cutoff: datetime) -> bool:
+    """Same freshness rule as filter_fresh_jobs, for one job at a time."""
+    if job.posted_at is not None:
+        return job.posted_at >= cutoff
+    return job.source in _PREFILTERED_SOURCES
+
+
+def prefer_fresher(a: RawJob, b: RawJob, hours_old: int) -> RawJob:
+    """Given two RawJobs that collide on fingerprint, return the one that
+    should survive dedup — preferring whichever one `filter_fresh_jobs` would
+    call fresh over one it would call stale, then whichever has the more
+    recent `posted_at` (unknown-but-trusted counts as "now").
+
+    Fixes a real bug: dedup used to run before the freshness filter and kept
+    whichever duplicate was encountered first (adapter order), so a 40-day-old
+    Greenhouse listing could win the fingerprint slot and then die as stale in
+    the freshness phase — taking a fresh LinkedIn repost of the same job down
+    with it, since only one survives dedup.
+    """
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=hours_old)
+    a_fresh, b_fresh = _is_fresh(a, cutoff), _is_fresh(b, cutoff)
+    if a_fresh != b_fresh:
+        return a if a_fresh else b
+    # Both fresh or both stale — prefer the more recently posted; treat a
+    # missing posted_at as "now" only when it's the trusted/fresh case above
+    # already agreed, otherwise fall back to whichever has a real date.
+    if a.posted_at is not None and b.posted_at is not None:
+        return a if a.posted_at >= b.posted_at else b
+    if a.posted_at is not None:
+        return a
+    if b.posted_at is not None:
+        return b
+    return a  # both unknown — arbitrary, stable choice
 
 
 def filter_fresh_jobs(
@@ -57,6 +93,7 @@ class ScraperOrchestrator:
         self, titles: list[str], locations: list[str],
         known_fingerprints: set[str] | None = None,
         on_source_done: SourceDoneCallback | None = None,
+        hours_old: int | None = None,
     ) -> SourceResult:
         all_jobs: list[RawJob] = []
         all_errors: list[str] = []
@@ -72,16 +109,29 @@ class ScraperOrchestrator:
             all_jobs.extend(result.jobs)
             all_errors.extend(result.errors)
 
-        # Deduplicate by fingerprint
-        seen: set[str] = set(known_fingerprints or set())
-        unique_jobs: list[RawJob] = []
+        # Deduplicate by fingerprint. Jobs already known from a prior run are
+        # dropped unconditionally. Jobs that collide WITHIN this run's batch
+        # (e.g. the same posting from Greenhouse and a LinkedIn repost) are
+        # resolved by freshness via prefer_fresher, not by which adapter
+        # happens to run first — see prefer_fresher's docstring for the bug
+        # this fixes.
+        effective_hours_old = hours_old if hours_old is not None else _DEFAULT_HOURS_OLD
+        known = known_fingerprints or set()
+        best: dict[str, RawJob] = {}
         dupes = 0
         for job in all_jobs:
-            if job.fingerprint not in seen:
-                seen.add(job.fingerprint)
-                unique_jobs.append(job)
+            fp = job.fingerprint
+            if fp in known:
+                dupes += 1
+                continue
+            existing = best.get(fp)
+            if existing is None:
+                best[fp] = job
             else:
                 dupes += 1
+                best[fp] = prefer_fresher(job, existing, effective_hours_old)
+
+        unique_jobs = list(best.values())
 
         logger.info(
             f"Orchestrator: {len(all_jobs)} total, {dupes} duplicates removed, "

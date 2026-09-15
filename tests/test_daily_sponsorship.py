@@ -57,7 +57,7 @@ def _ws_mock():
     return ws
 
 
-def test_write_screened_jobs_emits_15_columns_per_row():
+def test_write_screened_jobs_emits_16_columns_per_row():
     ws = _ws_mock()
     jobs = [_screened("linkedin", True), _screened("hackernews", False)]
     write_screened_jobs(ws, jobs)
@@ -66,7 +66,7 @@ def test_write_screened_jobs_emits_15_columns_per_row():
     rows = ws.append_rows.call_args[0][0]
     assert len(rows) == 2
     for row in rows:
-        assert len(row) == 15, f"row has {len(row)} cells, expected 15"
+        assert len(row) == 16, f"row has {len(row)} cells, expected 16"
 
 
 def test_write_screened_jobs_status_at_index_4_blank():
@@ -77,31 +77,47 @@ def test_write_screened_jobs_status_at_index_4_blank():
     assert row[4] == ""
 
 
-def test_write_screened_jobs_risk_flags_at_index_5():
+def test_write_screened_jobs_interview_score_at_index_5_blank_when_unset():
+    ws = _ws_mock()
+    write_screened_jobs(ws, [_screened("linkedin", True)])
+    row = ws.append_rows.call_args[0][0][0]
+    assert row[5] == ""
+
+
+def test_write_screened_jobs_interview_score_at_index_5():
+    ws = _ws_mock()
+    job = _screened("linkedin", True)
+    job.interview_likelihood = 42
+    write_screened_jobs(ws, [job])
+    row = ws.append_rows.call_args[0][0][0]
+    assert row[5] == 42
+
+
+def test_write_screened_jobs_risk_flags_at_index_6():
     ws = _ws_mock()
     job = _screened("linkedin", True)
     job.risk_flags = ["seniority_mismatch", "salary_below_floor"]
     write_screened_jobs(ws, [job])
     row = ws.append_rows.call_args[0][0][0]
-    assert row[5] == "seniority_mismatch, salary_below_floor"
+    assert row[6] == "seniority_mismatch, salary_below_floor"
 
 
-def test_write_screened_jobs_sponsorship_at_index_12():
+def test_write_screened_jobs_sponsorship_at_index_13():
     ws = _ws_mock()
     write_screened_jobs(ws, [_screened("linkedin", True)])
     row = ws.append_rows.call_args[0][0][0]
-    assert row[12] == "Verified sponsor"
+    assert row[13] == "Verified sponsor"
 
 
 def test_write_screened_jobs_sponsorship_no_history():
     ws = _ws_mock()
     write_screened_jobs(ws, [_screened("hackernews", False)])
     row = ws.append_rows.call_args[0][0][0]
-    assert row[12] == "No H-1B history"
+    assert row[13] == "No H-1B history"
 
 
 def test_write_screened_jobs_sponsorship_curated_unknown():
     ws = _ws_mock()
     write_screened_jobs(ws, [_screened("greenhouse-anthropic", None)])
     row = ws.append_rows.call_args[0][0][0]
-    assert row[12] == "Curated — unknown"
+    assert row[13] == "Curated — unknown"

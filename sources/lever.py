@@ -12,7 +12,7 @@ import aiohttp
 
 from models.job import RawJob
 from sources._dates import parse_epoch
-from sources.base import SourceAdapter, SourceResult
+from sources.base import SourceAdapter, SourceResult, scrape_boards
 from sources.greenhouse import _title_is_relevant
 
 logger = logging.getLogger(__name__)
@@ -27,23 +27,11 @@ class LeverAdapter(SourceAdapter):
         self.companies = companies
 
     async def scrape(self, titles: list[str], locations: list[str]) -> SourceResult:
-        jobs: list[RawJob] = []
-        errors: list[str] = []
-
-        async with aiohttp.ClientSession() as session:
-            for company in self.companies:
-                try:
-                    company_jobs = await self._scrape_company(
-                        session, company["token"], company["name"]
-                    )
-                    jobs.extend(company_jobs)
-                except Exception as e:
-                    msg = f"Lever {company['name']}: {e}"
-                    logger.warning(msg)
-                    errors.append(msg)
-
-        logger.info(f"Lever: scraped {len(jobs)} relevant jobs from {len(self.companies)} companies")
-        return SourceResult(jobs=jobs, errors=errors)
+        return await scrape_boards(
+            self.companies,
+            lambda session, c: self._scrape_company(session, c["token"], c["name"]),
+            label="Lever",
+        )
 
     async def _scrape_company(
         self, session: aiohttp.ClientSession, token: str, name: str

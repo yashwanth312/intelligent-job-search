@@ -5,7 +5,10 @@ ruamel.yaml>=0.17
 python-dotenv>=1.0
 
 # Scraping
-python-jobspy>=1.1
+# Pinned exact: sources/linkedin_indeed.py overrides LinkedIn.delay/band_delay
+# class attributes at import time (guarded, but a version bump could silently
+# rename/remove them without that override erroring).
+python-jobspy==1.1.82
 aiohttp>=3.9
 beautifulsoup4>=4.12
 
@@ -21,6 +24,10 @@ weasyprint>=60.0
 
 # CLI & UX
 rich>=13.0
+
+# Web UI
+fastapi>=0.111
+uvicorn[standard]>=0.29
 
 # Testing
 pytest>=8.0

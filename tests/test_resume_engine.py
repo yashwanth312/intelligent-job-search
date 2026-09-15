@@ -1,5 +1,6 @@
 import pytest
 import json
+from unittest.mock import patch
 from generation.resume_engine import ResumeEngine
 
 
@@ -65,3 +66,51 @@ class TestResumeEngine:
         assert result is not None
         assert result["cover_letter"] == ""
         assert result["decisions"] == {}
+
+
+class TestResumeEnginePromptSplit:
+    """generate() splits application_materials.md into a cached system prompt
+    (profile + static instructions) and a small per-job dynamic prompt."""
+
+    def _engine(self, profile_yaml_path):
+        return ResumeEngine(profile_path=str(profile_yaml_path))
+
+    def test_system_prompt_contains_profile_not_job_fields(self, tmp_path):
+        profile = tmp_path / "profile.yaml"
+        profile.write_text("name: Test Candidate\n", encoding="utf-8")
+        engine = self._engine(profile)
+        sys_prompt = engine._build_system_prompt()
+
+        assert "Test Candidate" in sys_prompt
+        assert "{{profile_yaml}}" not in sys_prompt
+        assert "{{company}}" not in sys_prompt
+        assert "LOCKED CONSTANTS" in sys_prompt
+
+    def test_system_prompt_is_memoized(self, tmp_path):
+        profile = tmp_path / "profile.yaml"
+        profile.write_text("name: Test Candidate\n", encoding="utf-8")
+        engine = self._engine(profile)
+        first = engine._build_system_prompt()
+        second = engine._build_system_prompt()
+        assert first is second
+
+    def test_generate_calls_run_claude_with_system_prompt_and_thinking_off(self, tmp_path):
+        profile = tmp_path / "profile.yaml"
+        profile.write_text("name: Test Candidate\n", encoding="utf-8")
+        engine = self._engine(profile)
+
+        with patch("generation.resume_engine.run_claude", return_value=None) as mock_run:
+            engine.generate(
+                company="Acme", title="DevOps Engineer", location="Remote",
+                description="Do infra things", source="linkedin",
+            )
+
+        assert mock_run.call_count == 1
+        _args, kwargs = mock_run.call_args
+        assert kwargs["disable_thinking"] is True
+        assert "Test Candidate" in kwargs["system_prompt"]
+        dynamic_prompt = mock_run.call_args.args[0]
+        assert "Acme" in dynamic_prompt
+        assert "DevOps Engineer" in dynamic_prompt
+        assert "Test Candidate" not in dynamic_prompt
+        assert "LOCKED CONSTANTS" not in dynamic_prompt
