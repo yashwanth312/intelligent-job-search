@@ -20,6 +20,12 @@ python feedback_report.py
 # Update profile vault interactively
 python update_profile.py
 
+# Resume project scorer: rebuild skill rarity table (monthly), replay over past
+# applications, and per-project usage/callbacks for the tracker
+python scripts/build_skill_idf.py
+python scripts/replay_project_scorer.py
+python scripts/project_usage.py
+
 # Run tests
 pytest tests/ -v
 
@@ -48,6 +54,26 @@ Six-component AI job search platform:
 - Daily + Audit tabs cleared each run; Applied tab is persistent
 - All data persisted to SQLite before clearing Sheets
 
+## Portfolio projects (set 2026-09-26)
+
+- docs/projects/*.md are 15 portfolio project specs; profile.yaml
+  `portfolio_catalog:` points at them, `projects:` holds built projects. Both
+  carry skill tags from generation/skill_taxonomy.py (spec front matter /
+  `skills:` block).
+- generation/project_scorer.py picks the resume's 3 projects per JD
+  deterministically (rarity x section x repetition x title boost, greedy
+  diversity). ResumeEngine strips `projects`/`portfolio_catalog` from the
+  cached system prompt and sends only the 3 picks in the per-job slice.
+- The generator may select ANY catalog project regardless of build status
+  (user decision). Status lives only in the Portfolio Build Board artifact
+  (https://claude.ai/artifact/UwPKd8R8zVisEQnc44H9Mp, db collection `projects`,
+  usage in `stats/usage`). Portfolio-project bullets may only use the spec's
+  target metrics.
+- Stage 2 sees a one-line-per-project catalog and may raise confidence by at
+  most 1 for skill gaps a catalog project covers (prompts/screening.md rule 3).
+- feedback rows record projects_used, project_coverage and admission
+  (core | it_identity); the Applied tab Notes column lists the projects.
+
 ## Targeting strategy (set 2026-09-13)
 
 Retargeted to infrastructure only, from outcome data in the "Seven Callbacks"
@@ -55,9 +81,16 @@ audit: 1,003 applications produced 7 callbacks, ALL of them infrastructure roles
 (Cloud 4.35%, SRE 2.20%, Systems/Infra 1.41%) while AI/ML (0/238), Software
 Engineer (0/128) and Security Analyst (0/73) produced none.
 
-- TARGET_TITLES is infra-only; MLOps is the single AI-adjacent entry
-- TITLE_DOMAIN_KEYWORDS has no bare "ai" or "security" — such titles must also
-  carry an infra word, which is what the converting roles actually looked like
+- TARGET_TITLES is infra titles plus AI engineering (MLOps, AI Engineer,
+  Generative AI Engineer, Machine Learning Engineer). AI was restored 2026-09-16
+  at the user's call: the infra-only gate dropped an LLMOps "AI Engineer" role
+  (NYU Langone) that sent an assessment. Do not narrow AI back out without asking.
+- TITLE_DOMAIN_KEYWORDS includes the AI/ML words (ai, genai, llm, ml, ...) but
+  not bare "security"; security titles must also carry an infra word
+- IT/identity titles (sysadmin, Windows, identity/IAM, endpoint, M365, VMware)
+  were opened 2026-09-26 via IT_IDENTITY_TITLE_KEYWORDS, backed by the
+  docs/projects portfolio catalog. They pass only without a security word:
+  the user chose to keep Security Engineer / analyst titles out.
 - Prefer direct-ATS boards over LinkedIn; grow them with
   `python scripts/discover_ats_boards.py --limit 4000 --apply`
 - Workday tenants are promoted from the discovery queue on DOMAIN RELEVANCE

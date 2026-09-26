@@ -16,6 +16,7 @@ from config import (
     STAGE2_THINKING_BUDGET_TOKENS,
 )
 from generation.claude_cli import run_claude, extract_json
+from generation.portfolio import catalog_summary, load_portfolio, strip_top_level_keys
 
 logger = logging.getLogger(__name__)
 
@@ -75,7 +76,9 @@ class Stage2Screen:
         if self._profile:
             return self._profile
         with open(self.profile_path, encoding="utf-8") as f:
-            self._profile = f.read()
+            # Catalog pointers are rendered as the compact {{portfolio_catalog}}
+            # block instead — see prompts/screening.md rule 3.
+            self._profile = strip_top_level_keys(f.read(), ("portfolio_catalog",))
         return self._profile
 
     def _build_system_prompt(self) -> str:
@@ -98,6 +101,8 @@ class Stage2Screen:
             before
             .replace("{{profile}}", self._load_profile())
             .replace("{{sponsorship_policy}}", sponsorship_policy)
+            .replace("{{portfolio_catalog}}",
+                     catalog_summary(load_portfolio(self.profile_path)) or "None")
         )
         return self._system_prompt
 

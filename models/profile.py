@@ -16,7 +16,7 @@ class PersonalInfo(BaseModel):
 class Education(BaseModel):
     school: str
     degree: str
-    gpa: str
+    gpa: str = ""
     graduation: str
 
 
@@ -33,10 +33,26 @@ class Experience(BaseModel):
     raw_context: str = ""
 
 
+class ProjectSkills(BaseModel):
+    """Skill tags by depth, using generation.skill_taxonomy keys."""
+    core: list[str] = []
+    supporting: list[str] = []
+    touch: list[str] = []
+
+
 class Project(BaseModel):
     name: str
+    id: str = ""
     raw_context: str = ""
     framings: dict[str, dict] = {}  # e.g. {"healthcare": {"bullets": [...]}}
+    skills: ProjectSkills = ProjectSkills()
+
+
+class CatalogRef(BaseModel):
+    """Pointer to a portfolio project spec (docs/projects/*.md)."""
+    id: str
+    name: str
+    spec: str
 
 
 class Certification(BaseModel):
@@ -52,6 +68,7 @@ class Profile(BaseModel):
     education: list[Education] = []
     experiences: list[Experience] = []
     projects: list[Project] = []
+    portfolio_catalog: list[CatalogRef] = []
     certifications: list[Certification] = []
     training: list[str] = []
     skills: dict[str, list[str]] = {}

@@ -31,6 +31,7 @@ from generation.verifier import ResumeVerifier, format_feedback, keyword_coverag
 from generation.pdf_renderer import render_resume_pdf, render_cover_letter_pdf
 from generation.drive_uploader import DriveUploader
 from models.job import ScreenedJob, ScreeningVerdict
+from screening.stage1 import title_admission
 from sheets.client import SheetsClient
 from sheets import daily as daily_ops, materials as materials_ops
 from sheets.formatting import format_all_sheets
@@ -333,6 +334,9 @@ def process_job(
             cov, missing = keyword_coverage(result, jd_kws)
             result["_interview_score"] = round(cov * 100)
     interview_score = result.get("_interview_score")
+    selection = result.get("_project_selection") or {}
+    project_ids = [p["id"] for p in selection.get("projects", [])]
+    project_names = [p["name"] for p in selection.get("projects", [])]
 
     # ── Step 3: render PDFs ───────────────────────────────
     board.update(idx, "rendering PDFs")
@@ -355,6 +359,7 @@ def process_job(
         "job": {"company": company, "title": title, "source": source, "confidence": confidence},
         "decisions": result.get("decisions", {}),
         "interview_score": interview_score,
+        "project_selection": selection,
         "verification": result.get("_verification"),
         "generated_at": today,
     }, indent=2))
@@ -382,6 +387,9 @@ def process_job(
 
     # ── Step 5: classify outcome + write to Sheet ─────────
     notes_parts = []
+    if project_names:
+        # Surfaced in the Applied tab so a callback shows which projects to build first.
+        notes_parts.append(f"Projects: {', '.join(project_names)}")
     if interview_score is not None:
         notes_parts.append(f"Interview score: {interview_score:.0f}/100")
     if not resume_ok:
@@ -421,6 +429,9 @@ def process_job(
         screen_confidence=int(confidence),
         resume_angle=result.get("decisions", {}).get("angle", ""),
         date_applied=today,
+        projects_used=project_ids,
+        project_coverage=selection.get("coverage"),
+        admission=title_admission(title),
     )
 
     elapsed = fmt_dur(time.perf_counter() - job_t0)

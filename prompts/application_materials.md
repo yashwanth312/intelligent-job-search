@@ -15,6 +15,12 @@ Screening notes: {{screening_notes}}
 Description:
 {{description}}
 
+## Selected Projects
+
+These 3 projects were chosen for THIS job by a deterministic skill scorer, in rank order. They are the only projects you may use — the profile vault above carries no projects section.
+
+{{selected_projects}}
+
 ## Reviewer Feedback on Previous Draft
 
 {{revision_feedback}}
@@ -34,13 +40,11 @@ These values are locked because recruiters cross-check the resume against Linked
 - Texas Instruments savings: **$75,000/year**
 - KV Bits infra: **40%** faster deployments, **90%** less manual setup, **15%** lower monthly cloud spend
 - DiaSense Docker Hub: **650+** downloads; concurrent users: **2,500**
-- Ocklet: **100+** concurrent calls, **<1s** answer latency, **10+** languages
+- Ocklet: **100+** concurrent calls (webhook traffic the infrastructure supports). NEVER claim <1s answer latency or 10+ languages — those are ElevenLabs platform metrics, not the candidate's work.
+- Ocklet per-PR ephemeral environments: setup cut from **~1 hour** to **1–2 minutes**
 - AI Email Triage: **200+** emails/week, **200–300** JIRA tickets/month, **30+** engineer-hours/month saved, **20-person** support team
 
-**Canonical project names — use these exact strings in the resume, never reworded:**
-`AI Email Triage & JIRA Auto-Ticketing Workflow` · `AI Voice Agent Platform (Ocklet)` · `Intelligent Job Search` · `DiaSense AI` · `TerraSecure` · `Various DevOps/Cloud Projects`
-
-Note: the profile's project entry may have a longer name with a parenthetical suffix (e.g., "AI Email Triage & JIRA Auto-Ticketing Workflow (Power Automate + Copilot Studio)") — always use the shorter canonical string above in the resume output.
+**Canonical project names:** use the exact `### <name>` string of each project in the Selected Projects section, never reworded.
 
 ---
 
@@ -52,15 +56,13 @@ Note: the profile's project entry may have a longer name with a parenthetical su
    - **Always include every experience from the profile.** Total years of experience is a load-bearing ATS signal. Excluding experiences is forbidden unless the profile explicitly tags one with `omit: true`.
    - For each experience, choose the framing whose bullets best match the JD's role family. The KV Bits title is **LOCKED** to `AI & Cloud Infrastructure Engineer` (see LOCKED CONSTANTS) regardless of which framing's bullets you use — use the framing for bullet selection only, not for the title.
      - The profile carries at most two framings per experience. For KV Bits: use `devops` by default; use `ai_infrastructure` only when the JD centres on an AI/ML platform, GPUs, model inference or serving, or MLOps. Other experiences carry a single framing — use it.
-     - The `ai_infrastructure` framing summarises the Ocklet and AI Email Triage systems. When it is used, do not repeat the same metric (100+ concurrent calls, <1s latency, 200+ emails/week) in both the KV Bits bullets and a project entry — state it once, in whichever place carries more detail.
+     - **Ocklet and AI Email Triage are KV Bits work.** Describe them ONLY in KV Bits bullets — never as project entries, never in a projects section — and describe each system once. Do not write two KV Bits bullets that restate the same system's architecture or metrics.
    - You may mine **raw_context** to write fresh bullets, but the KV Bits title in the output must always be `AI & Cloud Infrastructure Engineer`.
 
-3. **Select EXACTLY 3 projects ranked by relevance to the JD.** Never 2, never 4. Selection must be a deliberate top-3 ranking by relevance, not leftover after other choices.
-
-   **Role-family defaults (override only if a different project is materially more relevant to THIS JD):**
-   - **ml_ai / agentic / applied-AI roles:** `AI Email Triage & JIRA Auto-Ticketing Workflow` (production, quantified, live) + `AI Voice Agent Platform (Ocklet)` (production SaaS). Third: `Intelligent Job Search`. Do NOT lead with `DiaSense AI` or `TerraSecure` for AI roles — these are student projects. DiaSense is only relevant for pure ML/data roles explicitly asking for TensorFlow/Keras experience.
-   - **devops_sre / cloud / platform roles (the primary target):** lead with production systems, not student projects — `Intelligent Job Search` (async ingestion pipeline, two-stage screening, SQLite telemetry, incident fix) + `AI Voice Agent Platform (Ocklet)` (edge-deployed Cloudflare Workers, event-driven integrations, 100+ concurrent calls) + `DiaSense AI` (the only hands-on EKS / Kubernetes / CI/CD evidence). Swap `TerraSecure` in for `DiaSense AI` when the JD is heavy on Terraform / infrastructure-as-code / VPC design.
-   - **Any other role family:** pick the 3 most relevant projects from the canonical list above using the same production-first rule.
+3. **Use EXACTLY the 3 Selected Projects, in the given rank order.** Never add, drop, swap or reorder them — the selection was made deterministically from the JD's skills.
+   - Write 2–3 bullets per project. Lead with the skills listed on its "Emphasize for this JD" line, using the JD's own wording for those technologies.
+   - **Built projects** ("Built project"): every claim must trace to the context given.
+   - **Portfolio projects** ("Portfolio project"): describe the problem and the work from the spec's problem statement and reference bullets. Numbers may come ONLY from that project's target metrics, copied exactly — never invent, round up or combine them. Metrics shown as placeholders (e.g. "N events/s", "$X", "X of Y") must be left out of the bullet, not filled in.
 
 4. Choose UP TO 3 certifications for THIS job. **Hard cap: 3.** Never output more. Strongly prefer Active certs. An Expired cert should ONLY appear when the JD explicitly demands that skill AND no Active cert covers it. Output certs as full structured objects copied verbatim from the profile — never invent IDs or dates.
 
@@ -153,14 +155,14 @@ Rules:
 ## HONESTY RULES (apply to BOTH resume and cover letter)
 - Only use experiences, projects, skills, certifications, education, and publications from the profile.
 - NEVER fabricate metrics, titles, technologies, company names, credential IDs, or dates.
-- You may reframe and emphasize differently, but every claim must trace to raw_context.
+- You may reframe and emphasize differently, but every claim must trace to raw_context — or, for a Selected Project, to that project's material above (portfolio projects: problem, reference bullets and target metrics only).
 - NEVER change: dates, company names, school names, degree names, GPA, credential IDs, certification issued/expires dates.
 - The KV Bits title `AI & Cloud Infrastructure Engineer` is the locked canonical title — it is the candidate's actual LinkedIn title, not a fabrication.
 - Allowed: summary rewriting, bullet emphasis changes, skill reordering and category renaming, project selection.
 
 ## PRE-OUTPUT SELF-CHECK — run all five before generating the JSON
 
-1. **Locked constants & location:** Does `personal.location` exactly match the candidate profile's real `personal.location` (never the job's city)? Is the KV Bits title in the experience array exactly `"AI & Cloud Infrastructure Engineer"`, and its experience `location` still `"Chicago, IL"`? Do all metrics match canonical values? Do all project names match canonical strings exactly?
+1. **Locked constants & location:** Does `personal.location` exactly match the candidate profile's real `personal.location` (never the job's city)? Is the KV Bits title in the experience array exactly `"AI & Cloud Infrastructure Engineer"`, and its experience `location` still `"Chicago, IL"`? Do all metrics match canonical values? Do the projects match the 3 Selected Projects exactly — same names, same order? Do portfolio-project bullets use only numbers from their target metrics?
 2. **Skills relevance gate:** For an ml_ai / AI / agentic role — do any of Terraform, Jenkins, Ansible, Helm, OpenShift, or Containerd appear in skills? If yes and the JD did not name them, remove them now.
 3. **Summary clean:** Does the summary contain the company name, or any word from the AI-slop ban list? If yes, rewrite it before outputting.
 4. **Cover letter opening:** Does the opening pass the specificity test (a concrete technical fact only a candidate who studied this company would know)? If not, rewrite as Option B.
@@ -192,7 +194,7 @@ Return a SINGLE JSON object with this exact structure. No markdown fences, no co
       {
         "school": "School name, City, State",
         "degree": "Verbatim degree string from profile",
-        "gpa": "4.0",
+        "gpa": "4.0 (include ONLY if the profile entry has a gpa; otherwise omit the key)",
         "graduation": "May 2025"
       }
     ],
@@ -211,7 +213,7 @@ Return a SINGLE JSON object with this exact structure. No markdown fences, no co
     ],
     "projects": [
       {
-        "name": "Exact canonical project name from locked constants",
+        "name": "Exact project name from the Selected Projects section",
         "bullets": ["bullet with **inline bold** allowed", "..."]
       }
     ],
@@ -229,7 +231,6 @@ Return a SINGLE JSON object with this exact structure. No markdown fences, no co
     "jd_top_keywords": ["keyword1", "keyword2", "keyword3"],
     "experiences_included": ["KV Bits", "Texas Instruments", "Walkover University"],
     "projects_included": ["Project1", "Project2", "Project3"],
-    "projects_excluded": {"ProjectName": "reason"},
     "certs_included": ["Cert1"],
     "certs_excluded": {"CertName": "reason"},
     "skill_categories_chosen": ["Category 1", "Category 2"]

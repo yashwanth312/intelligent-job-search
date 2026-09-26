@@ -15,6 +15,11 @@ on stdin. Neither channel hits Windows' ~32KB argv limit since nothing goes
 through argv. Extended thinking is disabled for this call (see
 generation.claude_cli.run_claude) — it's ~86% of a generation call's billed
 output and is discarded, never surfaced to callers.
+
+Projects are the one per-job part of the profile. The profile's `projects` and
+`portfolio_catalog` blocks are stripped from the cached system prompt;
+generation.project_scorer picks 3 projects for each JD (no Claude call) and
+only those 3 are rendered into the dynamic slice as {{selected_projects}}.
 """
 from __future__ import annotations
 
@@ -25,6 +30,8 @@ import yaml
 
 from config import RESUME_GENERATION_MODEL, RESUME_GENERATION_TIMEOUT
 from generation.claude_cli import run_claude, extract_json
+from generation.portfolio import PER_JOB_PROFILE_KEYS, load_portfolio, strip_top_level_keys
+from generation.project_scorer import ProjectScorer, Selection
 
 logger = logging.getLogger(__name__)
 
@@ -36,9 +43,11 @@ _JOB_SECTION_END = "## LOCKED CONSTANTS"
 
 class ResumeEngine:
     def __init__(self, profile_path: str = "profile.yaml"):
-        with open(profile_path) as f:
+        with open(profile_path, encoding="utf-8") as f:
             self._profile_raw = f.read()
         self._profile = yaml.safe_load(self._profile_raw)
+        self._profile_prompt = strip_top_level_keys(self._profile_raw, PER_JOB_PROFILE_KEYS)
+        self._scorer = ProjectScorer(load_portfolio(profile_path))
         self._system_prompt: str | None = None
 
     def _build_system_prompt(self) -> str:
@@ -54,7 +63,7 @@ class ResumeEngine:
         before, rest = template.split(_JOB_SECTION_START, 1)
         _job_section, after = rest.split(_JOB_SECTION_END, 1)
         self._system_prompt = (
-            before.replace("{{profile_yaml}}", self._profile_raw)
+            before.replace("{{profile_yaml}}", self._profile_prompt)
             + _JOB_SECTION_END + after
         )
         return self._system_prompt
@@ -71,9 +80,12 @@ class ResumeEngine:
         previous draft to address each fix; when empty it generates fresh.
 
         Returns a dict shaped like:
-          {"resume": {...}, "decisions": {...}, "cover_letter": "..."}
-        or None if the call or parse failed.
+          {"resume": {...}, "decisions": {...}, "cover_letter": "...",
+           "_project_selection": {...}}
+        or None if the call or parse failed. The selection is deterministic
+        for a given title + description, so a revision pass gets the same 3.
         """
+        selection = self.select_projects(title, description)
         template = PROMPT_PATH.read_text(encoding="utf-8")
         _before, rest = template.split(_JOB_SECTION_START, 1)
         job_section, _after = rest.split(_JOB_SECTION_END, 1)
@@ -92,6 +104,8 @@ class ResumeEngine:
         ).replace(
             "{{description}}", description or ""
         ).replace(
+            "{{selected_projects}}", selection.prompt_block() or "None"
+        ).replace(
             "{{revision_feedback}}", revision_feedback.strip() or "None"
         )
         output = run_claude(
@@ -101,7 +115,13 @@ class ResumeEngine:
             system_prompt=self._build_system_prompt(),
             disable_thinking=True,
         )
-        return self._parse_response(output) if output else None
+        result = self._parse_response(output) if output else None
+        if result is not None:
+            result["_project_selection"] = selection.as_dict()
+        return result
+
+    def select_projects(self, title: str, description: str) -> Selection:
+        return self._scorer.select(title, description or "")
 
     def _parse_response(self, text: str) -> dict | None:
         data = extract_json(text)

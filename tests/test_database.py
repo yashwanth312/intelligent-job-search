@@ -176,3 +176,31 @@ class TestClaudeUsage:
         far_future = "2999-01-01 00:00:00"
         assert db.get_claude_usage_rows(since=far_future) == []
         assert len(db.get_claude_usage_rows()) == 1
+
+
+class TestFeedbackProjectColumns:
+    def test_save_feedback_records_projects_and_admission(self, db):
+        db.save_feedback(
+            job_fingerprint="acme||sysadmin", company="Acme", title="Sysadmin",
+            source="linkedin", screen_confidence=4, resume_angle="devops",
+            date_applied="2026-09-26", projects_used=["hybridid", "restorepoint", "fleetforge"],
+            project_coverage=0.82, admission="it_identity",
+        )
+        row = db.get_all_feedback()[0]
+        assert row["projects_used"] == '["hybridid", "restorepoint", "fleetforge"]'
+        assert row["project_coverage"] == 0.82
+        assert row["admission"] == "it_identity"
+
+    def test_old_feedback_table_is_migrated(self, tmp_path):
+        import sqlite3
+        path = tmp_path / "old.db"
+        conn = sqlite3.connect(path)
+        conn.execute("CREATE TABLE feedback (id INTEGER PRIMARY KEY, job_fingerprint TEXT NOT NULL)")
+        conn.commit()
+        conn.close()
+
+        database = Database(str(path))
+        database.initialize()
+        cols = {r["name"] for r in database.conn.execute("PRAGMA table_info(feedback)")}
+        database.close()
+        assert {"projects_used", "project_coverage", "admission"} <= cols

@@ -1,6 +1,7 @@
 """SQLite database connection and operations."""
 from __future__ import annotations
 
+import json
 import sqlite3
 from datetime import datetime, timezone
 from typing import Any
@@ -99,6 +100,20 @@ class Database:
             CREATE INDEX IF NOT EXISTS idx_feedback_fingerprint ON feedback(job_fingerprint);
             CREATE INDEX IF NOT EXISTS idx_claude_usage_purpose ON claude_usage(purpose);
         """)
+        self._add_missing_columns("feedback", {
+            # JSON list of project ids the resume carried (generation.project_scorer)
+            "projects_used": "TEXT",
+            "project_coverage": "REAL",
+            # which Stage 1 title family admitted the job: core | it_identity
+            "admission": "TEXT",
+        })
+
+    def _add_missing_columns(self, table: str, columns: dict[str, str]) -> None:
+        existing = {r["name"] for r in self.conn.execute(f"PRAGMA table_info({table})")}
+        for name, sql_type in columns.items():
+            if name not in existing:
+                self.conn.execute(f"ALTER TABLE {table} ADD COLUMN {name} {sql_type}")
+        self.conn.commit()
 
     def get_tables(self) -> list[str]:
         cursor = self.conn.execute(
@@ -213,23 +228,29 @@ class Database:
     def save_feedback(
         self, job_fingerprint: str, company: str, title: str,
         source: str, screen_confidence: int, resume_angle: str,
-        date_applied: str,
+        date_applied: str, projects_used: list[str] | None = None,
+        project_coverage: float | None = None, admission: str | None = None,
     ) -> None:
         self.conn.execute(
             """INSERT INTO feedback
-            (job_fingerprint, company, title, source, screen_confidence, resume_angle, date_applied)
-            VALUES (?, ?, ?, ?, ?, ?, ?)""",
-            (job_fingerprint, company, title, source, screen_confidence, resume_angle, date_applied),
+            (job_fingerprint, company, title, source, screen_confidence, resume_angle,
+             date_applied, projects_used, project_coverage, admission)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (job_fingerprint, company, title, source, screen_confidence, resume_angle,
+             date_applied, json.dumps(projects_used) if projects_used is not None else None,
+             project_coverage, admission),
         )
         self.conn.commit()
 
-    def update_feedback_outcome(self, job_fingerprint: str, outcome: str) -> None:
-        self.conn.execute(
+    def update_feedback_outcome(self, job_fingerprint: str, outcome: str) -> int:
+        """Set the outcome on every feedback row for this job; returns rows matched."""
+        cur = self.conn.execute(
             """UPDATE feedback SET outcome = ?, updated_at = datetime('now')
             WHERE job_fingerprint = ?""",
             (outcome, job_fingerprint),
         )
         self.conn.commit()
+        return cur.rowcount
 
     def get_all_feedback(self) -> list[dict]:
         cursor = self.conn.execute("SELECT * FROM feedback ORDER BY date_applied DESC")
