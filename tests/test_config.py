@@ -27,24 +27,24 @@ class TestConfig:
         titles_lower = [t.lower() for t in TARGET_TITLES]
         assert any("systems development engineer" in t for t in titles_lower)
 
-    def test_target_titles_exclude_standalone_security_and_ai(self):
-        # 0/73 on Security Analyst and 0/238 on AI/ML over 1,003 applications.
+    def test_target_titles_exclude_standalone_security(self):
+        # 0/73 on Security Analyst over 1,003 applications.
         titles_lower = [t.lower() for t in TARGET_TITLES]
         assert not any("security" in t for t in titles_lower)
-        assert not any(t.startswith("ai") or " ai" in t for t in titles_lower)
 
-    def test_mlops_is_the_only_ai_adjacent_title(self):
-        # Kept because MLOps is infrastructure work in an under-supplied niche.
+    def test_target_titles_include_ai_engineering(self):
+        # Restored 2026-09-16: infra-only searching dropped AI engineering roles
+        # like NYU Langone's LLMOps "AI Engineer", which sent an assessment.
         titles_lower = [t.lower() for t in TARGET_TITLES]
-        assert any("mlops" in t for t in titles_lower)
+        for expected in ("mlops engineer", "ai engineer", "machine learning engineer"):
+            assert any(expected in t for t in titles_lower), expected
 
-    def test_title_domain_keywords_require_infra_context_for_ai(self):
+    def test_title_domain_keywords_cover_infra_and_ai(self):
         kws = [k.lower() for k in TITLE_DOMAIN_KEYWORDS]
-        # Bare "ai" and "security" must not be standalone passes any more.
-        assert "ai" not in kws
+        # Bare "security" must not be a standalone pass.
         assert "security" not in kws
-        # Infra vocabulary stays.
-        for expected in ("cloud", "infrastructure", "systems", "platform", "sre"):
+        for expected in ("cloud", "infrastructure", "systems", "platform", "sre",
+                         "ai", "ml", "machine learning", "llm", "genai"):
             assert expected in kws, expected
 
     def test_campus_funnels_are_excluded_but_junior_is_not(self):
@@ -86,8 +86,17 @@ class TestConfig:
             "Financial Connections TechOps Integration Reliability Engineer",
             "Applied Cloud and AI Engineer - Equities Cloud Platform Technology",
             "Core Infrastructure Engineer",
+            # NYU Langone assessment invite — LinkedIn and official titles.
+            "AI Engineer",
+            "Engineer II, Gen AI",
         ):
             assert passes(title), title
+
+    def test_ai_word_does_not_match_inside_other_words(self):
+        import re
+        domain = [re.compile(r"\b" + re.escape(k) + r"\b", re.I) for k in TITLE_DOMAIN_KEYWORDS]
+        for title in ("Retail Sales Associate", "HTML Email Designer", "Email Marketing Specialist"):
+            assert not any(rx.search(title) for rx in domain), title
 
     def test_locations_include_remote(self):
         assert "Remote" in LOCATIONS

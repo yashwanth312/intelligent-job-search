@@ -143,6 +143,24 @@ class TestStage1Filter:
         ))
         assert result.passed is True
 
+    def test_keeps_range_with_dropped_dash(self):
+        """"3–5 years" scraped as "35 years" is a 3-year lower bound, not 35."""
+        f = Stage1Filter()
+        result = f.filter_job(make_job(
+            description=(
+                "AWS and Kubernetes cloud infrastructure engineer. "
+                "35 years of hands-on experience delivering production AI solutions."
+            )
+        ))
+        assert result.passed is True
+
+    def test_rejects_range_with_dropped_dash_above_threshold(self):
+        f = Stage1Filter()
+        result = f.filter_job(make_job(
+            description="AWS and Kubernetes cloud infrastructure engineer. 58 years of experience."
+        ))
+        assert result.passed is False
+
     def test_keeps_preferred_low_years(self):
         """2+ years preferred stays under the hard-stop threshold."""
         f = Stage1Filter()
@@ -179,4 +197,48 @@ class TestStage1Filter:
         ]
         passed, rejected = f.filter_batch(jobs)
         assert len(passed) == 2
+        assert len(rejected) == 1
+
+    @pytest.mark.parametrize("title", [
+        "System Administrator",
+        "Windows Server Engineer",
+        "IAM Engineer",
+        "Entra ID Engineer",
+        "Endpoint Engineer (Intune & FlexApp)",
+        "M365 Engineer",
+        "VMware (ESXi) Engineer",
+    ])
+    def test_it_identity_titles_pass_title_gate(self, title):
+        f = Stage1Filter()
+        result = f.filter_job(make_job(
+            title=title,
+            description="Manage Active Directory, Windows Server and Intune with PowerShell.",
+        ))
+        assert result.stage != "stage1_title_domain", result.reason
+        assert result.passed is True
+
+    @pytest.mark.parametrize("title", [
+        "Identity Security Engineer",
+        "Endpoint Security Engineer",
+        "M365 Security Engineer",
+        "Endpoint Threat Hunting Consultant",
+    ])
+    def test_it_identity_word_does_not_admit_security_titles(self, title):
+        f = Stage1Filter()
+        result = f.filter_job(make_job(title=title))
+        assert result.passed is False
+        assert result.stage == "stage1_title_domain"
+
+    def test_bare_administrator_is_not_a_domain_word(self):
+        f = Stage1Filter()
+        result = f.filter_job(make_job(title="Benefits Administrator"))
+        assert result.stage == "stage1_title_domain"
+
+    def test_title_only_gate_admits_it_identity_titles(self):
+        f = Stage1Filter()
+        passed, rejected = f.filter_titles_only([
+            make_job(title="Windows System Administrator", description=None),
+            make_job(title="Identity Security Engineer", description=None),
+        ])
+        assert [j.title for j in passed] == ["Windows System Administrator"]
         assert len(rejected) == 1

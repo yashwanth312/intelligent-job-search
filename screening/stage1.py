@@ -9,11 +9,34 @@ from models.job import RawJob
 from config import (
     EXCLUDE_TITLE_KEYWORDS, EXCLUDE_DESC_PATTERNS,
     REQUIRE_ONE_OF, SALARY_FLOOR, TITLE_DOMAIN_KEYWORDS,
+    IT_IDENTITY_TITLE_KEYWORDS, IT_IDENTITY_SECURITY_BLOCKERS,
     SPONSORSHIP_DESC_PATTERNS, SPONSORSHIP_FILTER_ENABLED,
     EXCLUDE_LOCATION_PATTERNS, MIN_YOE_HARD_STOP,
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _any_word(keywords: list[str], text: str) -> bool:
+    return any(re.search(r'\b' + re.escape(kw) + r'\b', text) for kw in keywords)
+
+
+def title_admission(title: str) -> str | None:
+    """Which title family admits `title`: "core" (TITLE_DOMAIN_KEYWORDS),
+    "it_identity" (IT_IDENTITY_TITLE_KEYWORDS on a title with no security
+    word), or None. Recorded per application so the IT/identity family's
+    callback rate can be measured separately."""
+    title_lower = title.lower()
+    if _any_word(TITLE_DOMAIN_KEYWORDS, title_lower):
+        return "core"
+    if (_any_word(IT_IDENTITY_TITLE_KEYWORDS, title_lower)
+            and not _any_word(IT_IDENTITY_SECURITY_BLOCKERS, title_lower)):
+        return "it_identity"
+    return None
+
+
+def _has_title_domain(title_lower: str) -> bool:
+    return title_admission(title_lower) is not None
 
 # Effective description hard-stops. The sponsorship-availability patterns are
 # folded in only when the master toggle is on; while it's off, a "we don't
@@ -66,9 +89,16 @@ def _yoe_value(token: str) -> int:
     if token in _YOE_NUM_WORDS:
         return _YOE_NUM_WORDS[token]
     try:
-        return int(token)
+        value = int(token)
     except ValueError:
         return 0
+    # A range whose en dash was dropped during scraping: "3–5 years" arrives
+    # as "35 years". Read an implausible two-digit value with ascending digits
+    # as that range's lower bound, like _YOE_RANGE_RE does. NYU Langone's
+    # "Engineer II, Gen AI" (assessment invite) was hard-stopped on exactly this.
+    if value >= 16 and token[0] < token[1]:
+        return int(token[0])
+    return value
 
 
 def _normalize_desc_dashes(text: str) -> str:
@@ -137,11 +167,7 @@ class Stage1Filter:
                                     stage="stage1_title")
 
         # 2. Title domain check — at least one domain keyword must appear in the title
-        has_domain = any(
-            re.search(r'\b' + re.escape(kw) + r'\b', title_lower)
-            for kw in TITLE_DOMAIN_KEYWORDS
-        )
-        if not has_domain:
+        if not _has_title_domain(title_lower):
             return FilterResult(job=job, passed=False,
                                 reason=f"No domain keyword in title: '{job.title}'",
                                 stage="stage1_title_domain")
@@ -210,11 +236,7 @@ class Stage1Filter:
                     ))
                     break
             else:
-                has_domain = any(
-                    re.search(r'\b' + re.escape(kw) + r'\b', title_lower)
-                    for kw in TITLE_DOMAIN_KEYWORDS
-                )
-                if not has_domain:
+                if not _has_title_domain(title_lower):
                     rejected.append(FilterResult(
                         job=job, passed=False,
                         reason=f"No domain keyword in title: '{job.title}'",

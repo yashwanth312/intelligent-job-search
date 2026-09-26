@@ -58,9 +58,8 @@ DB_FILE = "jobs.db"
 #     Security Analyst / GRC    0.00%  (0/73)
 #
 # Infra cluster 2.15% vs everything else 0.14% — a 15x difference on n=1,003.
-# Security and standalone-AI search terms are dropped accordingly; MLOps stays
-# as the one AI-adjacent entry because it is infrastructure work and is the one
-# AI niche reported as under-supplied rather than oversubscribed.
+# Security search terms are dropped accordingly. Standalone-AI terms were dropped
+# too, then restored on 2026-09-16 — see the AI entries at the end of the list.
 #
 # "DevOps Engineer" is retained despite 0/85 on the job-title cut: it is a SEARCH
 # term, not an outcome bucket, and it is the widest net that surfaces cloud/SRE/
@@ -82,6 +81,19 @@ TARGET_TITLES = [
     "DevOps Engineer",
     # AI-adjacent, but infrastructure-shaped
     "MLOps Engineer",
+    # AI engineering — restored 2026-09-16 at the user's call, after the pivot
+    # silently dropped NYU Langone's "AI Engineer" (official title "Engineer II,
+    # Gen AI"), which returned an assessment invite. That req is LLMOps/platform
+    # work under an AI title — the shape the infra-only title gate can't see.
+    # These are the three highest-volume AI title families in Stage 2 since
+    # 2026-06 ("AI Engineer" 556 screened, Gen AI 239, ML Engineer 130); "AI
+    # Platform" / "AI Infrastructure" titles already surface via the infra searches.
+    "AI Engineer",
+    "Generative AI Engineer",
+    "Machine Learning Engineer",
+    # IT / identity family, opened 2026-09-26 with IT_IDENTITY_TITLE_KEYWORDS.
+    # Without a search query these roles only arrive from direct-ATS boards.
+    "Systems Administrator",
 ]
 
 # ── LOCATIONS ─────────────────────────────────────────────
@@ -165,6 +177,10 @@ EXCLUDE_LOCATION_PATTERNS = [
     "pune", "delhi", "kolkata", "noida", "gurugram", "gurgaon",
     "ahmedabad", "coimbatore", "kochi", "trivandrum", "nagpur", "indore",
     "thane",
+    "pakistan", "karachi", "islamabad", "lahore",
+    "bangladesh", "dhaka", "chittagong",
+    "sri lanka", "colombo",
+    "nepal", "kathmandu",
     # Europe
     # NOTE: deliberately no bare "vienna"/"melbourne"/"manchester"/"rome"/
     # "athens"/"cairo"/"geneva" — each collides with a real US city
@@ -193,8 +209,32 @@ EXCLUDE_LOCATION_PATTERNS = [
     "denmark", "copenhagen",
     "norway", "oslo",
     "finland", "helsinki",
+    "iceland", "reykjavik",
     "greece",
     "turkey", "istanbul",
+    "cyprus", "malta", "luxembourg",
+    # Eastern Europe / Balkans / Baltics — added 2026-09-15 after Speechify's
+    # per-city Greenhouse postings showed these countries have no coverage.
+    # Bare "moscow"/"riga"/"belgrade" deliberately omitted: they collide with
+    # real US places (Moscow ID, Riga MI, Belgrade MT) — the country-level
+    # token still catches the normal "City, Country" format for those.
+    "lithuania", "vilnius", "kaunas",
+    "latvia",
+    "estonia", "tallinn",
+    "croatia", "zagreb", "split",
+    "serbia", "novi sad",
+    "bosnia and herzegovina", "sarajevo",
+    "bulgaria", "sofia",
+    "slovenia", "ljubljana",
+    "ukraine", "kyiv",
+    "belarus",
+    "moldova", "chisinau",
+    "north macedonia", "skopje",
+    "montenegro", "podgorica",
+    "albania", "tirana",
+    # " russia" (leading space) not bare "russia" — bare substring-matches
+    # "King of Prussia, PA, US".
+    " russia",
     # APAC
     "singapore", "australia", "sydney", "adelaide", "japan", "tokyo",
     "china", "beijing", "shanghai", "hong kong",
@@ -212,12 +252,56 @@ EXCLUDE_LOCATION_PATTERNS = [
     "united arab emirates", "dubai", "abu dhabi",
     "egypt",
     "south africa",
+    "jordan", "amman",
+    "lebanon", "beirut",
+    "iraq", "baghdad",
+    "qatar", "doha",
+    "kuwait",
+    "bahrain",
+    "oman",
+    "nigeria", "abuja",
+    "kenya", "nairobi",
+    "morocco", "casablanca", "rabat",
+    "ghana", "accra",
+    "ethiopia", "addis ababa",
+    "tunisia",
+    "algeria", "algiers",
+    "uganda", "kampala",
+    "tanzania",
+    "rwanda", "kigali",
+    "senegal", "dakar",
+    "zimbabwe", "harare",
+    # Caucasus / Central Asia — added 2026-09-15, same Speechify gap. Bare
+    # "georgia" (country) omitted: collides with the US state — "tbilisi"
+    # still catches the "City, Georgia" format for that country.
+    "armenia", "yerevan",
+    "azerbaijan", "baku",
+    "tbilisi",
+    "kazakhstan", "almaty", "astana",
+    "kyrgyzstan", "bishkek",
+    "uzbekistan", "tashkent",
+    "tajikistan",
+    "turkmenistan",
     # Canada (US companies often post CA roles separately)
     "canada", "toronto", "vancouver", "montreal", "ottawa", "waterloo",
     "burnaby", "calgary", "edmonton", "winnipeg", "quebec", "halifax",
     # Latin America
     "mexico", "brazil", "colombia", "bogota", "argentina", "buenos aires",
     "chile", "santiago", "costa rica", "guanajuato",
+    "peru",
+    "uruguay", "montevideo",
+    "venezuela", "caracas",
+    "ecuador", "quito",
+    "bolivia",
+    "paraguay",
+    "guatemala",
+    # ", panama" not bare "panama" — bare substring-matches
+    # "Panama City, FL, US".
+    ", panama",
+    "el salvador",
+    "honduras",
+    "nicaragua",
+    "dominican republic",
 ]
 
 # ── TITLE EXCLUSIONS ──────────────────────────────────────
@@ -272,20 +356,28 @@ EXCLUDE_TITLE_KEYWORDS = [
 # match "maintenance". Do NOT switch this to substring matching for that reason.
 #
 # Narrowed to infrastructure on 2026-09-13 (see TARGET_TITLES for the outcome
-# data). The standalone security and AI words are gone. That does NOT blanket-ban
+# data). The standalone security words are gone. That does NOT blanket-ban
 # those jobs — it means they now have to carry an infrastructure word too, which
-# is exactly the profile that converted: "Applied Cloud and AI Engineer"
-# (Millennium, interview) still passes on "cloud"; "Software Security Engineer,
+# is exactly the profile that converted: "Software Security Engineer,
 # Distributed Systems" (Salesforce, interview) still passes on "systems"; bare
-# "Security Analyst" (0/73) and "AI Engineer" (part of 0/238) no longer do.
+# "Security Analyst" (0/73) no longer does. AI words were removed on 09-13 and
+# restored on 2026-09-16 — see the AI block below.
 TITLE_DOMAIN_KEYWORDS = [
     # Cloud / infra / DevOps / SRE
     "cloud", "devops", "devsecops", "sre", "platform", "infrastructure",
     "reliability", "kubernetes", "observability", "systems",
     "network", "networking",
-    # Infra-shaped AI only. Bare "ai" is deliberately absent: an AI title now has
-    # to also name cloud/platform/infrastructure/systems to survive Stage 1.
     "mlops",
+    # AI / ML engineering — restored 2026-09-16 (see the matching TARGET_TITLES
+    # note). The 09-13 removal of bare "ai" cut AI/ML titles by 94% and dropped
+    # "Engineer II, Gen AI" (NYU Langone), a real LLMOps role that later sent an
+    # assessment. A description-signal gate for AI-only titles was trialled on
+    # 935 historical AI-titled Stage 2 jobs and rejected: at every threshold it
+    # discarded APPLY and SKIP verdicts at about the same rate, so Stage 2 does
+    # that sorting instead. Word-boundary matching keeps "ai" off "maintenance".
+    "ai", "genai", "generative", "agentic",
+    "llm", "llms", "llmops",
+    "ml", "machine learning", "deep learning",
 
     # Cloud/IaC/CI-CD tool names — already trusted in REQUIRE_ONE_OF for
     # descriptions but missing here, so titles like "AWS Engineer" or
@@ -297,6 +389,25 @@ TITLE_DOMAIN_KEYWORDS = [
     # Catches "Automation Engineer" / "Linux Engineer" / "Linux Administrator"
     # titles that carry no other domain word.
     "automation", "linux",
+]
+
+# ── IT / IDENTITY TITLE KEYWORDS (opened 2026-09-26) ──────
+# Sysadmin, Windows, identity and endpoint titles, opened for the portfolio
+# catalog (docs/projects: HybridID, RestorePoint, FleetForge). Kept separate from
+# TITLE_DOMAIN_KEYWORDS because they pass only when the title carries no
+# security word below: "Identity Security Engineer" / "Endpoint Security
+# Engineer" / "M365 Security Engineer" are security-engineer roles the user
+# chose to keep out. Bare "administrator" is deliberately absent — it matches
+# database, benefits and office administrators; "it" is absent for the same reason.
+IT_IDENTITY_TITLE_KEYWORDS = [
+    "systems administrator", "system administrator", "sysadmin",
+    "windows", "active directory", "identity", "iam", "entra",
+    "endpoint", "intune", "microsoft 365", "m365",
+    "it infrastructure", "it engineer", "it systems",
+    "vmware", "virtualization",
+]
+IT_IDENTITY_SECURITY_BLOCKERS = [
+    "security", "cybersecurity", "cyber", "threat", "soc",
 ]
 
 # ── SPONSORSHIP FILTER (master toggle — pluggable) ────────
@@ -367,6 +478,10 @@ REQUIRE_ONE_OF = [
     "ci/cd", "docker", "jenkins", "github actions", "ansible",
     "prometheus", "grafana", "helm", "vault", "linux", "automation",
     "mlops", "ai", "machine learning", "ml pipeline", "observability",
+    # IT / identity vocabulary, so sysadmin and Windows JDs admitted by
+    # IT_IDENTITY_TITLE_KEYWORDS can reach the 3-match bar.
+    "active directory", "windows server", "powershell", "intune", "entra",
+    "microsoft 365", "vmware",
 ]
 
 # ── SALARY FLOOR ──────────────────────────────────────────
