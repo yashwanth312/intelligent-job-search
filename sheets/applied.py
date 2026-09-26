@@ -49,4 +49,8 @@ def add_job(
 
 
 def get_all_applied(ws: gspread.Worksheet) -> list[dict]:
-    return ws.get_all_records()
+    # The tab is now "Materials" (see SheetsClient.get_materials_sheet) and has
+    # blank trailing header cells; without expected_headers gspread rejects the
+    # duplicate '' headers and feedback_sync crashed on every run.
+    from sheets.materials import _HEADERS
+    return ws.get_all_records(expected_headers=_HEADERS)
