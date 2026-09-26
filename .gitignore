@@ -31,3 +31,30 @@ Thumbs.db
 
 # Claude
 .claude/
+
+# SQLite sidecar files
+*.db-shm
+*.db-wal
+
+# Local backups, scratch scripts and run logs
+*.bak.*
+profile_archive.yaml
+daily_backup_*.csv
+*_tmp.py
+log_*.txt
+out_*.txt
+.playwright-mcp/
+
+# Personal outreach and one-off per-company generation scripts (contact details)
+_contact_companies.json
+_contacts_workflow.js
+_gen_contacts_wf.py
+generate_indata.py
+generate_kargo.py
+generate_network_engineer.py
+
+# Personal career notes
+docs/career/
+
+# Per-application usage export (scripts/project_usage.py)
+data/project_usage.json
