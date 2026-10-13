@@ -11,7 +11,7 @@ def main():
         print("profile.yaml not found.")
         return
 
-    with open(path) as f:
+    with open(path, encoding="utf-8") as f:
         profile = yaml.safe_load(f)
 
     print("\nWhat would you like to add?")
@@ -49,7 +49,7 @@ def main():
             profile.setdefault("training", []).append(name)
         print(f"Added: {name}")
 
-    with open(path, "w") as f:
+    with open(path, "w", encoding="utf-8") as f:
         yaml.dump(profile, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
 
     print("profile.yaml updated.\n")

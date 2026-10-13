@@ -50,7 +50,7 @@ def main() -> None:
     for job in results:
         print(f"{'='*60}")
         print(f"  {job.title} @ {job.company}")
-        print(f"  Verdict:    {job.verdict.value}  (confidence {job.confidence}/5)")
+        print(f"  Confidence: {job.confidence}/5  ·  interview {job.interview_likelihood}%")
         print(f"  Reasoning:  {job.reasoning}")
         if job.match_signals:
             print(f"  Signals:    {', '.join(job.match_signals)}")

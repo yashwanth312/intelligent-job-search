@@ -1,6 +1,14 @@
 import pytest
 from models.job import RawJob
 from screening.stage1 import Stage1Filter, FilterResult
+from examples.title_gate_recipes import INFRA_AND_AI, apply_to_stage1
+
+
+@pytest.fixture(autouse=True)
+def infra_and_ai_recipe(monkeypatch):
+    """These tests describe the documented infra+AI title-gate recipe
+    (examples/title_gate_recipes.py), not the neutral config.py defaults."""
+    apply_to_stage1(INFRA_AND_AI, monkeypatch)
 
 
 def make_job(**kwargs) -> RawJob:
@@ -66,7 +74,7 @@ class TestStage1Filter:
 
     def test_no_sponsorship_follows_toggle(self):
         """A 'we don't sponsor' JD is kept while the sponsorship filter is off
-        (candidate is work-authorized) and rejected only when it is on. The
+        (the default) and rejected only when it is on. The
         effective hard-stop list in stage1 is built from the same flag, so the
         two stay consistent."""
         from config import SPONSORSHIP_FILTER_ENABLED
@@ -102,6 +110,29 @@ class TestStage1Filter:
         ))
         assert result.passed is False
         assert "yoe" in result.reason.lower()
+
+    @pytest.mark.parametrize("desc", [
+        "AWS and Kubernetes required. * 5\\+ years of experience engineering cloud systems",
+        "AWS and Kubernetes required. Information Technology professional with 5\\-7\\+ years of experience",
+        "AWS and Kubernetes required. **must\\-haves:** * 4\\+ years of software engineering",
+    ])
+    def test_rejects_markdown_escaped_plus(self, desc):
+        """jobspy also escapes "+": LinkedIn's "5+ years" arrives as "5\\+ years",
+        which no YOE pattern matched — 168 of 544 Stage 2 screens on 2026-10-02
+        were LinkedIn jobs a board JD with the same text would have stopped."""
+        f = Stage1Filter()
+        result = f.filter_job(make_job(source="linkedin", description=desc))
+        assert result.passed is False
+        assert "yoe" in result.reason.lower()
+
+    def test_markdown_escapes_do_not_hide_desc_hard_stops(self):
+        f = Stage1Filter()
+        result = f.filter_job(make_job(
+            source="linkedin",
+            description="AWS, Kubernetes, CI/CD. Holds a TS\\/SCI with polygraph\\.",
+        ))
+        assert result.passed is False
+        assert result.stage == "stage1_desc"
 
     def test_rejects_bare_years_of_experience_no_qualifier(self):
         """'6 years of experience' with no '+'/'minimum'/'at least' qualifier
@@ -175,7 +206,9 @@ class TestStage1Filter:
         assert result.passed is False
         assert "no description" in result.reason.lower()
 
-    def test_rejects_below_salary_floor(self):
+    def test_rejects_below_salary_floor(self, monkeypatch):
+        import screening.stage1 as s1
+        monkeypatch.setattr(s1, "SALARY_FLOOR", 80_000)
         f = Stage1Filter()
         result = f.filter_job(make_job(salary_max=50000))
         assert result.passed is False
@@ -242,3 +275,66 @@ class TestStage1Filter:
         ])
         assert [j.title for j in passed] == ["Windows System Administrator"]
         assert len(rejected) == 1
+
+
+class TestTitleScope:
+    """2026-10-03 scope: infra + AI-for-infra. Networking titles (0/29
+    callbacks) and pure ML titles (0/32) are out; ML titles with an infra
+    word stay in."""
+
+    @pytest.mark.parametrize("title", [
+        "Network Engineer",
+        "Jr. Network Engineer",
+        "Software Engineer, Networking (Features)",
+        "Network Security Engineer",
+        "Machine Learning Engineer",
+        "Machine Learning Engineer II, Visual AI",
+        "AI/ML Engineer",
+        "Deep Learning Engineer",
+        "ML Engineer",
+    ])
+    def test_out_of_scope_titles_rejected(self, title):
+        from screening.stage1 import title_admission
+        assert title_admission(title) is None
+
+    @pytest.mark.parametrize("title", [
+        "Cloud Network Engineer",
+        "Software Engineer - Cloud Platform (Networks)",
+        "ML Platform Engineer",
+        "Machine Learning Infrastructure Engineer",
+        "MLOps Engineer",
+        "Machine Learning Systems Engineer",
+        "AI Engineer",
+        "Generative AI Engineer",
+        "LLM Platform Engineer",
+        "ML OPs Engineer",
+        "ML-Ops Engineer",
+        "Founding AI/ML Engineer, Agents",
+        "Generative AI / ML Engineer",
+    ])
+    def test_infra_and_ai_titles_still_admitted(self, title):
+        from screening.stage1 import title_admission
+        assert title_admission(title) == "core"
+
+
+class TestBoardTitleGate:
+    """Greenhouse/Lever/Ashby pre-filter must agree with Stage 1's title gate."""
+
+    @pytest.mark.parametrize("title", [
+        "Identity Engineer", "IAM Engineer", "Endpoint Engineer",
+        "VMware Administrator", "Systems Administrator",
+        "Infrastructure Engineer, Internal Tools",   # "intern" substring
+    ])
+    def test_titles_stage1_admits_pass_the_board_gate(self, title):
+        from screening.stage1 import title_passes
+        from sources.greenhouse import _title_is_relevant
+        assert title_passes(title)
+        assert _title_is_relevant(title)
+
+    @pytest.mark.parametrize("title", [
+        "Senior Cloud Engineer", "Platform Engineer Intern",
+        "Network Engineer", "Identity Security Engineer", "Account Executive",
+    ])
+    def test_titles_stage1_rejects_fail_the_board_gate(self, title):
+        from sources.greenhouse import _title_is_relevant
+        assert not _title_is_relevant(title)

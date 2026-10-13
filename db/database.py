@@ -227,7 +227,7 @@ class Database:
 
     def save_feedback(
         self, job_fingerprint: str, company: str, title: str,
-        source: str, screen_confidence: int, resume_angle: str,
+        source: str, screen_confidence: int | None, resume_angle: str,
         date_applied: str, projects_used: list[str] | None = None,
         project_coverage: float | None = None, admission: str | None = None,
     ) -> None:

@@ -19,10 +19,27 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date, datetime
 from pathlib import Path
 
+REPO_ROOT = Path(__file__).resolve().parent
+
+
+def laptop_materials_path(p: Path) -> str:
+    """Absolute path for a generated file, for the Materials tab.
+    The tab is the copy-paste base for job-application uploads. Paths are
+    rooted at config.USER_LAPTOP_REPO_PATH (default: this repo's location) and
+    use that path's own separator style, so Windows, macOS and Linux all work.
+    A file outside the repo tree is reported by its own absolute path.
+    """
+    try:
+        rel = p.resolve().relative_to(REPO_ROOT)
+    except ValueError:
+        return str(p.resolve())
+    sep = "\\" if ("\\" in USER_LAPTOP_REPO_PATH or ":" in USER_LAPTOP_REPO_PATH[:2]) else "/"
+    return sep.join([USER_LAPTOP_REPO_PATH.rstrip("\\/"), *rel.parts])
+
 from config import (
     DB_FILE, YOUR_NAME, GOOGLE_DRIVE_FOLDER_ID,
     RESUME_VERIFICATION_ENABLED, RESUME_INTERVIEW_SCORE_THRESHOLD,
-    RESUME_MAX_REVISIONS,
+    RESUME_MAX_REVISIONS, USER_LAPTOP_REPO_PATH,
 )
 from db.database import Database
 from sources.backfill import fetch_description_from_url
@@ -30,7 +47,7 @@ from generation.resume_engine import ResumeEngine
 from generation.verifier import ResumeVerifier, format_feedback, keyword_coverage
 from generation.pdf_renderer import render_resume_pdf, render_cover_letter_pdf
 from generation.drive_uploader import DriveUploader
-from models.job import ScreenedJob, ScreeningVerdict
+from models.job import ScreenedJob
 from screening.stage1 import title_admission
 from sheets.client import SheetsClient
 from sheets import daily as daily_ops, materials as materials_ops
@@ -58,7 +75,19 @@ def slugify(text: str) -> str:
     text = re.sub(r'[\\/:*?"<>|()\[\]{}]', "", text)  # strip Windows-invalid + brackets
     text = re.sub(r'\s+', "-", text.strip())
     text = re.sub(r'-+', "-", text)
-    return text[:50].rstrip("-")
+    # Windows rejects path components ending in "." or " " ("Sonos, Inc." ->
+    # "sonos,-inc." broke `git pull` of output/ on the user's laptop).
+    return text[:50].rstrip("-. ")
+
+
+def _sheet_confidence(value) -> int | None:
+    """Daily-tab Confidence cell -> 1-5, or None when blank (unscored row).
+    A blank cell used to default to 3, recording a score nobody gave."""
+    try:
+        conf = int(str(value).strip())
+    except (TypeError, ValueError):
+        return None
+    return conf if 1 <= conf <= 5 else None
 
 
 def fmt_dur(seconds: float) -> str:
@@ -280,7 +309,7 @@ def process_job(
     title = row.get("Job Title", "")
     location = row.get("Location", "")
     source = row.get("Source", "")
-    confidence = row.get("Confidence", 3)
+    confidence = _sheet_confidence(row.get("Confidence"))
     reasoning = row.get("AI Reasoning", "")
     suggested_angle = row.get("Suggested Angle", "")
     apply_link = row.get("Apply Link", "")
@@ -381,9 +410,9 @@ def process_job(
             drive_failure_msg = f"{type(e).__name__}: {str(e)[:120]}"
 
     if not resume_link and resume_ok:
-        resume_link = str(resume_path.resolve())
+        resume_link = laptop_materials_path(resume_path)
     if not cl_link and cl_ok:
-        cl_link = str(cl_path.resolve())
+        cl_link = laptop_materials_path(cl_path)
 
     # ── Step 5: classify outcome + write to Sheet ─────────
     notes_parts = []
@@ -413,7 +442,7 @@ def process_job(
     screened = ScreenedJob(
         title=title, company=company, location=location,
         description="", url=apply_link, source=source,
-        verdict=ScreeningVerdict.APPLY, confidence=int(confidence),
+        confidence=confidence,
         reasoning=reasoning, suggested_angle=suggested_angle,
     )
     with sheets_lock:
@@ -426,7 +455,7 @@ def process_job(
     db.save_feedback(
         job_fingerprint=fingerprint,
         company=company, title=title, source=source,
-        screen_confidence=int(confidence),
+        screen_confidence=confidence,
         resume_angle=result.get("decisions", {}).get("angle", ""),
         date_applied=today,
         projects_used=project_ids,

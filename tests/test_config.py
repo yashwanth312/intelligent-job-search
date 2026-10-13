@@ -3,49 +3,29 @@ from pathlib import Path
 from unittest.mock import patch
 from config import (
     TARGET_TITLES, LOCATIONS, EXCLUDE_TITLE_KEYWORDS,
-    SALARY_FLOOR, SCREENING_CONFIDENCE_THRESHOLD,
+    SALARY_FLOOR, DAILY_MIN_CONFIDENCE,
     TITLE_DOMAIN_KEYWORDS, SCREENING_BATCH_SIZE,
 )
 
 
 class TestConfig:
-    def test_target_titles_cover_the_converting_infra_domains(self):
-        titles_lower = [t.lower() for t in TARGET_TITLES]
-        for expected in (
-            "cloud engineer",
-            "infrastructure engineer",
-            "systems engineer",
-            "site reliability engineer",
-            "platform engineer",
-            "devops engineer",
-        ):
-            assert any(expected in t for t in titles_lower), expected
+    def test_target_titles_are_a_nonempty_list_of_strings(self):
+        assert TARGET_TITLES and all(isinstance(t, str) and t.strip() for t in TARGET_TITLES)
 
-    def test_target_titles_include_systems_development_engineer(self):
-        # The Amazon callback came from this exact title and the old list
-        # never searched for it.
-        titles_lower = [t.lower() for t in TARGET_TITLES]
-        assert any("systems development engineer" in t for t in titles_lower)
+    def test_every_target_title_passes_the_title_gate(self):
+        """A searched title that Stage 1 would drop is wasted scrape time."""
+        from screening.stage1 import title_passes
+        rejected = [t for t in TARGET_TITLES if not title_passes(t)]
+        assert not rejected, f"TARGET_TITLES rejected by the title gate: {rejected}"
 
-    def test_target_titles_exclude_standalone_security(self):
-        # 0/73 on Security Analyst over 1,003 applications.
-        titles_lower = [t.lower() for t in TARGET_TITLES]
-        assert not any("security" in t for t in titles_lower)
+    def test_title_domain_keywords_are_lowercase_and_nonempty(self):
+        assert TITLE_DOMAIN_KEYWORDS
+        assert all(k == k.lower() for k in TITLE_DOMAIN_KEYWORDS)
 
-    def test_target_titles_include_ai_engineering(self):
-        # Restored 2026-09-16: infra-only searching dropped AI engineering roles
-        # like NYU Langone's LLMOps "AI Engineer", which sent an assessment.
-        titles_lower = [t.lower() for t in TARGET_TITLES]
-        for expected in ("mlops engineer", "ai engineer", "machine learning engineer"):
-            assert any(expected in t for t in titles_lower), expected
-
-    def test_title_domain_keywords_cover_infra_and_ai(self):
-        kws = [k.lower() for k in TITLE_DOMAIN_KEYWORDS]
-        # Bare "security" must not be a standalone pass.
-        assert "security" not in kws
-        for expected in ("cloud", "infrastructure", "systems", "platform", "sre",
-                         "ai", "ml", "machine learning", "llm", "genai"):
-            assert expected in kws, expected
+    def test_optional_title_families_default_to_disabled(self):
+        import config
+        assert config.ML_TITLE_KEYWORDS == []
+        assert config.IT_IDENTITY_TITLE_KEYWORDS == []
 
     def test_campus_funnels_are_excluded_but_junior_is_not(self):
         excl = [k.lower() for k in EXCLUDE_TITLE_KEYWORDS]
@@ -67,30 +47,14 @@ class TestConfig:
         for kw in ("usc/gc", "green card", "clearance", "no c2c"):
             assert kw in excl, kw
 
-    def test_callback_titles_survive_the_title_gate(self):
-        """The 7 titles that actually produced interviews must never be filtered."""
-        import re
-        domain = [re.compile(r"\b" + re.escape(k) + r"\b", re.I) for k in TITLE_DOMAIN_KEYWORDS]
-
-        def passes(title: str) -> bool:
-            low = title.lower()
-            if any(kw in low for kw in EXCLUDE_TITLE_KEYWORDS):
-                return False
-            return any(rx.search(title) for rx in domain)
-
-        for title in (
-            "AWS Cloud Engineer",
-            "Site Reliability Engineer II",
-            "Software Security Engineer (Distributed Systems) MTS",
-            "Systems Development Engineer, Devices Technologies",
-            "Financial Connections TechOps Integration Reliability Engineer",
-            "Applied Cloud and AI Engineer - Equities Cloud Platform Technology",
-            "Core Infrastructure Engineer",
-            # NYU Langone assessment invite — LinkedIn and official titles.
-            "AI Engineer",
-            "Engineer II, Gen AI",
-        ):
+    def test_default_titles_pass_and_seniority_fails(self):
+        from screening.stage1 import title_passes as passes
+        for title in ("Software Engineer", "Backend Engineer", "Junior DevOps Engineer",
+                      "Cloud Engineer II", "Data Engineer"):
             assert passes(title), title
+        for title in ("Senior Software Engineer", "Engineering Manager", "Staff Engineer",
+                      "Software Engineering Intern"):
+            assert not passes(title), title
 
     def test_ai_word_does_not_match_inside_other_words(self):
         import re
@@ -101,11 +65,16 @@ class TestConfig:
     def test_locations_include_remote(self):
         assert "Remote" in LOCATIONS
 
-    def test_salary_floor(self):
-        assert SALARY_FLOOR >= 70000
+    def test_salary_floor_is_nonnegative_and_off_by_default(self):
+        assert SALARY_FLOOR >= 0
+        assert SALARY_FLOOR == 0  # neutral default: no salary filtering
+
+    def test_sponsorship_filter_is_off_by_default(self):
+        from config import SPONSORSHIP_FILTER_ENABLED
+        assert SPONSORSHIP_FILTER_ENABLED is False
 
     def test_screening_defaults(self):
-        assert SCREENING_CONFIDENCE_THRESHOLD >= 1
+        assert 1 <= DAILY_MIN_CONFIDENCE <= 5
         assert SCREENING_BATCH_SIZE >= 1
 
     def test_h1b_cache_ttl_exists(self):

@@ -65,7 +65,7 @@ class HackerNewsAdapter(SourceAdapter):
         errors: list[str] = []
 
         try:
-            async with aiohttp.ClientSession() as session:
+            async with aiohttp.ClientSession(trust_env=True, ) as session:
                 thread_id = await self._find_latest_thread(session)
                 if not thread_id:
                     return SourceResult(jobs=[], errors=["No 'Who is Hiring' thread found"])

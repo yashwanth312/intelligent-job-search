@@ -10,8 +10,9 @@ workday_candidates.yaml
 # Database
 *.db
 
-# Output
+# Output (generated resumes) and run logs
 output/
+runs/
 logs/
 
 # Python
@@ -39,22 +40,15 @@ Thumbs.db
 # Local backups, scratch scripts and run logs
 *.bak.*
 profile_archive.yaml
+profile.yaml.bak*
 daily_backup_*.csv
 *_tmp.py
 log_*.txt
 out_*.txt
 .playwright-mcp/
 
-# Personal outreach and one-off per-company generation scripts (contact details)
-_contact_companies.json
-_contacts_workflow.js
-_gen_contacts_wf.py
-generate_indata.py
-generate_kargo.py
-generate_network_engineer.py
-
-# Personal career notes
-docs/career/
-
 # Per-application usage export (scripts/project_usage.py)
 data/project_usage.json
+
+# DOL LCA disclosure xlsx (~750 MB); only the built data/h1b_filers.txt is committed
+data/lca/

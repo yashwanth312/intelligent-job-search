@@ -17,7 +17,7 @@ def _rgb(r: int, g: int, b: int) -> dict:
 HEADER_BG = _rgb(26, 26, 46)        # Dark navy
 HEADER_FG = _rgb(255, 255, 255)     # White text
 APPLY_GREEN = _rgb(216, 243, 220)   # Light green for APPLY
-MAYBE_YELLOW = _rgb(255, 243, 205)  # Light yellow for MAYBE
+MID_YELLOW = _rgb(255, 243, 205)  # Light yellow — mid confidence
 SKIP_RED = _rgb(255, 218, 218)      # Light red for SKIP
 REJECTED_GRAY = _rgb(240, 240, 240) # Light gray for Audit
 APPLIED_BLUE = _rgb(219, 234, 254)  # Light blue for Applied
@@ -130,19 +130,19 @@ def format_daily(spreadsheet: Spreadsheet, ws: Worksheet) -> None:
     for col, width in widths:
         requests.append(_col_width(sheet_id, col, width))
 
-    # Status dropdown (col 4): Apply, Skip, Maybe, Bookmark
+    # Status dropdown (col 4): Apply or Skip only — generate_materials.py acts
+    # on "Apply"; there are no screening verdicts to mirror (removed 2026-10-03).
     requests.append(_data_validation(
-        sheet_id, col=4, values=["Apply", "Skip", "Maybe", "Bookmark"]
+        sheet_id, col=4, values=["Apply", "Skip"], strict=True
     ))
 
     # Conditional formatting on Status column (col 4)
     requests.append(_cond_format_text(sheet_id, col=4, text="Apply", bg=APPLY_GREEN))
     requests.append(_cond_format_text(sheet_id, col=4, text="Skip", bg=SKIP_RED))
-    requests.append(_cond_format_text(sheet_id, col=4, text="Maybe", bg=MAYBE_YELLOW))
 
     # Conditional formatting on Confidence column (col 3): green for 4-5, yellow 3, red 1-2
     requests.append(_cond_format_number(sheet_id, col=3, op="NUMBER_GREATER_THAN_EQ", value="4", bg=APPLY_GREEN))
-    requests.append(_cond_format_number(sheet_id, col=3, op="NUMBER_EQ", value="3", bg=MAYBE_YELLOW))
+    requests.append(_cond_format_number(sheet_id, col=3, op="NUMBER_EQ", value="3", bg=MID_YELLOW))
     requests.append(_cond_format_number(sheet_id, col=3, op="NUMBER_LESS_THAN_EQ", value="2", bg=SKIP_RED))
 
     # Conditional formatting on Interview Score column (col 5): plain 0-100
@@ -343,7 +343,7 @@ def _col_width(sheet_id: int, col: int, width: int) -> dict:
     }
 
 
-def _data_validation(sheet_id: int, col: int, values: list[str]) -> dict:
+def _data_validation(sheet_id: int, col: int, values: list[str], strict: bool = False) -> dict:
     return {
         "setDataValidation": {
             "range": {
@@ -357,7 +357,7 @@ def _data_validation(sheet_id: int, col: int, values: list[str]) -> dict:
                     "values": [{"userEnteredValue": v} for v in values],
                 },
                 "showCustomUi": True,
-                "strict": False,
+                "strict": strict,
             },
         }
     }

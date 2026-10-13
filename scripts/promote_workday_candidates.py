@@ -44,7 +44,6 @@ _REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(_REPO_ROOT))
 
 from db.database import Database  # noqa: E402
-from screening.h1b_checker import H1BChecker  # noqa: E402
 from config import TITLE_DOMAIN_KEYWORDS  # noqa: E402
 
 CANDIDATES_YAML = _REPO_ROOT / "workday_candidates.yaml"
@@ -100,9 +99,6 @@ _DOMAIN_RES = [re.compile(r"\b" + re.escape(k) + r"\b", re.IGNORECASE) for k in 
 def _is_domain_title(title: str) -> bool:
     return any(rx.search(title) for rx in _DOMAIN_RES)
 
-
-# Reuse H1BChecker's per-company semaphore default (3) to be polite.
-H1B_CONCURRENCY = 3
 
 logger = logging.getLogger("promote_workday_candidates")
 
@@ -198,32 +194,6 @@ async def _probe_all(candidates: list[dict]) -> dict[str, tuple[bool | None, int
 
     async with aiohttp.ClientSession() as session:
         results = await asyncio.gather(*[_one(session, c) for c in candidates])
-    return dict(results)
-
-
-# ── H-1B check (reuses H1BChecker internals) ──────────────────────────────
-async def _check_h1b_all(candidates: list[dict], db: Database) -> dict[str, bool | None]:
-    """Return tenant -> True/False/None from h1bdata.info."""
-    if not candidates:
-        return {}
-    checker = H1BChecker(db)
-    sem = asyncio.Semaphore(H1B_CONCURRENCY)
-
-    async with aiohttp.ClientSession(headers={"User-Agent": "Mozilla/5.0"}) as session:
-        async def _one(c: dict) -> tuple[str, bool | None]:
-            key = checker._normalize(c["name"])
-            if not key:
-                return c["tenant"], None
-            # Cache hit short-circuits the HTTP call
-            cached = db.get_h1b_cache(key)
-            if cached is not None:
-                return c["tenant"], cached
-            result = await checker._check_company(sem, session, key, c["name"])
-            if result is not None:
-                db.set_h1b_cache(key, c["name"], result)
-            return c["tenant"], result
-
-        results = await asyncio.gather(*[_one(c) for c in candidates])
     return dict(results)
 
 
@@ -324,8 +294,8 @@ async def _run(dry_run: bool) -> int:
     try:
         # Promotion gates on domain relevance only. Sponsorship is enforced at
         # runtime instead — workday-* is a droppable source, so every posting
-        # gets sponsor-checked as it flows through the pipeline. Scraping
-        # h1bdata.info for ~1k tenants here would just duplicate that slowly.
+        # gets sponsor-checked as it flows through the pipeline, so checking
+        # ~1k tenants here would only duplicate that.
         logger.info(
             f"Promoting boards with >= {MIN_DOMAIN_HITS} infrastructure roles; "
             "sponsorship is enforced at scrape time, not here."

@@ -2,13 +2,11 @@ import pytest
 import json
 import threading
 from screening.stage2 import Stage2Screen
-from models.job import ScreeningVerdict
 
 
 MOCK_CLAUDE_OUTPUT = json.dumps([
     {
         "fingerprint": "google||cloud engineer",
-        "verdict": "APPLY",
         "confidence": 4,
         "reasoning": "Strong match: AWS + K8s experience aligns well",
         "match_signals": ["AWS", "Kubernetes", "Terraform"],
@@ -24,7 +22,6 @@ class TestStage2Screen:
         screen = Stage2Screen(profile_path="profile.yaml")
         results = screen._parse_response(MOCK_CLAUDE_OUTPUT)
         assert len(results) == 1
-        assert results[0]["verdict"] == "APPLY"
         assert results[0]["confidence"] == 4
         assert results[0]["interview_likelihood"] == 55
 
@@ -40,7 +37,7 @@ class TestStage2Screen:
         assert len(results) == 1
 
 
-def test_default_apply_does_not_inject_no_h1b_history_flag():
+def test_unscored_job_does_not_inject_no_h1b_history_flag():
     """no_h1b_history was a risk flag; sponsorship now has its own column."""
     from models.job import RawJob
     from screening.stage2 import Stage2Screen
@@ -53,23 +50,7 @@ def test_default_apply_does_not_inject_no_h1b_history_flag():
         source="linkedin",
         h1b_sponsor_verified=False,  # would have triggered the flag previously
     )
-    screened = Stage2Screen()._default_apply(job)
-    assert "no_h1b_history" not in screened.risk_flags
-
-
-def test_default_maybe_does_not_inject_no_h1b_history_flag():
-    from models.job import RawJob
-    from screening.stage2 import Stage2Screen
-
-    job = RawJob(
-        title="Cloud Engineer",
-        company="Acme",
-        location="Remote",
-        url="https://example.com",
-        source="linkedin",
-        h1b_sponsor_verified=False,
-    )
-    screened = Stage2Screen()._default_maybe(job)
+    screened = Stage2Screen()._unscored(job)
     assert "no_h1b_history" not in screened.risk_flags
 
 
@@ -88,7 +69,7 @@ def test_screen_batch_warns_on_partial_response():
     partial = [{
         "index": 0,
         "fingerprint": jobs[0].fingerprint,
-        "verdict": "APPLY", "confidence": 4, "reasoning": "Good",
+        "confidence": 4, "reasoning": "Good",
         "match_signals": [], "risk_flags": [], "suggested_angle": "",
     }]
 
@@ -102,7 +83,8 @@ def test_screen_batch_warns_on_partial_response():
     msg = mock_log.warning.call_args[0][0]
     assert "1/2 returned" in msg
     assert "DevOps Engineer" in msg
-    assert len(result) == 2  # both jobs still in output (one APPLY, one MAYBE)
+    assert len(result) == 2  # both jobs still in output (one scored, one unscored)
+    assert result[1].confidence is None
 
 
 def test_screen_batch_carries_interview_likelihood_into_screened_job():
@@ -113,7 +95,7 @@ def test_screen_batch_carries_interview_likelihood_into_screened_job():
                  url="https://a.com", source="linkedin")
     claude_result = [{
         "fingerprint": job.fingerprint,
-        "verdict": "APPLY", "confidence": 4, "reasoning": "Good",
+        "confidence": 4, "reasoning": "Good",
         "match_signals": [], "risk_flags": [], "suggested_angle": "",
         "interview_likelihood": 62,
     }]
@@ -133,7 +115,7 @@ def test_screen_batch_defaults_interview_likelihood_to_none_when_absent():
                  url="https://a.com", source="linkedin")
     claude_result = [{
         "fingerprint": job.fingerprint,
-        "verdict": "APPLY", "confidence": 4, "reasoning": "Good",
+        "confidence": 4, "reasoning": "Good",
         "match_signals": [], "risk_flags": [], "suggested_angle": "",
     }]
 
@@ -187,6 +169,51 @@ class TestStage2SystemPromptSplit:
         assert '"index": 0' in dynamic_prompt
         assert '"index": 1' in dynamic_prompt
 
+    def test_each_job_carries_the_resume_generators_project_picks(self, tmp_path):
+        """Stage 2 scores against the 3 projects the resume will actually
+        carry: the same deterministic picks ResumeEngine makes."""
+        import json
+        import yaml
+        from pathlib import Path
+        from unittest.mock import patch
+        from models.job import RawJob
+        from generation.portfolio import parse_spec
+        from generation.resume_engine import ResumeEngine
+
+        specs = sorted((Path(__file__).resolve().parent.parent
+                        / "examples" / "portfolio_catalog").glob("[0-9][0-9]-*.md"))
+        catalog = []
+        for spec in specs:
+            meta, _ = parse_spec(spec)
+            catalog.append({"id": meta["id"], "name": meta["name"], "spec": str(spec)})
+        profile = tmp_path / "profile.yaml"
+        profile.write_text(yaml.safe_dump({
+            "personal": {"name": "Test Candidate", "email": "t@example.com",
+                         "phone": "1", "location": "Austin, TX"},
+            "portfolio_catalog": catalog,
+        }), encoding="utf-8")
+
+        desc = ("Requirements: administer Active Directory, Entra ID and Intune; "
+                "PowerShell automation; Microsoft 365 tenant management.")
+        job = RawJob(title="Windows Systems Administrator", company="Acme",
+                     location="Remote", url="https://a.com", source="linkedin",
+                     description=desc)
+        screen = Stage2Screen(profile_path=str(profile))
+
+        with patch("screening.stage2.run_claude", return_value=None) as mock_run:
+            screen._screen_one_batch([job])
+
+        dynamic_prompt = mock_run.call_args.args[0]
+        payload = json.loads(dynamic_prompt.split("## Jobs to Screen", 1)[1]
+                             .split("Return ONLY", 1)[0])
+        sent = [p["name"] for p in payload[0]["resume_projects"]]
+        expected = ResumeEngine(str(profile)).select_projects(job.title, desc).names
+        assert sent == expected
+        assert "HybridID" in sent
+        # Catalog projects are presented exactly like built ones: no
+        # built/portfolio label for the model to discount.
+        assert all(set(p) == {"name", "covers"} for p in payload[0]["resume_projects"])
+
     def test_screen_one_batch_passes_thinking_budget(self, tmp_path):
         """Stage 2 caps rather than disables thinking — see
         config.STAGE2_THINKING_BUDGET_TOKENS."""
@@ -210,7 +237,7 @@ class TestStage2SystemPromptSplit:
 
 def test_screen_batch_keys_by_index_when_fingerprint_text_mismatches():
     """Claude echoing a slightly-off fingerprint string must not lose the
-    verdict as long as `index` round-trips correctly."""
+    score as long as `index` round-trips correctly."""
     from unittest.mock import patch
     from models.job import RawJob
 
@@ -219,7 +246,7 @@ def test_screen_batch_keys_by_index_when_fingerprint_text_mismatches():
     claude_result = [{
         "index": 0,
         "fingerprint": "acme || cloud engineer  ",  # deliberately mismatched text
-        "verdict": "APPLY", "confidence": 5, "reasoning": "Good",
+        "confidence": 5, "reasoning": "Good",
         "match_signals": [], "risk_flags": [], "suggested_angle": "",
     }]
 
@@ -227,7 +254,6 @@ def test_screen_batch_keys_by_index_when_fingerprint_text_mismatches():
     with patch.object(screen, "_screen_one_batch", return_value=claude_result):
         result = screen.screen_batch([job])
 
-    assert result[0].verdict == ScreeningVerdict.APPLY
     assert result[0].confidence == 5
 
 
@@ -389,7 +415,8 @@ class TestScreenBatchConcurrency:
         screen = Stage2Screen(profile_path="profile.yaml")
         with patch.object(screen, "_screen_one_batch", return_value=[]):
             result = screen.screen_batch(jobs)  # must not raise
-        assert len(result) == 3  # all defaulted to MAYBE, no crash
+        assert len(result) == 3  # all unscored, no crash
+        assert all(j.confidence is None for j in result)
 
 
 def test_screen_batch_caps_reasoning_and_list_fields():
@@ -401,7 +428,7 @@ def test_screen_batch_caps_reasoning_and_list_fields():
     claude_result = [{
         "index": 0,
         "fingerprint": job.fingerprint,
-        "verdict": "APPLY", "confidence": 4,
+        "confidence": 4,
         "reasoning": "x" * 1000,
         "match_signals": [f"signal{i}" for i in range(20)],
         "risk_flags": [f"flag{i}" for i in range(20)],
@@ -415,3 +442,58 @@ def test_screen_batch_caps_reasoning_and_list_fields():
     assert len(result[0].reasoning) == 300
     assert len(result[0].match_signals) == 5
     assert len(result[0].risk_flags) == 5
+
+
+class TestNoVerdictsHonestScoring:
+    """2026-10-03: verdicts removed — confidence, interview score and risk
+    flags are the whole output; nothing is inflated."""
+
+    def _job(self):
+        from models.job import RawJob
+        return RawJob(title="Cloud Engineer", company="Acme", location="Remote",
+                      url="https://a.com", source="linkedin")
+
+    def test_unreturned_job_is_unscored_not_defaulted(self):
+        from unittest.mock import patch
+        from rescreen import FAILED_PREFIX
+        screen = Stage2Screen(profile_path="profile.yaml")
+        with patch.object(screen, "_screen_one_batch", return_value=[]):
+            [job] = screen.screen_batch([self._job()])
+        assert job.confidence is None
+        assert job.interview_likelihood is None
+        # rescreen.py --failed-only finds failures by this prefix on the Daily tab
+        assert job.reasoning.startswith(FAILED_PREFIX)
+
+    def test_missing_confidence_is_unscored_not_three(self):
+        from unittest.mock import patch
+        screen = Stage2Screen(profile_path="profile.yaml")
+        result = [{"index": 0, "reasoning": "x", "interview_likelihood": 40}]
+        with patch.object(screen, "_screen_one_batch", return_value=result):
+            [job] = screen.screen_batch([self._job()])
+        assert job.confidence is None
+
+    def test_prompt_has_no_verdicts_or_inflation_rules(self):
+        from screening.stage2 import PROMPT_PATH
+        text = PROMPT_PATH.read_text(encoding="utf-8")
+        assert '"verdict"' not in text
+        for banned in ("APPLY", "MAYBE", "SKIP", "outweighs calendar YOE",
+                       "raise confidence"):
+            assert banned not in text, banned
+        assert "{{jobs_json}}" in text and "{{sponsorship_policy}}" in text
+
+    def test_sponsorship_policy_uses_confidence_not_verdict(self):
+        from screening.stage2 import _SPONSORSHIP_POLICY_ON
+        assert "SKIP" not in _SPONSORSHIP_POLICY_ON
+        assert "confidence MUST be 1" in _SPONSORSHIP_POLICY_ON
+
+    def test_prompt_treats_catalog_projects_as_built_evidence(self):
+        """User decision 2026-10-03: catalog projects count as built work for
+        confidence and interview scoring — but, like any project, never as
+        years of professional experience."""
+        from screening.stage2 import PROMPT_PATH
+        text = PROMPT_PATH.read_text(encoding="utf-8")
+        assert "zero credit" not in text
+        assert "Treat every catalog project as built" in text
+        assert "do not count portfolio projects" not in text
+        assert "do not count as years of experience" in text
+

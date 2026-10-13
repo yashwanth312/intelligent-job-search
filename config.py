@@ -13,6 +13,13 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
+def _env_bool(name: str, default: bool) -> bool:
+    raw = os.getenv(name)
+    if raw is None or not raw.strip():
+        return default
+    return raw.strip().lower() in ("1", "true", "yes", "on")
+
 # ── PERSONAL INFO ──────────────────────────────────────────
 # Set these in .env — see .env.example
 YOUR_NAME = os.getenv("YOUR_NAME", "")
@@ -21,6 +28,15 @@ YOUR_PHONE = os.getenv("YOUR_PHONE", "")
 YOUR_LOCATION_FALLBACK = os.getenv("YOUR_LOCATION_FALLBACK", "")
 YOUR_LINKEDIN = os.getenv("YOUR_LINKEDIN", "")
 YOUR_GITHUB = os.getenv("YOUR_GITHUB", "")
+
+# Absolute path to this repo on your machine. Materials-tab file links are
+# written as absolute paths under this root so they can be pasted into
+# job-application upload dialogs. Leave unset to use the repo's own location
+# (auto-detected); set it in .env only if you open the files from another
+# machine or a synced folder.
+USER_LAPTOP_REPO_PATH = os.getenv("USER_LAPTOP_REPO_PATH", "") or os.path.dirname(
+    os.path.abspath(__file__)
+)
 
 # ── GOOGLE INTEGRATIONS ───────────────────────────────────
 GOOGLE_SHEETS_CREDS_FILE = os.getenv("GOOGLE_SHEETS_CREDS_FILE", "credentials.json")
@@ -31,94 +47,31 @@ GOOGLE_DRIVE_FOLDER_ID = os.getenv("GOOGLE_DRIVE_FOLDER_ID", "")
 DB_FILE = "jobs.db"
 
 # ── TARGET JOB TITLES ─────────────────────────────────────
+# >>> TUNE THIS FIRST. See "Tune the title gate" in README.md. <<<
 # Used as both LinkedIn/Indeed search queries AND Stage 1 title matching.
 # Each title gets its own dedicated search so niche titles are never buried.
-#
-# This list deliberately excludes "Junior X" / "Associate X" variants:
-# LinkedIn keyword search returns the same posting set regardless of those
-# qualifiers (postings rarely put "Junior" in the title), so they were pure
-# duplicate queries adding scrape time with no new postings. Seniority is
-# already filtered post-scrape by EXCLUDE_TITLE_KEYWORDS below.
-#
-# Synonyms collapsed: SRE → "Site Reliability Engineer" (matches both),
-# "Reliability Engineer" / "Observability Engineer" / "Kubernetes Engineer"
-# are subsumed by SRE/Platform. "Cloud DevOps" / "AI DevOps" / "ML Platform"
-# are subsumed by their broader peers.
-# Narrowed to infrastructure on 2026-09-13 from five months of outcome data
-# (1,003 applications, 7 callbacks — see the "Seven Callbacks" audit). Observed
-# callback rate by the DOMAIN OF THE JOB APPLIED TO:
-#
-#     Cloud Engineer            4.35%  (2/46)
-#     SRE / Reliability         2.20%  (2/91)
-#     Systems / Infra / Platform 1.41% (2/142)
-#     Security Engineer         0.87%  (1/115)   <- lone hit was infra-flavoured
-#     AI/ML                     0.00%  (0/238)
-#     Software Engineer         0.00%  (0/128)
-#     DevOps (by job title)     0.00%  (0/85)
-#     Security Analyst / GRC    0.00%  (0/73)
-#
-# Infra cluster 2.15% vs everything else 0.14% — a 15x difference on n=1,003.
-# Security search terms are dropped accordingly. Standalone-AI terms were dropped
-# too, then restored on 2026-09-16 — see the AI entries at the end of the list.
-#
-# "DevOps Engineer" is retained despite 0/85 on the job-title cut: it is a SEARCH
-# term, not an outcome bucket, and it is the widest net that surfaces cloud/SRE/
-# platform reqs which do convert. Re-evaluate it once the next cohort lands.
+# Do not add "Junior X" / "Associate X" variants: LinkedIn returns the same
+# postings regardless of those qualifiers, so they only add scrape time.
+# Seniority is filtered after scraping by EXCLUDE_TITLE_KEYWORDS.
+# These neutral defaults are a broad software starting point.
 TARGET_TITLES = [
-    # Cloud / Infrastructure — best observed conversion
-    "Cloud Engineer",
-    "Cloud Infrastructure Engineer",
-    "Infrastructure Engineer",
-    "Systems Engineer",
-    # Amazon's callback came from this exact title, which the old list never searched.
-    "Systems Development Engineer",
-    # Reliability / Platform
-    "Site Reliability Engineer",
-    "Platform Engineer",
-    "Production Engineer",
-    "Observability Engineer",
-    # Broad feeder into all of the above
+    "Software Engineer",
+    "Backend Engineer",
+    "Full Stack Engineer",
+    "Data Engineer",
     "DevOps Engineer",
-    # AI-adjacent, but infrastructure-shaped
-    "MLOps Engineer",
-    # AI engineering — restored 2026-09-16 at the user's call, after the pivot
-    # silently dropped NYU Langone's "AI Engineer" (official title "Engineer II,
-    # Gen AI"), which returned an assessment invite. That req is LLMOps/platform
-    # work under an AI title — the shape the infra-only title gate can't see.
-    # These are the three highest-volume AI title families in Stage 2 since
-    # 2026-06 ("AI Engineer" 556 screened, Gen AI 239, ML Engineer 130); "AI
-    # Platform" / "AI Infrastructure" titles already surface via the infra searches.
-    "AI Engineer",
-    "Generative AI Engineer",
-    "Machine Learning Engineer",
-    # IT / identity family, opened 2026-09-26 with IT_IDENTITY_TITLE_KEYWORDS.
-    # Without a search query these roles only arrive from direct-ATS boards.
-    "Systems Administrator",
+    "Cloud Engineer",
 ]
 
 # ── LOCATIONS ─────────────────────────────────────────────
-# Cast the widest net across US tech hubs. 24h freshness filter
-# keeps volume sane even with 18 locations. "United States" is a
-# national catch-all on LinkedIn/Indeed that surfaces postings in
-# secondary metros (Miami, Tampa, Houston, Phoenix, Charlotte, etc.)
-# the city-specific queries miss; dedup absorbs the overlap.
+# Each location is searched once per title on LinkedIn/Indeed/Google, so runtime
+# grows with titles x locations. "United States" is a national catch-all that
+# surfaces postings in secondary metros; "Remote" catches remote-only roles.
 LOCATIONS = [
-    "Chicago, IL",
     "New York, NY",
+    "San Francisco, CA",
     "Seattle, WA",
     "Austin, TX",
-    "Boston, MA",
-    "Denver, CO",
-    "Philadelphia, PA",
-    "Washington, DC",
-    "San Francisco, CA",
-    "San Jose, CA",
-    "Los Angeles, CA",
-    "Atlanta, GA",
-    "Raleigh, NC",
-    "Minneapolis, MN",
-    "Dallas, TX",
-    "Portland, OR",
     "United States",
     "Remote",
 ]
@@ -126,6 +79,15 @@ LOCATIONS = [
 # ── CLAUDE CLI ────────────────────────────────────────────
 def _find_claude_cli() -> str:
     """Locate the Claude CLI binary, trying platform-specific install paths."""
+    # Honor the CLAUDE_CLI env var first (the Stage 2
+    # error message already tells users to set it), then a workspace shim
+    # that survives reboots (npm global bin is outside the workspace).
+    env_cli = os.environ.get("CLAUDE_CLI", "").strip()
+    if env_cli and (shutil.which(env_cli) or os.path.isfile(env_cli)):
+        return env_cli
+    workspace_shim = os.path.expanduser("~/workspace/bin/claude")
+    if os.path.isfile(workspace_shim):
+        return workspace_shim
     found = shutil.which("claude")
     if found:
         return found
@@ -213,8 +175,7 @@ EXCLUDE_LOCATION_PATTERNS = [
     "greece",
     "turkey", "istanbul",
     "cyprus", "malta", "luxembourg",
-    # Eastern Europe / Balkans / Baltics — added 2026-09-15 after Speechify's
-    # per-city Greenhouse postings showed these countries have no coverage.
+    # Eastern Europe / Balkans / Baltics.
     # Bare "moscow"/"riga"/"belgrade" deliberately omitted: they collide with
     # real US places (Moscow ID, Riga MI, Belgrade MT) — the country-level
     # token still catches the normal "City, Country" format for those.
@@ -271,7 +232,7 @@ EXCLUDE_LOCATION_PATTERNS = [
     "rwanda", "kigali",
     "senegal", "dakar",
     "zimbabwe", "harare",
-    # Caucasus / Central Asia — added 2026-09-15, same Speechify gap. Bare
+    # Caucasus / Central Asia. Bare
     # "georgia" (country) omitted: collides with the US state — "tbilisi"
     # still catches the "City, Georgia" format for that country.
     "armenia", "yerevan",
@@ -305,20 +266,16 @@ EXCLUDE_LOCATION_PATTERNS = [
 ]
 
 # ── TITLE EXCLUSIONS ──────────────────────────────────────
+# Word-boundary match against the job title; a hit drops the job in Stage 1.
 EXCLUDE_TITLE_KEYWORDS = [
-    # Seniority / employment type
-    # NOTE: "contract"/"contractor" deliberately NOT excluded — contract-to-hire
-    # is a primary entry path into DevOps/security for early-career candidates.
+    # Seniority / employment type. Remove entries here if you are targeting
+    # senior roles. "contract" is deliberately not listed: contract-to-hire is
+    # a common early-career entry path.
     "senior", "sr.", "sr ", "lead", "staff", "principal",
     "manager", "director", "vp ", "vp,", "vice president", "head of",
     "intern", "internship",
     "part-time", "part time", "freelance", "temporary",
-    # Mass-intake university funnels. These reqs draw thousands of applicants,
-    # close within days, and returned 0 callbacks across the 2026-04→09 cohort.
-    # NOTE: "junior", "associate" and "entry level" are deliberately NOT here —
-    # they are the right level for this candidate, and their 0-for-106 record is
-    # within noise at a 0.7% base rate (expected ~0.7 callbacks). Only the
-    # structured campus programs are excluded.
+    # Mass-intake university programs. Delete these if you ARE a new grad.
     "new grad", "new graduate", "new college grad", "college graduate",
     "university graduate", "university recruiting", "campus hire",
     "early career", "rotational program", "returnship",
@@ -326,104 +283,71 @@ EXCLUDE_TITLE_KEYWORDS = [
     "electrical engineer", "mechanical engineer", "civil engineer",
     "controls engineer", "building automation", "hvac",
     "asic", "fpga",
-    # Industrial/plant-floor work that slips through on the "automation" and
-    # "systems" domain keywords — "Automation Technician", "Quality Systems
-    # Engineer", "Thermal Systems Engineer" are none of them software roles.
+    # Industrial/plant-floor work that slips through on broad words like
+    # "automation" and "systems".
     "marketing automation", "sales automation", "automation technician",
     "technician", "quality systems", "thermal", "mechatronics", "plc ",
     "scada", "field service", "manufacturing", "warehouse", "machinist",
     "maintenance", "calibration", "tooling",
-    # Work-authorization hard stops written into the TITLE, which the
-    # description-level EXCLUDE_DESC_PATTERNS never sees. Staffing firms put
-    # these in titles constantly ("DevOps Engineer (USC/GC Only)"), and they
-    # are absolute disqualifiers for an F-1 candidate.
+    # Work-authorization hard stops written into the TITLE (staffing firms do
+    # this constantly). Only useful if you cannot meet them; delete them if
+    # you are a US citizen / green-card holder.
     "usc/gc", "usc only", "gc only", "us citizen", "green card",
     "citizens only", "no c2c", "w2 only", "clearance",
     # Non-IC / pre-sales roles
     "solutions architect", "presales", "pre-sales",
     # IT support
     "desktop support", "direct support",
-    # Non-engineering analyst roles
 ]
 
 # ── TITLE DOMAIN KEYWORDS ─────────────────────────────────
+# >>> TUNE THIS SECOND. See "Tune the title gate" in README.md. <<<
 # A title must contain at least one of these (word-boundary match) to survive
-# Stage 1. Matching is \bword\b, so multi-word/compound forms must be listed
-# EXPLICITLY: "security" does NOT match "cybersecurity" (no word boundary
-# inside the compound), so "cybersecurity" is its own entry. Likewise "cyber"
-# alone won't match "cybersecurity". Short tokens (ai, ml, it, soc, noc, grc,
-# iam) rely on the word boundary to avoid false positives — e.g. "ai" must not
-# match "maintenance". Do NOT switch this to substring matching for that reason.
-#
-# Narrowed to infrastructure on 2026-09-13 (see TARGET_TITLES for the outcome
-# data). The standalone security words are gone. That does NOT blanket-ban
-# those jobs — it means they now have to carry an infrastructure word too, which
-# is exactly the profile that converted: "Software Security Engineer,
-# Distributed Systems" (Salesforce, interview) still passes on "systems"; bare
-# "Security Analyst" (0/73) no longer does. AI words were removed on 09-13 and
-# restored on 2026-09-16 — see the AI block below.
-TITLE_DOMAIN_KEYWORDS = [
-    # Cloud / infra / DevOps / SRE
-    "cloud", "devops", "devsecops", "sre", "platform", "infrastructure",
-    "reliability", "kubernetes", "observability", "systems",
-    "network", "networking",
-    "mlops",
-    # AI / ML engineering — restored 2026-09-16 (see the matching TARGET_TITLES
-    # note). The 09-13 removal of bare "ai" cut AI/ML titles by 94% and dropped
-    # "Engineer II, Gen AI" (NYU Langone), a real LLMOps role that later sent an
-    # assessment. A description-signal gate for AI-only titles was trialled on
-    # 935 historical AI-titled Stage 2 jobs and rejected: at every threshold it
-    # discarded APPLY and SKIP verdicts at about the same rate, so Stage 2 does
-    # that sorting instead. Word-boundary matching keeps "ai" off "maintenance".
-    "ai", "genai", "generative", "agentic",
-    "llm", "llms", "llmops",
-    "ml", "machine learning", "deep learning",
-
-    # Cloud/IaC/CI-CD tool names — already trusted in REQUIRE_ONE_OF for
-    # descriptions but missing here, so titles like "AWS Engineer" or
-    # "Terraform Engineer" were being dropped before Stage 2 ever saw them.
-    "aws", "gcp", "azure", "terraform", "k8s", "ci/cd",
-    "docker", "jenkins", "ansible",
-    # Observability / config-mgmt tool names, same rationale.
-    "prometheus", "grafana", "helm", "vault",
-    # Catches "Automation Engineer" / "Linux Engineer" / "Linux Administrator"
-    # titles that carry no other domain word.
-    "automation", "linux",
+# Stage 1. Matching is \bword\b, so compound forms must be listed explicitly:
+# "security" does NOT match "cybersecurity". Short tokens (ai, ml, it, sre)
+# rely on the word boundary to avoid false positives ("ai" must not match
+# "maintenance"). Do NOT switch this to substring matching for that reason.
+CORE_TITLE_KEYWORDS = [
+    "software", "backend", "back-end", "frontend", "front-end",
+    "full stack", "full-stack", "fullstack", "web", "api",
+    "data", "cloud", "devops", "platform", "infrastructure",
+    "reliability", "sre", "systems", "developer",
 ]
 
-# ── IT / IDENTITY TITLE KEYWORDS (opened 2026-09-26) ──────
-# Sysadmin, Windows, identity and endpoint titles, opened for the portfolio
-# catalog (docs/projects: HybridID, RestorePoint, FleetForge). Kept separate from
-# TITLE_DOMAIN_KEYWORDS because they pass only when the title carries no
-# security word below: "Identity Security Engineer" / "Endpoint Security
-# Engineer" / "M365 Security Engineer" are security-engineer roles the user
-# chose to keep out. Bare "administrator" is deliberately absent — it matches
-# database, benefits and office administrators; "it" is absent for the same reason.
-IT_IDENTITY_TITLE_KEYWORDS = [
-    "systems administrator", "system administrator", "sysadmin",
-    "windows", "active directory", "identity", "iam", "entra",
-    "endpoint", "intune", "microsoft 365", "m365",
-    "it infrastructure", "it engineer", "it systems",
-    "vmware", "virtualization",
-]
-IT_IDENTITY_SECURITY_BLOCKERS = [
-    "security", "cybersecurity", "cyber", "threat", "soc",
-]
+# A second bucket for a specialty you want to keep separately tunable (for
+# example AI words: "ai", "genai", "llm"). Empty by default.
+EXTRA_TITLE_KEYWORDS: list[str] = []
 
-# ── SPONSORSHIP FILTER (master toggle — pluggable) ────────
-# Enabled: target only companies likely to sponsor in the future even though
-# the candidate is work-authorized (F1 OPT) through June 2028. When True:
-#   • Phase 5 runs h1bdata.info sponsor check and drops no-history companies
+TITLE_DOMAIN_KEYWORDS = CORE_TITLE_KEYWORDS + EXTRA_TITLE_KEYWORDS
+
+# ── OPTIONAL TITLE FAMILIES (empty = disabled) ────────────
+# ML titles need a second word. A title containing any ML_TITLE_KEYWORDS word
+# is admitted only if it ALSO carries a CORE_TITLE_KEYWORDS word or an
+# ML_TITLE_LLM_EXEMPTIONS word. Use this to keep pure-modelling roles out while
+# keeping ML platform / MLOps roles in. Example in README.md.
+ML_TITLE_KEYWORDS: list[str] = []
+ML_TITLE_LLM_EXEMPTIONS: list[str] = []
+
+# A second admission family for titles that carry none of the domain words
+# above, e.g. IT / sysadmin / identity titles. A title in this family passes
+# only if it has none of IT_IDENTITY_SECURITY_BLOCKERS. Example in README.md.
+IT_IDENTITY_TITLE_KEYWORDS: list[str] = []
+IT_IDENTITY_SECURITY_BLOCKERS: list[str] = []
+
+# ── SPONSORSHIP FILTER (master toggle) ────────────────────
+# OFF by default. Turn it ON (SPONSORSHIP_FILTER_ENABLED=true in .env) only if
+# you need an employer to sponsor a work visa. When True:
+#   • Phase 5 checks employers against DOL LCA (H-1B) filings and drops
+#     employers with no filing history (offline index, data/h1b_filers.txt)
 #   • Stage 1 hard-stops JDs that explicitly say "we don't sponsor"
-#   • Stage 2 treats explicit no-sponsor JD language as a SKIP disqualifier
-#     and reduces confidence by 1 for unverified companies
-# Flip to False to skip all sponsorship checks (saves run time).
-SPONSORSHIP_FILTER_ENABLED = True
+#   • Stage 2 treats explicit no-sponsor JD language as a disqualifier and
+#     reduces confidence by 1 for unverified companies
+SPONSORSHIP_FILTER_ENABLED = _env_bool("SPONSORSHIP_FILTER_ENABLED", False)
 
 # ── DESCRIPTION HARD-STOP PATTERNS ────────────────────────
-# ALWAYS enforced, independent of the sponsorship toggle. Clearance and
-# US-citizenship requirements are hard disqualifiers for an F1 candidate
-# regardless of whether sponsorship is needed.
+# ALWAYS enforced, independent of the sponsorship toggle. They assume you hold
+# no security clearance and are not a US citizen. If you DO hold a clearance
+# or are a citizen, set this list to [] to see those jobs.
 #
 # Years-of-experience requirements used to be enumerated here too (a
 # per-number literal-substring list: "5+ years", "4-6 years", etc.) but that
@@ -450,13 +374,17 @@ EXCLUDE_DESC_PATTERNS = [
 ]
 
 # ── YEARS-OF-EXPERIENCE HARD-STOP THRESHOLD ───────────────
-# A hard requirement of this many years or more is a hard disqualifier —
-# target level is 0-3 yrs / junior-to-mid (see prompts/screening.md).
+# A hard requirement of this many years or more is a hard disqualifier.
+# Set it near your own experience + 1. Use 99 to disable. Also describe your
+# level in TARGET_LEVEL below so Stage 2 judges consistently.
 # "Preferred"/"nice to have" YOE mentions are intentionally NOT hard-stopped
 # here; only requirement-shaped phrasing is: "N+ years", "N or more years",
 # "at least/minimum N years", a numeric range ("A-B years"/"A to B years"),
 # or bare "N years [...] experience". See screening/stage1.py for the regex.
-MIN_YOE_HARD_STOP = 4
+MIN_YOE_HARD_STOP = int(os.getenv("MIN_YOE_HARD_STOP", "4"))
+
+# How Stage 2 describes the level you target. Filled into prompts/screening.md.
+TARGET_LEVEL = os.getenv("TARGET_LEVEL", "0-3 years / junior-to-mid")
 
 # ── SPONSORSHIP-AVAILABILITY HARD-STOPS (toggle-gated) ────
 # Applied in Stage 1 only when SPONSORSHIP_FILTER_ENABLED is True.
@@ -472,29 +400,28 @@ SPONSORSHIP_DESC_PATTERNS = [
 ]
 
 # ── MUST-HAVE KEYWORDS ────────────────────────────────────
+# A description must mention several of these to pass Stage 1. Put your own
+# core skills here (lowercase). Neutral defaults below.
 REQUIRE_ONE_OF = [
-    "aws", "gcp", "azure", "cloud", "kubernetes", "k8s", "terraform",
-    "devops", "security", "iam", "sre", "platform", "infrastructure",
-    "ci/cd", "docker", "jenkins", "github actions", "ansible",
-    "prometheus", "grafana", "helm", "vault", "linux", "automation",
-    "mlops", "ai", "machine learning", "ml pipeline", "observability",
-    # IT / identity vocabulary, so sysadmin and Windows JDs admitted by
-    # IT_IDENTITY_TITLE_KEYWORDS can reach the 3-match bar.
-    "active directory", "windows server", "powershell", "intune", "entra",
-    "microsoft 365", "vmware",
+    "python", "java", "javascript", "typescript", "go", "sql", "api",
+    "aws", "gcp", "azure", "cloud", "kubernetes", "docker", "terraform",
+    "ci/cd", "linux", "react", "node", "microservices", "devops",
+    "data pipeline", "machine learning",
 ]
 
 # ── SALARY FLOOR ──────────────────────────────────────────
-SALARY_FLOOR = 80_000
+# Drop jobs whose stated maximum salary is below this. 0 disables the check.
+SALARY_FLOOR = int(os.getenv("SALARY_FLOOR", "0"))
 
 # ── SCREENING SETTINGS ────────────────────────────────────
-# Not read by any code path — the actual cutoff is enforced by Claude itself
-# via the confidence scale/verdict bands spelled out in prompts/screening.md
-# (APPLY 3-5, MAYBE 2, SKIP 1+disqualifier). Kept here as documentation of
-# that value and asserted >= 1 by tests/test_config.py; change both together.
-SCREENING_CONFIDENCE_THRESHOLD = 3  # Minimum confidence for APPLY verdict
+# Minimum Stage 2 confidence for a job to be written to the Daily tab; below
+# it the job goes to the Audit tab with its score and reasoning. Defaults to 3.
+# There are no verdicts — confidence, interview
+# score and risk flags are the screening output. Unscored jobs (Stage 2
+# failure) still go to Daily, blank confidence, for `rescreen.py --failed-only`.
+DAILY_MIN_CONFIDENCE = 3
 SCREENING_BATCH_SIZE = 8            # JDs per Claude CLI invocation — prompt goes via stdin not argv, so no 32KB limit concern
-# Batches ran strictly sequentially until 2026-09-09: measured 10-22 batches/run
+# Batches used to run strictly sequentially: measured 10-22 batches/run
 # at ~100-240s each (thinking stays on for screening — see claude_cli.run_claude's
 # disable_thinking docstring), so Stage 2 alone was taking 27-63 minutes while
 # scraping (~30min) and generation (~5min, thinking off) got fast. Batches are
@@ -508,7 +435,7 @@ STAGE2_MODEL = "claude-haiku-4-5-20251001"  # Switch to claude-sonnet-4-6 for hi
 # measured at a 37% verdict-flip rate, skewed lenient — unacceptable) but
 # was otherwise unbounded, billing whatever the model chose to think.
 # Chosen from the real per-call output_tokens distribution logged in
-# claude_usage over the 400 most recent screening calls (2026-09-11):
+# claude_usage over the 400 most recent screening calls (measured on a real run):
 #   p50=11,277  p60=11,907  p70=12,693  p75=13,193  p80=13,930  p90=16,077  max=21,261
 # 12,000 sits just above the p50-p60 band, so the *typical* batch is
 # completely unaffected — only the upper ~35-40% of calls (the ones already
@@ -521,7 +448,7 @@ STAGE2_MODEL = "claude-haiku-4-5-20251001"  # Switch to claude-sonnet-4-6 for hi
 STAGE2_THINKING_BUDGET_TOKENS = 12_000
 # Measured wall time per batch (with thinking left on — see claude_cli.run_claude's
 # disable_thinking docstring) is ~100-150s, so the old 150s ceiling was a coin-flip:
-# on 2026-09-08, 22/32 batches (204/253 jobs) timed out on both attempts and were
+# in one measured run, 22/32 batches (204/253 jobs) timed out on both attempts and were
 # silently defaulted to MAYBE with no real screening. Give real headroom, same fix
 # already applied to RESUME_GENERATION_TIMEOUT below.
 STAGE2_TIMEOUT = 300                # seconds per Stage 2 screening call (batch of SCREENING_BATCH_SIZE jobs)
@@ -532,6 +459,9 @@ H1B_CACHE_TTL_DAYS = 30             # Days before re-checking a CONFIRMED sponso
 # like. A wrong negative silently drops every posting from that employer, so it
 # gets days to self-heal rather than a month.
 H1B_NEGATIVE_CACHE_TTL_DAYS = 7
+# DOL posts LCA disclosure data quarterly; past this age the run summary
+# flags data/h1b_filers.txt for a rebuild (scripts/build_lca_index.py).
+H1B_INDEX_STALE_DAYS = 150
 
 # ── RESUME VERIFICATION (interview-likelihood gate) ───────
 # After a resume + cover letter are generated, a Claude "senior technical

@@ -82,3 +82,19 @@ def test_format_tracker_uses_only_valid_condition_types():
     requests = spreadsheet.batch_update.call_args.args[0]["requests"]
     used = _condition_types_in(requests)
     assert used <= _VALID_CONDITION_TYPES, f"invalid enum(s): {used - _VALID_CONDITION_TYPES}"
+
+
+def test_daily_status_dropdown_is_apply_or_skip_only():
+    spreadsheet, ws = _fake_spreadsheet()
+    format_daily(spreadsheet, ws)
+    requests = spreadsheet.batch_update.call_args.args[0]["requests"]
+    dropdowns = [r["setDataValidation"]["rule"]["condition"]["values"]
+                 for r in requests if "setDataValidation" in r]
+    assert [[v["userEnteredValue"] for v in d] for d in dropdowns] == [["Apply", "Skip"]]
+    assert all(r["setDataValidation"]["rule"]["strict"] for r in requests if "setDataValidation" in r)
+    status_texts = [
+        r["addConditionalFormatRule"]["rule"]["booleanRule"]["condition"]["values"][0]["userEnteredValue"]
+        for r in requests if "addConditionalFormatRule" in r
+        and r["addConditionalFormatRule"]["rule"]["booleanRule"]["condition"]["type"] == "TEXT_EQ"
+    ]
+    assert set(status_texts) <= {"Apply", "Skip"}

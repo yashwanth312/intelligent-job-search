@@ -8,7 +8,9 @@ from typing import Callable
 
 import aiohttp
 from bs4 import BeautifulSoup
+from datetime import datetime, timedelta, timezone
 
+from config import HOURS_OLD
 from models.job import RawJob
 from sources._dates import parse_workday_relative
 from sources.base import SourceAdapter, SourceResult
@@ -89,7 +91,7 @@ class WorkdayAdapter(SourceAdapter):
         all_jobs: list[RawJob] = []
         all_errors: list[str] = []
 
-        async with aiohttp.ClientSession(headers=_HEADERS) as session:
+        async with aiohttp.ClientSession(trust_env=True, headers=_HEADERS) as session:
             results = await asyncio.gather(
                 *[self._scrape_company(session, company, titles)
                   for company in self.companies],
@@ -107,7 +109,7 @@ class WorkdayAdapter(SourceAdapter):
                 all_errors.extend(errors)
 
         logger.info(
-            f"Workday: {len(all_jobs)} jobs from {len(self.companies)} companies"
+            f"Workday: {len(all_jobs)} fresh jobs from {len(self.companies)} companies"
         )
         return SourceResult(jobs=all_jobs, errors=all_errors)
 
@@ -131,6 +133,15 @@ class WorkdayAdapter(SourceAdapter):
 
         jobs: list[RawJob] = []
         errors: list[str] = []
+        stale_skipped = 0
+
+        # NOTE (2026-09-26): apply the phase-4 freshness rule here at parse
+        # time. Workday boards return every open posting (tens of thousands
+        # per run); holding them all in memory killed the run before phase 4
+        # could drop them. A posting skipped here is exactly one that
+        # filter_fresh_jobs would classify stale (workday-* is not a
+        # prefiltered source, so posted_at=None is also stale).
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=HOURS_OLD)
 
         for i, title in enumerate(titles):
             if i > 0:
@@ -138,6 +149,10 @@ class WorkdayAdapter(SourceAdapter):
 
             postings, err = await self._search(session, api_url, title, name)
             for posting in postings:
+                posted_at = parse_workday_relative(posting.get("postedOn"))
+                if posted_at is None or posted_at < cutoff:
+                    stale_skipped += 1
+                    continue
                 external_path = posting.get("externalPath", "")
                 jobs.append(RawJob(
                     title=posting.get("title", ""),
@@ -148,7 +163,7 @@ class WorkdayAdapter(SourceAdapter):
                     description=None,
                     url=f"{job_url_base}/{external_path}",
                     source=f"workday-{tenant}",
-                    posted_at=parse_workday_relative(posting.get("postedOn")),
+                    posted_at=posted_at,
                 ))
             if err == "__422__":
                 logger.warning(
@@ -338,7 +353,7 @@ async def fetch_descriptions(
             on_progress(1)
         return ok
 
-    async with aiohttp.ClientSession(headers=_HEADERS) as session:
+    async with aiohttp.ClientSession(trust_env=True, headers=_HEADERS) as session:
         results = await asyncio.gather(*[_one(session, j) for j in targets])
 
     n_filled = sum(1 for r in results if r)

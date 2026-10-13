@@ -10,6 +10,7 @@ from config import (
     EXCLUDE_TITLE_KEYWORDS, EXCLUDE_DESC_PATTERNS,
     REQUIRE_ONE_OF, SALARY_FLOOR, TITLE_DOMAIN_KEYWORDS,
     IT_IDENTITY_TITLE_KEYWORDS, IT_IDENTITY_SECURITY_BLOCKERS,
+    CORE_TITLE_KEYWORDS, ML_TITLE_KEYWORDS, ML_TITLE_LLM_EXEMPTIONS,
     SPONSORSHIP_DESC_PATTERNS, SPONSORSHIP_FILTER_ENABLED,
     EXCLUDE_LOCATION_PATTERNS, MIN_YOE_HARD_STOP,
 )
@@ -25,8 +26,14 @@ def title_admission(title: str) -> str | None:
     """Which title family admits `title`: "core" (TITLE_DOMAIN_KEYWORDS),
     "it_identity" (IT_IDENTITY_TITLE_KEYWORDS on a title with no security
     word), or None. Recorded per application so the IT/identity family's
-    callback rate can be measured separately."""
+    callback rate can be measured separately.
+
+    An ML-worded title is admitted only alongside an infra or LLM/agent
+    word — see config.ML_TITLE_KEYWORDS."""
     title_lower = title.lower()
+    if (_any_word(ML_TITLE_KEYWORDS, title_lower)
+            and not _any_word(CORE_TITLE_KEYWORDS + ML_TITLE_LLM_EXEMPTIONS, title_lower)):
+        return None
     if _any_word(TITLE_DOMAIN_KEYWORDS, title_lower):
         return "core"
     if (_any_word(IT_IDENTITY_TITLE_KEYWORDS, title_lower)
@@ -37,6 +44,23 @@ def title_admission(title: str) -> str | None:
 
 def _has_title_domain(title_lower: str) -> bool:
     return title_admission(title_lower) is not None
+
+
+def title_exclusion(title: str) -> str | None:
+    """The EXCLUDE_TITLE_KEYWORDS entry that matches `title` (word-boundary),
+    or None."""
+    title_lower = title.lower()
+    for kw in EXCLUDE_TITLE_KEYWORDS:
+        if re.search(r'\b' + re.escape(kw.strip().rstrip('.')) + r'\b', title_lower):
+            return kw
+    return None
+
+
+def title_passes(title: str) -> bool:
+    """Stage 1's whole title gate: no exclusion word and an admitting family.
+    The board-style ATS adapters pre-filter with this, so a title they drop
+    is exactly one Stage 1 would have rejected."""
+    return title_exclusion(title) is None and title_admission(title) is not None
 
 # Effective description hard-stops. The sponsorship-availability patterns are
 # folded in only when the master toggle is on; while it's off, a "we don't
@@ -66,7 +90,7 @@ _YOE_ATLEAST_RE = re.compile(
 # threshold (a range starting below it, e.g. "2-5 years", isn't a hard
 # requirement of the higher number). Tolerates a plain hyphen here; the
 # markdown-escaped form ("4\-6 years") is normalized before matching — see
-# _normalize_desc_dashes.
+# _unescape_markdown.
 _YOE_RANGE_RE = re.compile(
     rf'\b({_YOE_NUM_PATTERN})\s*(?:-|to)\s*{_YOE_NUM_PATTERN}\+?\s*years?\b', re.I
 )
@@ -94,24 +118,31 @@ def _yoe_value(token: str) -> int:
         return 0
     # A range whose en dash was dropped during scraping: "3–5 years" arrives
     # as "35 years". Read an implausible two-digit value with ascending digits
-    # as that range's lower bound, like _YOE_RANGE_RE does. NYU Langone's
-    # "Engineer II, Gen AI" (assessment invite) was hard-stopped on exactly this.
+    # as that range's lower bound, like _YOE_RANGE_RE does. A real posting was
+    # hard-stopped on exactly this.
     if value >= 16 and token[0] < token[1]:
         return int(token[0])
     return value
 
 
-def _normalize_desc_dashes(text: str) -> str:
-    """Collapse markdown-escaped hyphens ("4\\-6" -> "4-6") so the range
-    pattern matches jobspy's Markdown-formatted LinkedIn/Indeed descriptions,
-    which backslash-escape every literal hyphen."""
-    return text.replace('\\-', '-')
+# Any ASCII punctuation preceded by a backslash (CommonMark escape).
+_MD_ESCAPE_RE = re.compile(r'\\([!-/:-@\[-`{-~])')
+
+
+def _unescape_markdown(text: str) -> str:
+    """Drop Markdown backslash escapes ("4\\-6" -> "4-6", "5\\+" -> "5+").
+
+    jobspy renders LinkedIn/Indeed descriptions as Markdown, which escapes
+    hyphens, "+", "/", "." and friends. Only "\\-" used to be undone, so every
+    LinkedIn "N+ years" requirement slipped past the YOE hard-stop that the
+    same text from a board ATS would have hit."""
+    return _MD_ESCAPE_RE.sub(r'\1', text)
 
 
 def _find_yoe_hard_stop(desc_lower: str) -> str | None:
-    """Return a reason string if the (dash-normalized, lowercased)
-    description contains a YOE requirement >= MIN_YOE_HARD_STOP, else None."""
-    desc_lower = _normalize_desc_dashes(desc_lower)
+    """Return a reason string if the (lowercased) description contains a YOE
+    requirement >= MIN_YOE_HARD_STOP, else None."""
+    desc_lower = _unescape_markdown(desc_lower)
 
     for regex in (_YOE_PLUS_RE, _YOE_ATLEAST_RE, _YOE_RANGE_RE):
         m = regex.search(desc_lower)
@@ -147,7 +178,7 @@ class Stage1Filter:
 
     def filter_job(self, job: RawJob) -> FilterResult:
         title_lower = job.title.lower()
-        desc_lower = (job.description or "").lower()
+        desc_lower = _unescape_markdown((job.description or "").lower())
         has_description = bool(job.description and job.description.strip())
         location_lower = (job.location or "").lower()
 
@@ -159,12 +190,11 @@ class Stage1Filter:
                                     stage="stage1_location")
 
         # 1. Title exclusion (word-boundary matching) — always applies
-        for kw in EXCLUDE_TITLE_KEYWORDS:
-            pattern = r'\b' + re.escape(kw.strip().rstrip('.')) + r'\b'
-            if re.search(pattern, title_lower):
-                return FilterResult(job=job, passed=False,
-                                    reason=f"Title exclusion: '{kw}' matched in '{job.title}'",
-                                    stage="stage1_title")
+        kw = title_exclusion(job.title)
+        if kw:
+            return FilterResult(job=job, passed=False,
+                                reason=f"Title exclusion: '{kw}' matched in '{job.title}'",
+                                stage="stage1_title")
 
         # 2. Title domain check — at least one domain keyword must appear in the title
         if not _has_title_domain(title_lower):
@@ -224,26 +254,21 @@ class Stage1Filter:
         rejected: list[FilterResult] = []
 
         for job in jobs:
-            title_lower = job.title.lower()
-
-            for kw in EXCLUDE_TITLE_KEYWORDS:
-                pattern = r'\b' + re.escape(kw.strip().rstrip('.')) + r'\b'
-                if re.search(pattern, title_lower):
-                    rejected.append(FilterResult(
-                        job=job, passed=False,
-                        reason=f"Title exclusion: '{kw}' matched in '{job.title}'",
-                        stage="stage1_title",
-                    ))
-                    break
+            kw = title_exclusion(job.title)
+            if kw:
+                rejected.append(FilterResult(
+                    job=job, passed=False,
+                    reason=f"Title exclusion: '{kw}' matched in '{job.title}'",
+                    stage="stage1_title",
+                ))
+            elif not _has_title_domain(job.title.lower()):
+                rejected.append(FilterResult(
+                    job=job, passed=False,
+                    reason=f"No domain keyword in title: '{job.title}'",
+                    stage="stage1_title_domain",
+                ))
             else:
-                if not _has_title_domain(title_lower):
-                    rejected.append(FilterResult(
-                        job=job, passed=False,
-                        reason=f"No domain keyword in title: '{job.title}'",
-                        stage="stage1_title_domain",
-                    ))
-                else:
-                    passed.append(job)
+                passed.append(job)
 
         logger.info(
             f"Stage 1 (title-only): {len(passed)} passed, {len(rejected)} rejected "

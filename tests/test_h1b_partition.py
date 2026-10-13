@@ -42,14 +42,14 @@ class TestIsDroppableSource:
     def test_remoteok_is_not_droppable(self):
         assert is_droppable_source("remoteok") is False
 
-    def test_greenhouse_prefixed_is_not_droppable(self):
-        assert is_droppable_source("greenhouse-anthropic") is False
+    def test_greenhouse_prefixed_is_droppable(self):
+        assert is_droppable_source("greenhouse-anthropic") is True
 
-    def test_lever_prefixed_is_not_droppable(self):
-        assert is_droppable_source("lever-stripe") is False
+    def test_lever_prefixed_is_droppable(self):
+        assert is_droppable_source("lever-stripe") is True
 
-    def test_ashby_prefixed_is_not_droppable(self):
-        assert is_droppable_source("ashby-foo") is False
+    def test_ashby_prefixed_is_droppable(self):
+        assert is_droppable_source("ashby-foo") is True
 
     def test_unknown_source_is_not_droppable(self):
         # Conservative default: don't drop sources we don't recognize
@@ -67,13 +67,20 @@ class TestPartitionDrops:
         jobs = [
             _job("hackernews", False),
             _job("remoteok", False),
+        ]
+        kept, dropped = partition_drops(jobs)
+        assert kept == jobs
+        assert dropped == []
+
+    def test_verified_false_from_board_ats_is_dropped(self):
+        jobs = [
             _job("greenhouse-anthropic", False),
             _job("lever-stripe", False),
             _job("ashby-foo", False),
         ]
         kept, dropped = partition_drops(jobs)
-        assert kept == jobs
-        assert dropped == []
+        assert kept == []
+        assert dropped == jobs
 
     def test_verified_true_is_kept_from_any_source(self):
         jobs = [

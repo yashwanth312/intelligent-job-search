@@ -127,5 +127,5 @@ async def _fetch_one(
 
 async def fetch_description_from_url(url: str, timeout: float = 15.0) -> str | None:
     """One-shot fetch for a single URL. Used by generate_materials fallback."""
-    async with aiohttp.ClientSession() as session:
+    async with aiohttp.ClientSession(trust_env=True, ) as session:
         return await _fetch_one(session, url, timeout)

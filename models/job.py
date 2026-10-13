@@ -2,15 +2,8 @@
 from __future__ import annotations
 
 from datetime import datetime
-from enum import Enum
 
 from pydantic import BaseModel, Field, computed_field
-
-
-class ScreeningVerdict(str, Enum):
-    APPLY = "APPLY"
-    SKIP = "SKIP"
-    MAYBE = "MAYBE"
 
 
 class RawJob(BaseModel):
@@ -26,7 +19,7 @@ class RawJob(BaseModel):
     source: str  # e.g. "greenhouse-anthropic", "hn-apr2026", "linkedin"
     scraped_at: datetime = Field(default_factory=datetime.now)
     posted_at: datetime | None = None  # When the company actually posted the job (UTC)
-    h1b_sponsor_verified: bool | None = None  # None = not checked / curated source
+    h1b_sponsor_verified: bool | None = None  # None = lookup errored or timed out
 
     @computed_field
     @property
@@ -35,10 +28,15 @@ class RawJob(BaseModel):
 
 
 class ScreenedJob(RawJob):
-    """A job after passing through the screening engine."""
+    """A job after passing through the screening engine.
 
-    verdict: ScreeningVerdict
-    confidence: int = Field(ge=1, le=5)
+    There is no verdict (APPLY/MAYBE/SKIP was removed 2026-10-03): confidence,
+    interview_likelihood and risk_flags are the whole screening output, and
+    config.DAILY_MIN_CONFIDENCE decides what reaches the Daily tab."""
+
+    # 1-5 fit score. None = not scored (Stage 2 failed for this job, or it had
+    # no description) — renders blank and is never mistaken for a real score.
+    confidence: int | None = Field(default=None, ge=1, le=5)
     reasoning: str
     match_signals: list[str] = Field(default_factory=list)
     risk_flags: list[str] = Field(default_factory=list)

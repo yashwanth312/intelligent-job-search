@@ -85,7 +85,7 @@ def main() -> None:
     yaml.preserve_quotes = True
     yaml.width = 4096  # avoid wrapping
 
-    with open(TARGET_YAML) as f:
+    with open(TARGET_YAML, encoding="utf-8") as f:
         data = yaml.load(f)
 
     workday_all: list[dict] = list(data.get("workday") or [])
@@ -114,13 +114,13 @@ def main() -> None:
 
     # ── Write back the pruned target_companies.yaml ──
     data["workday"] = keep
-    with open(TARGET_YAML, "w") as f:
+    with open(TARGET_YAML, "w", encoding="utf-8") as f:
         yaml.dump(data, f)
 
     # ── Merge with existing workday_rejected.yaml (preserve prior rejects) ──
     existing_rejects: list[dict] = []
     if REJECTED_YAML.exists():
-        with open(REJECTED_YAML) as f:
+        with open(REJECTED_YAML, encoding="utf-8") as f:
             prior = yaml.load(f) or {}
         existing_rejects = list(prior.get("rejected") or [])
 
@@ -150,7 +150,7 @@ def main() -> None:
         "# To restore a tenant: remove its entry here and add it to the\n"
         "# workday section of target_companies.yaml.\n"
     )
-    with open(REJECTED_YAML, "w") as f:
+    with open(REJECTED_YAML, "w", encoding="utf-8") as f:
         f.write(header)
         yaml.dump({"rejected": merged_rejects}, f)
 

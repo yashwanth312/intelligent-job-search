@@ -1,7 +1,7 @@
 import os
 import pytest
 from db.database import Database
-from models.job import RawJob, ScreenedJob, ScreeningVerdict
+from models.job import RawJob, ScreenedJob
 
 
 @pytest.fixture

@@ -1,6 +1,6 @@
 import pytest
 from datetime import datetime
-from models.job import RawJob, ScreenedJob, ScreeningVerdict
+from models.job import RawJob, ScreenedJob
 
 
 class TestRawJob:
@@ -50,14 +50,13 @@ class TestScreenedJob:
             description="...",
             url="https://example.com",
             source="greenhouse-anthropic",
-            verdict=ScreeningVerdict.APPLY,
             confidence=5,
             reasoning="Strong match: AWS + K8s + ML pipeline",
             match_signals=["EKS", "Terraform", "ML pipeline"],
             risk_flags=[],
             suggested_angle="AI Infrastructure",
         )
-        assert job.verdict == ScreeningVerdict.APPLY
+        assert not hasattr(job, "verdict")
         assert job.confidence == 5
 
 
@@ -68,8 +67,8 @@ class TestProfile:
     def test_load_profile_from_dict(self):
         data = {
             "personal": {
-                "name": "Yashwanth Medisetti",
-                "email": "yashwanthsaikrishna@gmail.com",
+                "name": "Jane Doe",
+                "email": "jane.doe@example.com",
                 "phone": "+1 (630) 276 8408",
                 "location": "Chicago, IL",
                 "visa": "F1 OPT",
@@ -82,11 +81,11 @@ class TestProfile:
             "skills": {},
         }
         profile = Profile(**data)
-        assert profile.personal.name == "Yashwanth Medisetti"
+        assert profile.personal.name == "Jane Doe"
 
     def test_experience_has_raw_context(self):
         exp = Experience(
-            company="KV Bits",
+            company="Acme Corp",
             location="Chicago, IL",
             period="June 2024 - Present",
             framings={"security": {"title": "Junior Security Engineer", "bullets": ["Built IAM..."]}},

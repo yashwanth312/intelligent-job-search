@@ -1,7 +1,7 @@
 """Tests for the Sponsorship column label derivation."""
 from __future__ import annotations
 
-from models.job import ScreenedJob, ScreeningVerdict
+from models.job import ScreenedJob
 from sheets.daily import _sponsorship_label
 
 
@@ -13,7 +13,6 @@ def _screened(source: str, verified: bool | None) -> ScreenedJob:
         url="https://example.com/job",
         source=source,
         h1b_sponsor_verified=verified,
-        verdict=ScreeningVerdict.APPLY,
         confidence=4,
         reasoning="ok",
     )
@@ -30,20 +29,13 @@ def test_verified_false_returns_no_history():
     assert _sponsorship_label(job) == "No H-1B history"
 
 
-def test_curated_source_with_none_returns_curated_unknown():
-    for source in ("greenhouse-anthropic", "lever-stripe", "ashby-foo"):
+def test_unchecked_job_returns_unknown_for_every_source():
+    # Board ATS jobs are checked like any other source since 2026-10-03, so
+    # None only means the lookup errored or timed out — same label everywhere.
+    for source in ("greenhouse-anthropic", "lever-stripe", "ashby-foo",
+                   "hackernews", "remoteok", "linkedin"):
         job = _screened(source, None)
-        assert _sponsorship_label(job) == "Curated — unknown"
-
-
-def test_non_curated_source_with_none_returns_blank():
-    job = _screened("hackernews", None)
-    assert _sponsorship_label(job) == ""
-
-
-def test_non_curated_unknown_source_with_none_returns_blank():
-    job = _screened("remoteok", None)
-    assert _sponsorship_label(job) == ""
+        assert _sponsorship_label(job) == "Unknown"
 
 
 from unittest.mock import MagicMock
@@ -120,4 +112,24 @@ def test_write_screened_jobs_sponsorship_curated_unknown():
     ws = _ws_mock()
     write_screened_jobs(ws, [_screened("greenhouse-anthropic", None)])
     row = ws.append_rows.call_args[0][0][0]
-    assert row[13] == "Curated — unknown"
+    assert row[13] == "Unknown"
+
+
+def test_daily_cutoff_is_three_and_unscored_rows_stay_for_rescreen():
+    from config import DAILY_MIN_CONFIDENCE
+    from sheets.daily import belongs_on_daily
+    assert DAILY_MIN_CONFIDENCE == 3
+    assert belongs_on_daily(_screened("linkedin", True).model_copy(update={"confidence": 3}))
+    assert not belongs_on_daily(_screened("linkedin", True).model_copy(update={"confidence": 2}))
+    # Stage 2 failure: no score yet, kept so `rescreen.py --failed-only` finds it
+    assert belongs_on_daily(_screened("linkedin", True).model_copy(update={"confidence": None}))
+
+
+def test_unscored_row_has_blank_confidence_and_sorts_last():
+    ws = _ws_mock()
+    scored = _screened("linkedin", True)
+    unscored = scored.model_copy(update={"confidence": None, "company": "Zed"})
+    write_screened_jobs(ws, [unscored, scored])
+    rows = ws.append_rows.call_args[0][0]
+    assert rows[0][3] == 4
+    assert rows[1][3] == ""

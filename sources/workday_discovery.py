@@ -60,7 +60,7 @@ def _load_rejected_tenants(
         from ruamel.yaml import YAML
 
         ryaml = YAML()
-        with open(path) as f:
+        with open(path, encoding="utf-8") as f:
             data = ryaml.load(f) or {}
         return {r["tenant"] for r in (data.get("rejected") or []) if "tenant" in r}
     except Exception as e:
@@ -79,7 +79,7 @@ def _load_active_tenants(
         from ruamel.yaml import YAML
 
         ryaml = YAML()
-        with open(path) as f:
+        with open(path, encoding="utf-8") as f:
             data = ryaml.load(f) or {}
         return {c["tenant"] for c in (data.get("workday") or []) if "tenant" in c}
     except Exception as e:
@@ -115,7 +115,7 @@ def save_candidates(
         # Load existing candidates (or start fresh)
         candidates_path = pathlib.Path(candidates_yaml_path)
         if candidates_path.exists():
-            with open(candidates_path) as f:
+            with open(candidates_path, encoding="utf-8") as f:
                 cdata = ryaml.load(f) or {}
         else:
             cdata = {}
@@ -171,7 +171,7 @@ def save_candidates(
 
         if newly_queued > 0 or repeats > 0:
             candidates_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(candidates_path, "w") as f:
+            with open(candidates_path, "w", encoding="utf-8") as f:
                 ryaml.dump(cdata, f)
 
         if skipped_active or skipped_rejected:

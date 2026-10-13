@@ -107,12 +107,12 @@ RESUME_FIXTURE = {
         "summary": "Engineer shipping services with <1s latency — at scale.",
         "experience": [{
             "title": "AI & Cloud Infrastructure Engineer",
-            "company": "KV Bits", "location": "Chicago, IL",
+            "company": "Acme Corp", "location": "Chicago, IL",
             "period": "June 2024 – Present",
             "bullets": [f"Bullet {i} describing a **quantified** outcome." for i in range(5)],
         }],
         "education": [{
-            "school": "Illinois Institute of Technology, Chicago, IL",
+            "school": "Example State University, Austin, TX",
             "degree": "MS, Computer and Information Systems", "gpa": "4.0",
             "graduation": "May 2025",
         }],

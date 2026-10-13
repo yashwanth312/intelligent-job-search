@@ -64,7 +64,7 @@ async def scrape_boards(
                 logger.warning(msg)
                 errors.append(msg)
 
-    async with aiohttp.ClientSession(headers=headers or {}) as session:
+    async with aiohttp.ClientSession(trust_env=True, headers=headers or {}) as session:
         await asyncio.gather(*[one(session, c) for c in companies])
 
     logger.info(

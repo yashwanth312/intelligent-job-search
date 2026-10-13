@@ -9,18 +9,24 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Callable
 
-from models.job import RawJob, ScreenedJob, ScreeningVerdict
+from models.job import RawJob, ScreenedJob
 from config import (
     SCREENING_BATCH_SIZE, SCREENING_MAX_WORKERS, CLAUDE_CLI,
     SPONSORSHIP_FILTER_ENABLED, STAGE2_MODEL, STAGE2_TIMEOUT,
-    STAGE2_THINKING_BUDGET_TOKENS,
+    STAGE2_THINKING_BUDGET_TOKENS, TARGET_LEVEL,
 )
 from generation.claude_cli import run_claude, extract_json
 from generation.portfolio import catalog_summary, load_portfolio, strip_top_level_keys
+from generation.project_scorer import ProjectScorer
+from generation.skill_taxonomy import label
 
 logger = logging.getLogger(__name__)
 
 PROMPT_PATH = Path(__file__).parent.parent / "prompts" / "screening.md"
+
+# Reasoning prefix for jobs Stage 2 could not score; rescreen.py's
+# FAILED_PREFIX must stay equal to it.
+UNSCORED_PREFIX = "Claude screening failed"
 
 # Split point: everything before this heading (profile + strategy + confidence
 # scale + sponsorship policy + output format) is constant for the whole run
@@ -42,7 +48,7 @@ _SPONSORSHIP_POLICY_ON = (
     "- If the job description explicitly states the company will NOT provide visa "
     "sponsorship (any phrasing: 'no sponsorship', 'will not sponsor', 'cannot sponsor', "
     "'must be authorized to work without sponsorship', 'sponsorship not available', etc.), "
-    "verdict MUST be SKIP regardless of other signals — treat as a hard disqualifier.\n"
+    "confidence MUST be 1 regardless of other signals — treat as a hard disqualifier.\n"
     "- If h1b_sponsor_verified is False but the JD does NOT explicitly deny sponsorship: "
     "reduce confidence by 1 (minimum 1). Do not add to risk_flags — "
     "sponsorship has its own sheet column."
@@ -50,8 +56,8 @@ _SPONSORSHIP_POLICY_ON = (
 _SPONSORSHIP_POLICY_OFF = (
     "- Sponsorship is NOT a scoring factor. The candidate is currently "
     "work-authorized and does not require sponsorship. Ignore "
-    "h1b_sponsor_verified entirely: do NOT reduce confidence, add risk flags, "
-    "or lower the verdict for sponsorship, visa, or \"no sponsorship\" "
+    "h1b_sponsor_verified entirely: do NOT reduce confidence or add risk "
+    "flags for sponsorship, visa, or \"no sponsorship\" "
     "language in the JD."
 )
 
@@ -60,6 +66,7 @@ class Stage2Screen:
         self.profile_path = profile_path
         self._profile: str | None = None
         self._system_prompt: str | None = None
+        self._scorer: ProjectScorer | None = None
 
     def validate_cli(self) -> None:
         """Raise RuntimeError if the Claude CLI binary cannot be located."""
@@ -91,7 +98,7 @@ class Stage2Screen:
         """
         if self._system_prompt is not None:
             return self._system_prompt
-        template = PROMPT_PATH.read_text()
+        template = PROMPT_PATH.read_text(encoding="utf-8")
         before, _rest = template.split(_JOBS_SECTION_START, 1)
         sponsorship_policy = (
             _SPONSORSHIP_POLICY_ON if SPONSORSHIP_FILTER_ENABLED
@@ -101,6 +108,7 @@ class Stage2Screen:
             before
             .replace("{{profile}}", self._load_profile())
             .replace("{{sponsorship_policy}}", sponsorship_policy)
+            .replace("{{target_level}}", TARGET_LEVEL)
             .replace("{{portfolio_catalog}}",
                      catalog_summary(load_portfolio(self.profile_path)) or "None")
         )
@@ -180,14 +188,14 @@ class Stage2Screen:
     def _map_batch_results(
         self, batch_num: int, batch: list[RawJob], batch_results: list[dict],
     ) -> list[ScreenedJob]:
-        """Map one batch's raw Claude results onto ScreenedJob, defaulting to
-        MAYBE for anything Claude didn't return. Pure function of one batch —
-        safe to call from any thread.
+        """Map one batch's raw Claude results onto ScreenedJob, leaving
+        unscored anything Claude didn't return (or returned without a usable
+        confidence). Pure function of one batch — safe to call from any thread.
         """
         # Key by the batch-position `index` Claude echoes back — robust to
         # any drift between our fingerprint string and what Claude returns
         # (whitespace/casing/truncation), which previously caused a
-        # handful of silent MAYBE-defaults per run. Fall back to matching
+        # handful of silent defaults per run. Fall back to matching
         # on fingerprint for any response that omits `index`.
         by_index = {
             r["index"]: r for r in batch_results
@@ -205,53 +213,39 @@ class Stage2Screen:
             logger.warning(
                 f"Stage 2 batch {batch_num + 1}: "
                 f"{len(batch) - len(missing)}/{len(batch)} returned — "
-                f"defaulting to MAYBE for: {titles}"
+                f"left unscored: {titles}"
             )
 
         screened_batch: list[ScreenedJob] = []
         for job in batch:
             result = result_map.get(job.fingerprint)
-            if result:
-                # Claude is asked for confidence 1-5 (see prompts/screening.md)
-                # but occasionally returns an out-of-range value (e.g. 0 for a
-                # "definitely not" case it doesn't have a scale point for).
-                # That's a real, informative verdict, not a parse failure --
-                # clamp it into range rather than letting ScreenedJob's
-                # validator reject the whole result and fall through to the
-                # except branch below, which used to mistake this for a
-                # screening failure and force verdict=APPLY on a job Claude
-                # was actively trying to reject.
-                raw_confidence = result.get("confidence", 3)
-                try:
-                    clamped_confidence = max(1, min(5, int(raw_confidence)))
-                except (TypeError, ValueError):
-                    clamped_confidence = 3
-                try:
-                    screened = ScreenedJob(
-                        **job.model_dump(),
-                        verdict=ScreeningVerdict(result["verdict"]),
-                        confidence=clamped_confidence,
-                        reasoning=(result.get("reasoning") or "")[:_MAX_REASONING_CHARS],
-                        match_signals=(result.get("match_signals") or [])[:_MAX_LIST_ITEMS],
-                        risk_flags=(result.get("risk_flags") or [])[:_MAX_LIST_ITEMS],
-                        suggested_angle=result.get("suggested_angle", ""),
-                        interview_likelihood=result.get("interview_likelihood"),
-                    )
-                    screened_batch.append(screened)
-                except Exception as e:
-                    # A result was returned but still didn't fit the schema
-                    # (e.g. an unrecognized verdict string) -- this is
-                    # genuinely ambiguous, so flag it for manual review rather
-                    # than assuming the job is worth applying to.
-                    logger.warning(f"Failed to create ScreenedJob for {job.fingerprint}: {e}")
-                    screened_batch.append(self._default_maybe(job))
-            else:
-                screened_batch.append(self._default_maybe(job))
+            confidence = self._confidence(result) if result else None
+            if confidence is None:
+                if result:
+                    logger.warning(f"Stage 2 returned no usable confidence for {job.fingerprint}")
+                screened_batch.append(self._unscored(job))
+                continue
+            try:
+                screened_batch.append(ScreenedJob(
+                    **job.model_dump(),
+                    confidence=confidence,
+                    reasoning=(result.get("reasoning") or "")[:_MAX_REASONING_CHARS],
+                    match_signals=(result.get("match_signals") or [])[:_MAX_LIST_ITEMS],
+                    risk_flags=(result.get("risk_flags") or [])[:_MAX_LIST_ITEMS],
+                    suggested_angle=result.get("suggested_angle", ""),
+                    interview_likelihood=result.get("interview_likelihood"),
+                ))
+            except Exception as e:
+                # A result came back but didn't fit the schema (e.g. an
+                # interview_likelihood outside 0-100) — leave it unscored for
+                # a rescreen rather than guess.
+                logger.warning(f"Failed to create ScreenedJob for {job.fingerprint}: {e}")
+                screened_batch.append(self._unscored(job))
 
         return screened_batch
 
     def _screen_one_batch(self, jobs: list[RawJob]) -> list[dict]:
-        template = PROMPT_PATH.read_text()
+        template = PROMPT_PATH.read_text(encoding="utf-8")
         _before, jobs_section = template.split(_JOBS_SECTION_START, 1)
 
         jobs_data = []
@@ -268,6 +262,7 @@ class Stage2Screen:
                 "salary_max": job.salary_max,
                 "source": job.source,
                 "h1b_sponsor_verified": job.h1b_sponsor_verified,
+                "resume_projects": self._resume_projects(job),
             })
 
         dynamic_prompt = (
@@ -283,6 +278,27 @@ class Stage2Screen:
             return []
         return self._parse_response(output)
 
+    def _resume_projects(self, job: RawJob) -> list[dict]:
+        """The 3 projects the resume generator will put on this job's resume.
+
+        Same deterministic scorer, title and full description that
+        ResumeEngine.select_projects uses, so Stage 2's score and angle refer
+        to the resume that will actually be sent. Built lazily and shared
+        across batch threads — selection is a pure function of its inputs.
+        """
+        if self._scorer is None:
+            self._scorer = ProjectScorer(load_portfolio(self.profile_path))
+        selection = self._scorer.select(job.title, job.description or "")
+        # No built/portfolio label: catalog projects are scored as built work
+        # (user decision 2026-10-03), so the model gets nothing to discount.
+        return [
+            {
+                "name": pick.project.name,
+                "covers": [label(s) for s in pick.matched],
+            }
+            for pick in selection.picks
+        ]
+
     def _parse_response(self, text: str) -> list[dict]:
         data = extract_json(text)
         if isinstance(data, list):
@@ -291,22 +307,30 @@ class Stage2Screen:
             logger.warning(f"Failed to parse Claude response as JSON: {(text or '')[:200]}")
         return []
 
-    def _default_apply(self, job: RawJob) -> ScreenedJob:
-        return ScreenedJob(
-            **job.model_dump(),
-            verdict=ScreeningVerdict.APPLY,
-            confidence=2,
-            reasoning="Claude screening failed — defaulting to APPLY for manual review",
-            suggested_angle="",
-            risk_flags=[],
-        )
+    @staticmethod
+    def _confidence(result: dict) -> int | None:
+        """Claude's 1-5 confidence, clamped; None if missing or non-numeric.
 
-    def _default_maybe(self, job: RawJob) -> ScreenedJob:
+        Out-of-range values (e.g. 0 for a "definitely not") are a real,
+        informative score and are clamped into range. A missing one is NOT
+        defaulted — it used to become 3, a silent mid-score on a job nobody
+        actually rated."""
+        raw = result.get("confidence")
+        if raw is None or isinstance(raw, bool):
+            return None
+        try:
+            return max(1, min(5, int(raw)))
+        except (TypeError, ValueError):
+            return None
+
+    def _unscored(self, job: RawJob) -> ScreenedJob:
+        """A job Stage 2 failed to score. The reasoning prefix is what
+        `rescreen.py --failed-only` matches on the Daily tab — the old
+        "Not returned in Claude screening batch" text never matched it."""
         return ScreenedJob(
             **job.model_dump(),
-            verdict=ScreeningVerdict.MAYBE,
-            confidence=2,
-            reasoning="Not returned in Claude screening batch — flagged for review",
+            confidence=None,
+            reasoning=f"{UNSCORED_PREFIX} — not scored; run `python rescreen.py --failed-only`",
             suggested_angle="",
             risk_flags=[],
         )
