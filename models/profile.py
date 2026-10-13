@@ -9,7 +9,7 @@ class PersonalInfo(BaseModel):
     email: str
     phone: str
     location: str
-    visa: str
+    visa: str = ""             # e.g. "F-1 OPT through 2028"; empty = never mention
     linkedin: str = ""
 
 
@@ -29,8 +29,10 @@ class Experience(BaseModel):
     company: str
     location: str
     period: str
-    framings: dict[str, dict]  # e.g. {"security": {"title": "...", "bullets": [...]}}
+    framings: dict[str, dict]  # e.g. {"backend": {"title": "...", "bullets": [...]}}
     raw_context: str = ""
+    locked_title: str = ""     # if set, the resume always uses this exact title
+    omit: bool = False         # True keeps the experience off every resume
 
 
 class ProjectSkills(BaseModel):

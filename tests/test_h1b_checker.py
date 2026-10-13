@@ -1,12 +1,10 @@
-"""Tests for H1B sponsor check — DB cache, normalization, scraping, check_batch."""
+"""Tests for H1B sponsor check — DB cache, normalization, LCA index lookup, check_batch."""
 from __future__ import annotations
 
 import asyncio
 import unittest
 from datetime import datetime, timedelta, timezone
-from unittest.mock import AsyncMock, MagicMock
 
-import aiohttp
 import pytest
 
 from db.database import Database
@@ -17,40 +15,6 @@ def _make_db() -> Database:
     db = Database(":memory:")
     db.initialize()
     return db
-
-
-def _mock_session(html_by_year: dict[int, str]):
-    """Return a mock aiohttp.ClientSession whose get() returns HTML keyed by year."""
-
-    def make_resp(html: str):
-        resp = MagicMock()
-        resp.text = AsyncMock(return_value=html)
-
-        # _scrape_year streams the body and stops as soon as a result row shows
-        # up, so the mock has to expose content.iter_chunked, not just text().
-        def iter_chunked(size: int):
-            async def gen():
-                data = html.encode()
-                for i in range(0, max(len(data), 1), size):
-                    yield data[i : i + size]
-            return gen()
-
-        resp.content.iter_chunked = iter_chunked
-        resp.__aenter__ = AsyncMock(return_value=resp)
-        resp.__aexit__ = AsyncMock(return_value=None)
-        return resp
-
-    def get(url, **kwargs):
-        for year, html in html_by_year.items():
-            if str(year) in url:
-                return make_resp(html)
-        return make_resp("<html></html>")
-
-    session = MagicMock()
-    session.get = get
-    session.__aenter__ = AsyncMock(return_value=session)
-    session.__aexit__ = AsyncMock(return_value=None)
-    return session
 
 
 def _make_job(company: str, source: str = "linkedin") -> RawJob:
@@ -145,229 +109,123 @@ class TestH1BCheckerNormalize(unittest.TestCase):
         assert H1BChecker._normalize("  Google  LLC  ") == "google"
 
 
-class TestH1BCheckerHasResults(unittest.TestCase):
-    def test_no_data_string_returns_false(self):
+def _index(*legal_names: str):
+    """A real LcaIndex holding the given legal filer names, as the build script would."""
+    from screening.h1b_checker import H1BChecker
+    from screening.lca_index import LcaIndex
+    return LcaIndex({H1BChecker.filer_key(n) for n in legal_names})
+
+
+def _checker(db, *legal_names: str):
+    from screening.h1b_checker import H1BChecker
+    return H1BChecker(db, index=_index(*legal_names))
+
+
+class TestH1BFilerKey(unittest.TestCase):
+    def test_legal_suffix_is_stripped(self):
         from screening.h1b_checker import H1BChecker
-        html = "<html><body><table><tbody>No data available in table</tbody></table></body></html>"
-        assert H1BChecker._has_results(html) is False
+        assert H1BChecker.filer_key("IBM Corporation") == "ibm"
+        assert H1BChecker.filer_key("MICROSOFT CORPORATION") == "microsoft"
 
-    def test_tbody_with_tr_returns_true(self):
+    def test_punctuation_and_spaces_are_dropped(self):
         from screening.h1b_checker import H1BChecker
-        html = "<html><body><table><tbody><tr><td>STRIPE INC</td></tr></tbody></table></body></html>"
-        assert H1BChecker._has_results(html) is True
+        assert H1BChecker.filer_key("JPMORGAN CHASE & CO.") == "jpmorganchase"
+        assert H1BChecker.filer_key("Amazon.com Services LLC") == "amazoncomservices"
 
-    def test_empty_tbody_returns_false(self):
+    def test_suffix_only_name_has_no_key(self):
         from screening.h1b_checker import H1BChecker
-        html = "<html><body><table><tbody></tbody></table></body></html>"
-        assert H1BChecker._has_results(html) is False
-
-
-class TestH1BCheckerScrape(unittest.TestCase):
-    def test_scrape_year_returns_true_when_rows(self):
-        from screening.h1b_checker import H1BChecker
-        html_with_rows = (
-            "<html><table><tbody><tr><td>STRIPE INC</td></tr></tbody></table></html>"
-        )
-        session = _mock_session({2025: html_with_rows})
-        checker = H1BChecker(_make_db())
-
-        result = asyncio.run(checker._scrape_year(session, "stripe", 2025))
-        assert result is True
-
-    def test_scrape_year_returns_false_when_no_data(self):
-        from screening.h1b_checker import H1BChecker
-        html_no_data = (
-            "<html><table><tbody>No data available in table</tbody></table></html>"
-        )
-        session = _mock_session({2025: html_no_data})
-        checker = H1BChecker(_make_db())
-
-        result = asyncio.run(checker._scrape_year(session, "noco", 2025))
-        assert result is False
-
-    def test_check_company_returns_true_if_current_year_has_data(self):
-        from screening.h1b_checker import H1BChecker
-        current_year = datetime.now(timezone.utc).year
-        html_rows = "<html><table><tbody><tr><td>X</td></tr></tbody></table></html>"
-        html_none = "<html><table><tbody>No data available in table</tbody></table></html>"
-        session = _mock_session({current_year: html_rows, current_year - 1: html_none})
-        checker = H1BChecker(_make_db())
-        sem = asyncio.Semaphore(3)
-
-        result = asyncio.run(checker._check_company(sem, session, "stripe", "Stripe"))
-        assert result is True
-
-    def test_check_company_returns_false_if_both_years_empty(self):
-        from screening.h1b_checker import H1BChecker
-        current_year = datetime.now(timezone.utc).year
-        html_none = "<html><table><tbody>No data available in table</tbody></table></html>"
-        session = _mock_session({current_year: html_none, current_year - 1: html_none})
-        checker = H1BChecker(_make_db())
-        sem = asyncio.Semaphore(3)
-
-        result = asyncio.run(checker._check_company(sem, session, "noco", "NoCo"))
-        assert result is False
-
-    def test_check_company_returns_none_on_exception(self):
-        from screening.h1b_checker import H1BChecker
-
-        async def boom(*args, **kwargs):
-            raise aiohttp.ClientError("network failure")
-
-        checker = H1BChecker(_make_db())
-        checker._scrape_year = boom
-        sem = asyncio.Semaphore(3)
-        session = MagicMock()
-
-        result = asyncio.run(checker._check_company(sem, session, "errco", "ErrCo"))
-        assert result is None
+        assert H1BChecker.filer_key("Inc.") == ""
 
 
 class TestH1BCheckerBatch(unittest.TestCase):
-    def test_curated_sources_are_skipped(self):
+    def test_sponsor_in_the_index_is_verified(self):
+        """2026-10-04: h1bdata.info answered "0 records" for Microsoft, IBM and
+        JPMorganChase, and all three were dropped as non-sponsors."""
+        db = _make_db()
+        checker = _checker(db, "MICROSOFT CORPORATION", "IBM Corporation",
+                           "JPMORGAN CHASE & CO.")
+        jobs = [_make_job("Microsoft"), _make_job("IBM"), _make_job("JPMorganChase")]
+
+        asyncio.run(checker.check_batch(jobs))
+
+        assert [j.h1b_sponsor_verified for j in jobs] == [True, True, True]
+
+    def test_company_missing_from_the_index_is_not_a_sponsor(self):
+        db = _make_db()
+        checker = _checker(db, "MICROSOFT CORPORATION")
+        job = _make_job("Ghost Staffing LLC")
+
+        asyncio.run(checker.check_batch([job]))
+
+        assert job.h1b_sponsor_verified is False
+        assert db.get_h1b_cache("ghost staffing") is False
+
+    def test_decorated_board_names_match_the_legal_filer(self):
+        db = _make_db()
+        checker = _checker(db, "Amazon Web Services, Inc.", "NVIDIA Corporation",
+                           "Stripe, Inc.")
+        jobs = [_make_job("Amazon Web Services (AWS)"), _make_job("NVIDIA AI"),
+                _make_job("Stripe")]
+
+        asyncio.run(checker.check_batch(jobs))
+
+        assert all(j.h1b_sponsor_verified is True for j in jobs)
+
+    def test_cached_negative_is_overruled_by_the_index(self):
+        """The h1bdata-era negatives are wrong for big sponsors; the index decides."""
+        db = _make_db()
+        db.set_h1b_cache("microsoft", "Microsoft", False)
+        checker = _checker(db, "MICROSOFT CORPORATION")
+        job = _make_job("Microsoft")
+
+        asyncio.run(checker.check_batch([job]))
+
+        assert job.h1b_sponsor_verified is True
+        assert db.get_h1b_cache("microsoft") is True
+
+    def test_without_an_index_unknown_companies_stay_unverified(self):
+        """No index means no evidence either way: keep the job, cache nothing."""
         from screening.h1b_checker import H1BChecker
-        checker = H1BChecker(_make_db())
+        db = _make_db()
+        db.set_h1b_cache("stripe", "Stripe", True)
+        db.set_h1b_cache("ghost staffing", "Ghost Staffing", False)
+        checker = H1BChecker(db, index=None)
+        known, ghost, new = (_make_job("Stripe"), _make_job("Ghost Staffing"),
+                             _make_job("BrandNewCo"))
+
+        asyncio.run(checker.check_batch([known, ghost, new]))
+
+        assert known.h1b_sponsor_verified is True
+        assert ghost.h1b_sponsor_verified is None
+        assert new.h1b_sponsor_verified is None
+        assert db.get_h1b_cache("brandnewco") is None
+
+    def test_board_sources_are_checked(self):
+        """Board ATS jobs were exempt until 2026-10-03, which let known
+        non-sponsors onto the Daily sheet. They now get the same check."""
+        checker = _checker(_make_db(), "Anthropic, PBC", "Weights & Biases, Inc.")
         jobs = [
             _make_job("Anthropic", source="greenhouse-anthropic"),
             _make_job("Scale AI", source="lever-scaleai"),
             _make_job("Weights & Biases", source="ashby-wandb"),
         ]
+
         asyncio.run(checker.check_batch(jobs))
-        for job in jobs:
-            assert job.h1b_sponsor_verified is None
 
-    def test_open_source_job_gets_verified_true(self):
-        from screening.h1b_checker import H1BChecker
-        from unittest.mock import patch
+        assert [j.h1b_sponsor_verified for j in jobs] == [True, False, True]
 
-        db = _make_db()
-        checker = H1BChecker(db)
-        job = _make_job("Stripe", source="linkedin")
+    def test_same_company_variants_share_one_verdict(self):
+        checker = _checker(_make_db(), "Stripe, Inc.")
+        jobs = [_make_job("Stripe", source="linkedin"),
+                _make_job("Stripe, Inc.", source="indeed")]
 
-        async def fake_check(sem, session, key, raw):
-            return True
+        asyncio.run(checker.check_batch(jobs))
 
-        with patch.object(checker, "_check_company", side_effect=fake_check):
-            asyncio.run(checker.check_batch([job]))
-
-        assert job.h1b_sponsor_verified is True
-
-    def test_open_source_job_gets_verified_false(self):
-        from screening.h1b_checker import H1BChecker
-        from unittest.mock import patch
-
-        db = _make_db()
-        checker = H1BChecker(db)
-        job = _make_job("TinyStartup", source="remoteok")
-
-        async def fake_check(sem, session, key, raw):
-            return False
-
-        with patch.object(checker, "_check_company", side_effect=fake_check):
-            asyncio.run(checker.check_batch([job]))
-
-        assert job.h1b_sponsor_verified is False
-
-    def test_error_result_leaves_field_none(self):
-        from screening.h1b_checker import H1BChecker
-        from unittest.mock import patch
-
-        db = _make_db()
-        checker = H1BChecker(db)
-        job = _make_job("ErrCo", source="hackernews")
-
-        async def fake_check(sem, session, key, raw):
-            return None
-
-        with patch.object(checker, "_check_company", side_effect=fake_check):
-            asyncio.run(checker.check_batch([job]))
-
-        assert job.h1b_sponsor_verified is None
-
-    def test_cache_hit_skips_scrape(self):
-        from screening.h1b_checker import H1BChecker
-        from unittest.mock import patch
-
-        db = _make_db()
-        db.set_h1b_cache("stripe", "Stripe", True)
-        checker = H1BChecker(db)
-        job = _make_job("Stripe", source="linkedin")
-
-        call_count = 0
-
-        async def fake_check(sem, session, key, raw):
-            nonlocal call_count
-            call_count += 1
-            return False
-
-        with patch.object(checker, "_check_company", side_effect=fake_check):
-            asyncio.run(checker.check_batch([job]))
-
-        assert call_count == 0
-        assert job.h1b_sponsor_verified is True
-
-    def test_same_company_deduplicated(self):
-        from screening.h1b_checker import H1BChecker
-        from unittest.mock import patch
-
-        db = _make_db()
-        checker = H1BChecker(db)
-        jobs = [
-            _make_job("Stripe", source="linkedin"),
-            _make_job("Stripe, Inc.", source="indeed"),
-        ]
-
-        call_count = 0
-
-        async def fake_check(sem, session, key, raw):
-            nonlocal call_count
-            call_count += 1
-            return True
-
-        with patch.object(checker, "_check_company", side_effect=fake_check):
-            asyncio.run(checker.check_batch(jobs))
-
-        assert call_count == 1
         assert all(j.h1b_sponsor_verified is True for j in jobs)
 
-    def test_verified_result_is_cached(self):
-        from screening.h1b_checker import H1BChecker
-        from unittest.mock import patch
-
-        db = _make_db()
-        checker = H1BChecker(db)
-        job = _make_job("Datadog", source="linkedin")
-
-        async def fake_check(sem, session, key, raw):
-            return False
-
-        with patch.object(checker, "_check_company", side_effect=fake_check):
-            asyncio.run(checker.check_batch([job]))
-
-        assert db.get_h1b_cache("datadog") is False
-
-    def test_none_result_is_not_cached(self):
-        from screening.h1b_checker import H1BChecker
-        from unittest.mock import patch
-
-        db = _make_db()
-        checker = H1BChecker(db)
-        job = _make_job("ErrCo", source="remoteok")
-
-        async def fake_check(sem, session, key, raw):
-            return None
-
-        with patch.object(checker, "_check_company", side_effect=fake_check):
-            asyncio.run(checker.check_batch([job]))
-
-        assert db.get_h1b_cache("errco") is None
-
     def test_empty_company_name_is_skipped(self):
-        from screening.h1b_checker import H1BChecker
-        from unittest.mock import patch
-
         db = _make_db()
-        checker = H1BChecker(db)
+        checker = _checker(db, "Inc. Holdings")
         # A job whose company normalizes to empty string (e.g., just "Inc.")
         job = RawJob(
             title="Cloud Engineer",
@@ -378,17 +236,8 @@ class TestH1BCheckerBatch(unittest.TestCase):
             description="We use AWS.",
         )
 
-        call_count = 0
+        asyncio.run(checker.check_batch([job]))
 
-        async def fake_check(sem, session, key, raw):
-            nonlocal call_count
-            call_count += 1
-            return True
-
-        with patch.object(checker, "_check_company", side_effect=fake_check):
-            asyncio.run(checker.check_batch([job]))
-
-        assert call_count == 0  # skipped — no meaningful key
         assert job.h1b_sponsor_verified is None  # left untouched
 
 
@@ -481,7 +330,7 @@ class TestH1BBrandInheritance(unittest.TestCase):
         assert checker._inherits_sponsor("jobs via dice") is False
 
     def test_single_token_name_never_inherits(self):
-        # "amazon" itself must be scraped, not inherit from its own cache row.
+        # "amazon" itself must be looked up, not inherit from its own cache row.
         checker = self._checker_with_keys({"amazon"})
         assert checker._inherits_sponsor("amazon") is False
 
@@ -491,25 +340,14 @@ class TestH1BBrandInheritance(unittest.TestCase):
         assert checker._inherits_sponsor("ibm consulting") is False
         assert checker._inherits_sponsor("talent groups") is False
 
-    def test_inheritance_skips_the_scrape_and_caches_the_result(self):
-        from screening.h1b_checker import H1BChecker
-        from unittest.mock import patch
-
+    def test_inheritance_caches_the_result(self):
         db = _make_db()
         db.set_h1b_cache("nvidia", "NVIDIA", True)
-        checker = H1BChecker(db)
+        checker = _checker(db)  # empty index: only inheritance can verify it
         job = _make_job("NVIDIA AI")
 
-        calls = []
+        asyncio.run(checker.check_batch([job]))
 
-        async def fake_check(sem, session, key, raw):
-            calls.append(key)
-            return False
-
-        with patch.object(checker, "_check_company", side_effect=fake_check):
-            asyncio.run(checker.check_batch([job]))
-
-        assert calls == []                       # never hit the network
         assert job.h1b_sponsor_verified is True
         assert db.get_h1b_cache("nvidia ai") is True
 
@@ -555,37 +393,17 @@ class TestH1BInheritanceBeatsStaleNegative(unittest.TestCase):
         was cached False, so every AWS posting was dropped even though "Amazon"
         was sitting in the same cache as a confirmed sponsor.
         """
-        from screening.h1b_checker import H1BChecker
-        from unittest.mock import patch
-
         db = _make_db()
         db.set_h1b_cache("amazon", "Amazon", True)
         db.set_h1b_cache("amazon web services", "Amazon Web Services (AWS)", False)
 
-        checker = H1BChecker(db)
+        checker = _checker(db)
         job = _make_job("Amazon Web Services (AWS)")
 
-        with patch.object(checker, "_check_company", side_effect=AssertionError("should not scrape")):
-            asyncio.run(checker.check_batch([job]))
+        asyncio.run(checker.check_batch([job]))
 
         assert job.h1b_sponsor_verified is True
         assert db.get_h1b_cache("amazon web services") is True
-
-    def test_cached_false_still_wins_for_unrelated_company(self):
-        from screening.h1b_checker import H1BChecker
-        from unittest.mock import patch
-
-        db = _make_db()
-        db.set_h1b_cache("amazon", "Amazon", True)
-        db.set_h1b_cache("ghost staffing", "Ghost Staffing LLC", False)
-
-        checker = H1BChecker(db)
-        job = _make_job("Ghost Staffing LLC")
-
-        with patch.object(checker, "_check_company", side_effect=AssertionError("should not scrape")):
-            asyncio.run(checker.check_batch([job]))
-
-        assert job.h1b_sponsor_verified is False
 
 
 class TestH1BInheritanceRequiresFullParentKey(unittest.TestCase):

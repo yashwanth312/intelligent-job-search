@@ -1,46 +1,41 @@
-"""H1B sponsor check via h1bdata.info — Phase 5 of the pipeline.
+"""H1B sponsor check against DOL LCA filings — Phase 5 of the pipeline.
 
-How h1bdata.info actually matches
----------------------------------
-The `em=` parameter is a PREFIX search over the legal employer name as it
-appears on the LCA filing, not a fuzzy or substring search. Verified by probe:
+Where the verdict comes from
+----------------------------
+screening/lca_index.LcaIndex: every employer (legal name and trade name) on a
+certified H-1B Labor Condition Application in the DOL disclosure files, built
+offline by scripts/build_lca_index.py. Until 2026-10-09 this module scraped
+h1bdata.info, which indexes the same filings; that site started answering
+"0 records found" for Microsoft, IBM and JPMorganChase, and a throttled page
+was indistinguishable from a real miss, so big sponsors were cached as
+non-sponsors and every one of their postings dropped.
 
-    em=amazon web services  -> AMAZON WEB SERVICES INC        (hit)
-    em=accenture            -> ACCENTURE INFRASTRUCTURE ...   (hit)
-    em=accenture federal    -> (no rows — no filer starts with that)
-    em=at t                 -> AT&T ... (hit; "&" must become a SPACE)
-    em=att                  -> (no rows)
-    em=amazoncom            -> AMAZONCOM SERVICES LLC         (hit; "." is DROPPED)
+Why the name handling below exists
+----------------------------------
+Job boards publish decorated company strings: "Amazon Web Services (AWS)",
+"NVIDIA AI", "Walmart Global Tech", "Hakkoda, an IBM Company". None of those
+is the legal filer name, so a single literal lookup misses and the employer is
+recorded as a non-sponsor. "Amazon Web Services (AWS)" alone accounted for
+3,139 dropped postings before the cleaning and query ladder were added. The
+lookup is a prefix match over compact keys (letters and digits only), so
+punctuation and spacing differences ("AT&T", "Amazon.com", "JPMorganChase")
+no longer matter.
 
-Two consequences drive this module's design:
-
-1. Job boards publish decorated company strings — "Amazon Web Services (AWS)",
-   "NVIDIA AI", "Walmart Global Tech", "Hakkoda, an IBM Company". None of those
-   is the prefix of any legal filer name, so a single literal query misses and
-   the employer is recorded as a non-sponsor. That one miss then drops every
-   posting from that company. "Amazon Web Services (AWS)" alone accounted for
-   3,139 dropped postings before this was fixed.
-
-2. Punctuation is not uniform: dots are dropped by h1bdata ("amazoncom") while
-   ampersands are spaces ("at t"). Normalizing all punctuation the same way
-   guarantees a miss on one class or the other, so both variants are tried.
-
-The filter is therefore deliberately asymmetric. A false negative silently and
-permanently removes an employer from the pipeline; a false positive costs one
-Stage 2 screen, which then rejects it anyway. Every ambiguity resolves toward
-KEEP.
+The filter is deliberately asymmetric. A false negative silently removes an
+employer from the pipeline; a false positive costs one Stage 2 screen, which
+then rejects it anyway. Every ambiguity resolves toward KEEP, and with no
+index on disk nothing is dropped at all.
 """
 from __future__ import annotations
 
-import asyncio
+import logging
 import re
-import urllib.parse
-from datetime import datetime, timezone
-
-import aiohttp
 
 from db.database import Database
 from models.job import RawJob
+from screening.lca_index import LcaIndex, compact
+
+logger = logging.getLogger(__name__)
 
 # Trailing legal-entity suffixes. Stripped only from the END of a name (possibly
 # repeated, e.g. "Foo Holdings Inc"), never mid-string — "Corporation Service
@@ -109,43 +104,35 @@ _UNSAFE_ROOTS = frozenset({
 _MIN_BARE_ROOT_LEN = 4
 _MIN_INHERIT_ROOT_LEN = 4
 
-# Direct-ATS boards skip the sponsor check entirely.
-#
-# The original reason was that the board list was hand-curated. That stopped
-# being true on 2026-09-13, when bulk discovery took it from 176 boards to
-# ~1,030. The exemption survives on measurement instead: sampling the company
-# names on both populations through this checker gives
-#
-#     auto-discovered boards   n=220   85.0% verified sponsors
-#     hand-curated boards      n=102   81.4% verified sponsors
-#
-# Statistically the same pool, so "curated" was never what made these safe.
-# Running the check here would remove ~15% of a small, high-quality pool, and a
-# good share of that 15% is name-matching artifact rather than a real
-# non-sponsor — short or generic company names ("Arch", "Fin", "Capital",
-# "Array", "Zip") cannot prefix-match a legal filer, and early-stage startups
-# have no filings yet whether or not they would sponsor.
-#
-# The filter earns its keep on the OTHER sources: of 89,836 all-time
-# stage_h1b drops, 87,134 (97%) were LinkedIn. That is what it is for — a
-# keyword search surfaces thousands of arbitrary employers, whereas a board
-# list is a set of companies chosen on purpose.
-_CURATED_PREFIXES = ("greenhouse-", "lever-", "ashby-")
-
-# Cap on bytes read per response. A hit on a large employer can be an 8 MB page,
-# but the results table starts within the first ~60 KB (a miss page is ~60 KB
-# in total), so reading past 1 MB only burns bandwidth.
-_MAX_READ_BYTES = 1_048_576
+# Direct-ATS boards (greenhouse-/lever-/ashby-) used to skip the sponsor check:
+# sampling showed ~85% of board companies were verified sponsors, so the
+# exemption was kept on measurement. Dropped 2026-10-03 at the user's call —
+# the other ~15% were reaching the Daily sheet as applications that could not
+# convert (10 known non-sponsors on 2026-10-02 alone). Boards are now checked
+# and dropped exactly like LinkedIn/Workday; short or generic names that can't
+# prefix-match a filer are the known false-negative risk, mitigated by the
+# 7-day negative TTL.
 
 # Bound on how many query forms are tried per company before concluding "no
-# filings". Each form costs one request per year checked.
+# filings". The broadest forms come last and are the likeliest false hits.
 _MAX_QUERY_FORMS = 4
 
 
+_LOAD_DEFAULT = object()
+
+
 class H1BChecker:
-    def __init__(self, db: Database) -> None:
+    def __init__(self, db: Database, index: "LcaIndex | None | object" = _LOAD_DEFAULT) -> None:
+        """`index` defaults to data/h1b_filers.txt. Pass None to run with no
+        index: then only cached and inherited sponsors are verified and every
+        other company is left unknown (kept)."""
         self._db = db
+        self._index = LcaIndex.load() if index is _LOAD_DEFAULT else index
         self._verified_keys: set[str] = set()
+
+    @property
+    def index(self) -> LcaIndex | None:
+        return self._index
 
     # ── name handling ─────────────────────────────────────
 
@@ -167,7 +154,7 @@ class H1BChecker:
     def _tokens(name: str, *, dots_as_space: bool) -> list[str]:
         """Lowercase a cleaned name into query tokens.
 
-        `dots_as_space` picks between h1bdata's two punctuation conventions:
+        `dots_as_space` picks between the two ways a filer name treats dots:
         dots dropped ("amazon.com" -> "amazoncom") or separated
         ("amazon.com" -> "amazon com"). Ampersands and slashes are always
         separators — "AT&T" only matches as "at t".
@@ -186,10 +173,19 @@ class H1BChecker:
         """Return a canonical cache key for a company name.
 
         Keyed on the cleaned name so that decorated variants of one employer
-        collapse onto a single cache entry instead of each being scraped and
+        collapse onto a single cache entry instead of each being looked up and
         dropped independently.
         """
         return " ".join(cls._tokens(cls._clean(company), dots_as_space=False))
+
+    @classmethod
+    def filer_key(cls, legal_name: str) -> str:
+        """Index key for a name as filed with DOL: normalized, then compacted.
+
+        Shared by scripts/build_lca_index.py and every lookup, so both sides
+        of a match are normalized the same way.
+        """
+        return compact(cls._normalize(legal_name))
 
     @classmethod
     def _query_forms(cls, company: str) -> list[str]:
@@ -256,145 +252,65 @@ class H1BChecker:
                 return True
         return False
 
-    # ── scraping ──────────────────────────────────────────
+    # ── lookup ────────────────────────────────────────────
 
-    @staticmethod
-    def _has_results(html: str) -> bool:
-        """Return True if the h1bdata.info HTML table contains at least one data row."""
-        if "no data available in table" in html.lower():
-            return False
-        return bool(re.search(r"<tbody[^>]*>\s*<tr", html, re.IGNORECASE))
+    def _lookup(self, company_key: str, company_raw: str) -> bool | None:
+        """Resolve one employer through the query ladder against the index.
 
-    async def _scrape_year(
-        self, session: aiohttp.ClientSession, company_key: str, year: int
-    ) -> bool:
-        url = (
-            "https://h1bdata.info/index.php"
-            f"?em={urllib.parse.quote_plus(company_key)}&job=&city=&year={year}"
-        )
-        async with session.get(url, timeout=aiohttp.ClientTimeout(total=25)) as resp:
-            # Read incrementally and stop as soon as the verdict is decidable —
-            # a positive hit on a large employer is an 8 MB page we don't need.
-            buf = bytearray()
-            async for chunk in resp.content.iter_chunked(65_536):
-                buf.extend(chunk)
-                if re.search(rb"<tbody[^>]*>\s*<tr", buf, re.IGNORECASE):
-                    return True
-                if len(buf) >= _MAX_READ_BYTES:
-                    break
-        return self._has_results(buf.decode("utf-8", errors="replace"))
-
-    async def _check_form(
-        self, session: aiohttp.ClientSession, form: str, years: tuple[int, ...]
-    ) -> bool | None:
-        """Return True on any hit, False if every year was a clean miss, None on error."""
-        results = await asyncio.gather(
-            *[self._scrape_year(session, form, y) for y in years],
-            return_exceptions=True,
-        )
-        if any(r is True for r in results):
-            return True
-        if any(isinstance(r, BaseException) for r in results):
-            return None
-        return False
-
-    async def _check_company(
-        self,
-        sem: asyncio.Semaphore,
-        session: aiohttp.ClientSession,
-        company_key: str,
-        company_raw: str,
-    ) -> bool | None:
-        """Resolve one employer through the query ladder.
-
-        Returns True on the first form that hits, None if every form that missed
-        also saw an error (inconclusive — the job is kept and nothing is cached),
-        and False only when at least one form came back as a clean, error-free
-        miss and no form hit.
+        True if any form matches a filer, False if none does, None when there
+        is no index to ask (unknown, so the job is kept).
         """
-        async with sem:
-            try:
-                year = datetime.now(timezone.utc).year
-                years = (year, year - 1)
-                saw_clean_miss = False
-                for form in self._query_forms(company_raw) or [company_key]:
-                    result = await self._check_form(session, form, years)
-                    if result is True:
-                        return True
-                    if result is False:
-                        saw_clean_miss = True
-                return False if saw_clean_miss else None
-            except Exception:
-                return None
+        if self._index is None:
+            return None
+        forms = self._query_forms(company_raw) or [company_key]
+        return any(self._index.matches(compact(form)) for form in forms)
 
     # ── batch entry point ─────────────────────────────────
 
     async def check_batch(self, jobs: list[RawJob]) -> None:
-        """Mutate h1b_sponsor_verified on open-source jobs in-place.
+        """Set h1b_sponsor_verified on every job in-place.
 
-        Curated sources (greenhouse-*, lever-*, ashby-*) are left as None.
-        Open-source jobs get True/False from cache, brand inheritance, or an
-        h1bdata.info query ladder. Error results (None) are not cached and leave
-        the field as None, so the job survives to Stage 2.
+        A cached True or an inherited parent brand verifies a company; anything
+        else is decided by the index. Cached negatives are never trusted on
+        their own: the h1bdata-era ones were wrong for big sponsors, and a
+        lookup is cheap enough to redo. Unknown (None) is never cached.
+
+        Still a coroutine so main._h1b_check_with_timeout can bound it, though
+        nothing in it waits on the network any more.
         """
-        open_jobs = [j for j in jobs if not j.source.startswith(_CURATED_PREFIXES)]
-        if not open_jobs:
-            return
-
         self._verified_keys = self._db.get_verified_sponsor_keys()
+        if self._index is None:
+            logger.warning(
+                "H-1B index missing (data/h1b_filers.txt) — no company can be "
+                "ruled out, so the no-sponsor drop is effectively off. Build it "
+                "with `python scripts/build_lca_index.py`."
+            )
 
         # Group by normalized company key; keep one raw name per key
         by_key: dict[str, list[RawJob]] = {}
         raw_name: dict[str, str] = {}
-        for job in open_jobs:
+        for job in jobs:
             key = self._normalize(job.company)
             if not key:
                 continue
             by_key.setdefault(key, []).append(job)
             raw_name.setdefault(key, job.company)
 
-        # Serve cache hits; collect misses
-        verified: dict[str, bool | None] = {}
-        misses: list[str] = []
-        for key in by_key:
-            hit = self._db.get_h1b_cache(key)
-            if hit is True:
-                verified[key] = True
+        for key, key_jobs in by_key.items():
+            if self._db.get_h1b_cache(key) is True:
+                verdict: bool | None = True
             elif self._inherits_sponsor(key):
-                # A decorated variant of a confirmed sponsor. Checked BEFORE a
-                # cached False is honoured: "this name's parent brand files
-                # H-1Bs" is stronger evidence than "a prefix query on the
-                # decorated string returned nothing", which is exactly how the
-                # bad negatives got written in the first place.
-                verified[key] = True
+                # A decorated variant of a confirmed sponsor. Checked BEFORE the
+                # index: "this name's parent brand files H-1Bs" is stronger
+                # evidence than a prefix lookup on the decorated string missing.
+                verdict = True
                 self._db.set_h1b_cache(key, raw_name[key], True)
-            elif hit is False:
-                verified[key] = False
             else:
-                misses.append(key)
-
-        # Scrape cache misses concurrently
-        if misses:
-            sem = asyncio.Semaphore(3)
-            async with aiohttp.ClientSession(
-                headers={"User-Agent": "Mozilla/5.0"},
-            ) as session:
-                results = await asyncio.gather(
-                    *[
-                        self._check_company(sem, session, key, raw_name[key])
-                        for key in misses
-                    ]
-                )
-            for key, result in zip(misses, results):
-                verified[key] = result
-                if result is not None:  # only cache definitive True/False
-                    self._db.set_h1b_cache(key, raw_name[key], result)
-
-        # Mutate jobs in-place
-        for key, job_list in by_key.items():
-            v = verified.get(key)
-            for job in job_list:
-                job.h1b_sponsor_verified = v
+                verdict = self._lookup(key, raw_name[key])
+                if verdict is not None:  # only cache definitive True/False
+                    self._db.set_h1b_cache(key, raw_name[key], verdict)
+            for job in key_jobs:
+                job.h1b_sponsor_verified = verdict
 
 
 # Sources where "no H-1B history" reliably means "won't sponsor".
@@ -404,16 +320,17 @@ class H1BChecker:
 _DROPPABLE_SOURCES = frozenset({"linkedin", "indeed", "google"})
 
 # Per-tenant adapters emit `source=f"{adapter}-{tenant}"`. Workday
-# tenants (e.g. "workday-broadcom") are big-company by construction.
-_DROPPABLE_PREFIXES = ("workday-",)
+# tenants (e.g. "workday-broadcom") are big-company by construction; board
+# ATS sources joined the drop bucket on 2026-10-03 (see the note above
+# H1BChecker).
+_DROPPABLE_PREFIXES = ("workday-", "greenhouse-", "lever-", "ashby-")
 
 
 def is_droppable_source(source: str) -> bool:
-    """Return True if a source belongs to the big-company drop bucket.
+    """Return True if a source belongs to the drop bucket.
 
-    Sources outside this set are either user-curated (greenhouse/lever/ashby
-    prefixes) or startup-heavy (hackernews, remoteok), where a missing
-    h1bdata.info record is uninformative.
+    Sources outside it are startup-heavy (hackernews, remoteok), where a
+    missing LCA record is uninformative.
     """
     if source in _DROPPABLE_SOURCES:
         return True

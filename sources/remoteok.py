@@ -22,7 +22,7 @@ class RemoteOKAdapter(SourceAdapter):
         errors: list[str] = []
 
         try:
-            async with aiohttp.ClientSession() as session:
+            async with aiohttp.ClientSession(trust_env=True, ) as session:
                 jobs = await self._fetch_jobs(session)
         except Exception as e:
             msg = f"RemoteOK: {e}"
@@ -33,7 +33,7 @@ class RemoteOKAdapter(SourceAdapter):
         return SourceResult(jobs=jobs, errors=errors)
 
     async def _fetch_jobs(self, session: aiohttp.ClientSession) -> list[RawJob]:
-        headers = {"User-Agent": "IntelligentJobSearch/1.0"}
+        headers = {"User-Agent": "intelligent_job_search/1.0"}
         async with session.get(REMOTEOK_API, headers=headers, timeout=aiohttp.ClientTimeout(total=30)) as resp:
             if resp.status != 200:
                 logger.warning(f"RemoteOK: HTTP {resp.status}")

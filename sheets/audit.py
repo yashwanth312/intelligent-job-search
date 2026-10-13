@@ -12,7 +12,10 @@ logger = logging.getLogger(__name__)
 
 
 def clear_and_write_headers(ws: gspread.Worksheet) -> None:
-    ws.clear()
+    # NOTE (2026-09-26): ws.clear() sends an empty-body POST that this
+    # network's proxy rejects with HTTP 411. batch_clear sends a JSON body
+    # and goes through fine - same effect here.
+    ws.batch_clear([f"A1:{gspread.utils.rowcol_to_a1(ws.row_count, ws.col_count)}"])
     ws.append_row(AUDIT_HEADERS)
 
 

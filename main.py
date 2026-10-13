@@ -26,15 +26,16 @@ import yaml
 from config import (
     TARGET_TITLES, LOCATIONS, DB_FILE,
     HOURS_OLD, STALE_JOB_DAYS,
-    SPONSORSHIP_FILTER_ENABLED,
+    SPONSORSHIP_FILTER_ENABLED, DAILY_MIN_CONFIDENCE, H1B_INDEX_STALE_DAYS,
     validate_required_config,
 )
 from db.database import Database
-from models.job import ScreenedJob, ScreeningVerdict
-from output.ui import PipelineUI, install_rich_logging
+from models.job import ScreenedJob
+from pipeline_ui import PipelineUI, install_rich_logging
 from screening.stage1 import FilterResult, Stage1Filter
 from screening.stage2 import Stage2Screen
 from screening.h1b_checker import H1BChecker, partition_drops
+from screening.lca_index import LcaIndex
 from sheets.client import SheetsClient
 from sheets import daily as daily_ops, audit as audit_ops
 from sheets.formatting import format_all_sheets
@@ -123,9 +124,25 @@ async def _h1b_check_with_timeout(checker: "H1BChecker", jobs: list, timeout: fl
         await asyncio.wait_for(checker.check_batch(jobs), timeout=timeout)
     except asyncio.TimeoutError:
         logger.warning(
-            f"H1B checker timed out after {timeout}s — "
-            "all jobs proceeding with h1b_sponsor_verified=None"
+            f"H1B checker timed out after {timeout}s — cached and finished "
+            "verdicts were applied; companies still in flight proceed with "
+            "h1b_sponsor_verified=None"
         )
+
+
+def _h1b_index_note(index: "LcaIndex | None", today: date) -> str:
+    """One-line provenance for the Phase 5 summary, so a missing or stale
+    index is visible in every run instead of silently weakening the drop."""
+    if index is None:
+        return "NO INDEX: nothing dropped"
+    note = f"index {len(index):,} employers, built {index.built}"
+    try:
+        age = (today - date.fromisoformat(index.built or "")).days
+    except ValueError:
+        return note
+    if age > H1B_INDEX_STALE_DAYS:
+        note += " · STALE: rebuild with scripts/build_lca_index.py"
+    return note
 
 
 async def _fetch_deferred_descriptions(
@@ -165,7 +182,7 @@ async def _fetch_deferred_descriptions(
         rejected.extend(newly_rejected)
         n_promoted = len(newly_passed)
         # Remove the now-described jobs from no_desc_passed so they don't
-        # double up as MAYBE in the Daily tab.
+        # double up as unscored rows in the Daily tab.
         filled_fps = {j.fingerprint for j in filled_jobs}
         no_desc_passed = [j for j in no_desc_passed if j.fingerprint not in filled_fps]
         # Move their descriptions back into desc_jobs so they get persisted.
@@ -174,11 +191,28 @@ async def _fetch_deferred_descriptions(
     return n_filled, n_promoted, no_desc_passed
 
 
+def _score_breakdown(jobs: list["ScreenedJob"]) -> str:
+    """'5: 3  ·  4: 12  ·  3: 20  ·  2: 9  ·  1: 40  ·  unscored: 1'"""
+    counts = {c: sum(1 for j in jobs if j.confidence == c) for c in range(5, 0, -1)}
+    parts = [f"{c}: {n}" for c, n in counts.items()]
+    unscored = sum(1 for j in jobs if j.confidence is None)
+    if unscored:
+        parts.append(f"unscored: {unscored}")
+    return "  ·  ".join(parts)
+
+
+def _audit_outcome(job: "ScreenedJob") -> str:
+    """screening_audit.verdict for a Stage 2 row: DAILY / REJECT / UNSCORED."""
+    if job.confidence is None:
+        return "UNSCORED"
+    return "DAILY" if daily_ops.belongs_on_daily(job) else "REJECT"
+
+
 def _dedup_daily_jobs(jobs: list["ScreenedJob"]) -> list["ScreenedJob"]:
     """Deduplicate Daily jobs by fingerprint, keeping the highest-confidence version."""
     seen: set[str] = set()
     result: list["ScreenedJob"] = []
-    for job in sorted(jobs, key=lambda j: j.confidence, reverse=True):
+    for job in sorted(jobs, key=lambda j: j.confidence or 0, reverse=True):
         if job.fingerprint not in seen:
             seen.add(job.fingerprint)
             result.append(job)
@@ -254,7 +288,7 @@ async def run_pipeline() -> None:
     # Queue any newly discovered Workday tenants for promotion review.
     # Discoveries don't go straight into the active scrape list — they wait
     # in workday_candidates.yaml until promote_workday_candidates.py validates
-    # them against h1bdata.info + a live Workday API ping.
+    # them for domain relevance + a live Workday API ping.
     new_wd_queued, new_wd_repeats = save_candidates(
         li_adapter.discovered_workday_companies,
     )
@@ -275,16 +309,12 @@ async def run_pipeline() -> None:
     sponsor_dropped = []
     if not SPONSORSHIP_FILTER_ENABLED:
         # Candidate is work-authorized and does not need sponsorship yet, so
-        # the slow h1bdata.info scrape AND the no-history drop are both skipped.
+        # the sponsor lookup AND the no-history drop are both skipped.
         # Flip config.SPONSORSHIP_FILTER_ENABLED to re-enable. See config.py.
         ui.phase_done("filter OFF — skipped (work-authorized; reclaims scrape time)")
     else:
         checker = H1BChecker(db)
         await _h1b_check_with_timeout(checker, unique_jobs)
-        n_curated = sum(
-            1 for j in unique_jobs
-            if j.source.startswith(("greenhouse-", "lever-", "ashby-"))
-        )
         n_verified = sum(1 for j in unique_jobs if j.h1b_sponsor_verified is True)
         sponsor_kept, sponsor_dropped = partition_drops(unique_jobs)
         n_checked = sum(1 for j in unique_jobs if j.h1b_sponsor_verified is not None)
@@ -327,14 +357,14 @@ async def run_pipeline() -> None:
             f"{n_checked} checked  ·  {n_verified} verified  ·  "
             f"{len(sponsor_dropped)} no-history dropped  ·  "
             f"{n_no_history_kept} no-history kept (startup-friendly)  ·  "
-            f"{n_curated} curated skipped"
+            f"{_h1b_index_note(checker.index, date.today())}"
         )
 
     # Partition jobs by whether they arrived with descriptions. Sources that
     # return descriptions inline (Greenhouse/Lever/Ashby/HN/RemoteOK + LinkedIn
     # with fetch_description=True) feed the full Stage 1 filter. Sources that
     # don't (Workday) get a title-only Stage 1 pass and surface in Daily as
-    # MAYBE for manual review. The previous bulk URL-backfill phase was removed
+    # unscored rows for manual review. The previous bulk URL-backfill phase was removed
     # 2026-04-29 — fill rate was ~2% and it dominated runtime.
     desc_jobs = [j for j in unique_jobs if j.description and j.description.strip()]
     no_desc_jobs = [j for j in unique_jobs if not (j.description and j.description.strip())]
@@ -431,10 +461,7 @@ async def run_pipeline() -> None:
         with ui.progress(f"Screening {len(passed_jobs)} jobs", total=num_batches) as advance:
             screened_jobs = stage2.screen_batch(passed_jobs, on_progress=advance)
 
-        apply_n = sum(1 for j in screened_jobs if j.verdict == ScreeningVerdict.APPLY)
-        maybe_n = sum(1 for j in screened_jobs if j.verdict == ScreeningVerdict.MAYBE)
-        skip_n = sum(1 for j in screened_jobs if j.verdict == ScreeningVerdict.SKIP)
-        ui.phase_done(f"APPLY {apply_n}  ·  MAYBE {maybe_n}  ·  SKIP {skip_n}")
+        ui.phase_done(_score_breakdown(screened_jobs))
 
     stage2_audit = [
         {
@@ -443,7 +470,8 @@ async def run_pipeline() -> None:
             "title": j.title,
             "source": j.source,
             "stage": "stage2_claude",
-            "verdict": j.verdict.value,
+            # Routing, not a screening verdict: did it clear the Daily cutoff?
+            "verdict": _audit_outcome(j),
             "reason": j.reasoning,
             "confidence": j.confidence,
             "run_date": today_str,
@@ -455,15 +483,11 @@ async def run_pipeline() -> None:
 
     # ── Phase 9: Write Daily + Audit tabs ────────────────────
     ui.phase(9, "Writing Daily + Audit tabs")
-    daily_jobs = [
-        j for j in screened_jobs
-        if j.verdict in (ScreeningVerdict.APPLY, ScreeningVerdict.MAYBE)
-    ]
+    daily_jobs = [j for j in screened_jobs if daily_ops.belongs_on_daily(j)]
     for job in no_desc_passed:
         daily_jobs.append(ScreenedJob(
             **job.model_dump(),
-            verdict=ScreeningVerdict.MAYBE,
-            confidence=1,
+            confidence=None,
             reasoning="No JD available — review link manually",
             match_signals=[],
             risk_flags=["no_description"],
@@ -473,29 +497,25 @@ async def run_pipeline() -> None:
     daily_ops.write_screened_jobs(daily_ws, daily_jobs)
 
     audit_ops.write_rejections(audit_ws, rejected)
-    stage2_skips = [
-        type("FilterResult", (), {
-            "job": j, "stage": "stage2_claude",
-            "reason": j.reasoning, "passed": False,
-        })()
-        for j in screened_jobs if j.verdict == ScreeningVerdict.SKIP
+    below_cutoff = [
+        FilterResult(
+            job=j, passed=False, stage="stage2_claude",
+            reason=f"Confidence {j.confidence}/5 (Daily needs {DAILY_MIN_CONFIDENCE}+): {j.reasoning}",
+        )
+        for j in screened_jobs if not daily_ops.belongs_on_daily(j)
     ]
-    if stage2_skips:
-        audit_ops.write_rejections(audit_ws, stage2_skips)
-    ui.phase_done(f"{len(daily_jobs)} to Daily  ·  {len(rejected) + len(stage2_skips)} to Audit")
+    if below_cutoff:
+        audit_ops.write_rejections(audit_ws, below_cutoff)
+    ui.phase_done(f"{len(daily_jobs)} to Daily  ·  {len(rejected) + len(below_cutoff)} to Audit")
 
     # ── Final summary panel ──────────────────────────────────
-    apply_count = sum(1 for j in screened_jobs if j.verdict == ScreeningVerdict.APPLY)
-    maybe_count = sum(1 for j in screened_jobs if j.verdict == ScreeningVerdict.MAYBE)
-    skip_count = sum(1 for j in screened_jobs if j.verdict == ScreeningVerdict.SKIP)
-
     top: tuple[str, int] | None = None
-    apply_jobs_sorted = sorted(
-        (j for j in screened_jobs if j.verdict == ScreeningVerdict.APPLY),
-        key=lambda j: j.confidence, reverse=True,
+    scored = sorted(
+        (j for j in screened_jobs if j.confidence is not None),
+        key=lambda j: (j.confidence, j.interview_likelihood or 0), reverse=True,
     )
-    if apply_jobs_sorted:
-        best = apply_jobs_sorted[0]
+    if scored:
+        best = scored[0]
         top = (f"{best.company} — {best.title}", best.confidence)
 
     stats = {
@@ -512,9 +532,8 @@ async def run_pipeline() -> None:
         "Stage 1 rejected": len(desc_rejected),
         "No-desc title-passed": len(no_desc_passed),
         # ── Stage 2 ────────────────────────────────────────────
-        "Stage 2 APPLY": apply_count,
-        "Stage 2 MAYBE": maybe_count,
-        "Stage 2 SKIP": skip_count,
+        "Stage 2 scores": _score_breakdown(screened_jobs),
+        f"Below cutoff (< {DAILY_MIN_CONFIDENCE}) -> Audit": len(below_cutoff),
         # ── Output ─────────────────────────────────────────────
         "Written to Daily": len(daily_jobs),
     }

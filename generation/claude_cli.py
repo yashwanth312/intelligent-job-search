@@ -56,6 +56,18 @@ logger = logging.getLogger(__name__)
 
 _EMPTY_MCP_CONFIG = '{"mcpServers":{}}'  # --strict-mcp-config + this => no MCP servers loaded
 
+# Pipeline calls run with this repo as cwd, so by default each one also loaded
+# the interactive agent's context: project CLAUDE.md + auto-memory, user
+# plugins' SessionStart hooks and the skills listing — none of which a
+# screening/generation call uses. Measured 2026-10-03 with a custom system
+# prompt: 5,613 -> 2,128 input tokens per call. --no-session-persistence also
+# stops every call writing a transcript into ~/.claude/projects (~730 of them).
+_ISOLATION_FLAGS = (
+    "--setting-sources", "",
+    "--disable-slash-commands",
+    "--no-session-persistence",
+)
+
 
 def _kill_tree(proc: "subprocess.Popen") -> None:
     """Kill the CLI process and its entire child subtree.
@@ -176,6 +188,7 @@ def run_claude(
         CLAUDE_CLI, "-p", "--output-format", "json", "--model", model,
         "--strict-mcp-config", "--mcp-config", _EMPTY_MCP_CONFIG,
         "--tools", "",
+        *_ISOLATION_FLAGS,
     ]
 
     for attempt in range(1, retries + 2):  # 1 initial try + `retries` retries
@@ -219,6 +232,11 @@ def run_claude(
                     continue
 
             if proc.returncode != 0:
+                # On an API-side rejection (usage limit, outage) the envelope's
+                # `result` says why, but sits past the 300-char stdout cut.
+                reason, _ = _parse_envelope(stdout or "")
+                if reason and reason != stdout:
+                    logger.error(f"{label} failed: {reason[:300]!r}")
                 logger.error(
                     f"{label} error (rc={proc.returncode}): "
                     f"stderr={(stderr or '')[:500]!r}  stdout={(stdout or '')[:300]!r}"

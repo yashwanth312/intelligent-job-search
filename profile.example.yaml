@@ -1,0 +1,173 @@
+# ============================================================================
+#  profile.example.yaml  —  copy to profile.yaml and replace EVERYTHING below.
+#
+#      cp profile.example.yaml profile.yaml        (macOS / Linux / Git Bash)
+#      copy profile.example.yaml profile.yaml      (Windows cmd)
+#
+#  profile.yaml is your "vault": the single source of truth that Stage 2
+#  screening and resume/cover-letter generation read. It is gitignored, so it
+#  never leaves your machine. The names, companies and numbers below are
+#  fictional placeholders — Claude is told to use ONLY facts found in this
+#  file, so anything vague or missing here cannot appear on your resume.
+#
+#  Validate your edits any time with:   python scripts/check_setup.py
+#  Full field-by-field guide:           README.md → "Write your profile.yaml"
+# ============================================================================
+
+# ── personal ────────────────────────────────────────────────────────────────
+# name / email / phone / location are printed in the resume header.
+# `location` is copied verbatim onto every resume (never the job's city).
+# `visa` is OPTIONAL: if non-empty, cover letters end with one neutral
+# sentence stating it. Leave it "" if you do not want work authorization
+# mentioned (e.g. you are a citizen), and nothing visa-related is written.
+personal:
+  name: "Jane Doe"
+  email: "jane.doe@example.com"
+  phone: "+1 (555) 010-0199"
+  location: "Austin, TX"
+  visa: ""                       # e.g. "F-1 OPT through June 2028"
+  linkedin: "linkedin.com/in/janedoe"
+
+# ── education ───────────────────────────────────────────────────────────────
+# Copied verbatim. Omit `gpa` (or leave "") to hide it.
+education:
+  - school: "Example State University, Austin, TX"
+    degree: "B.S. in Computer Science"
+    gpa: "3.7"
+    graduation: "May 2023"
+
+# ── experiences ─────────────────────────────────────────────────────────────
+# Every experience here appears on every resume (total years of experience is
+# an ATS signal) unless you set `omit: true`.
+#
+# `framings` are alternative ways to present the SAME job. Name each key after
+# the kind of role it suits (backend, devops, data, ...). For each job the
+# generator picks the framing whose bullets best match the posting, so write
+# 1–2 framings per experience; a single framing is fine.
+#
+# `raw_context` is free text Claude may mine for fresh bullets: tools used,
+# scale, outcomes, numbers. The more concrete it is (real metrics!), the
+# better the bullets. Claude is forbidden from inventing metrics, so a number
+# not written here cannot appear.
+#
+# `locked_title` (optional) forces this exact job title on every resume. Use
+# it when your real title differs from the framing titles and recruiters will
+# cross-check it on LinkedIn.
+experiences:
+  - company: "Acme Corp"
+    location: "Austin, TX"
+    period: "June 2023 – Present"
+    locked_title: "Software Engineer"
+    framings:
+      backend:
+        title: "Software Engineer"
+        bullets:
+          - "Built and maintained REST APIs in Python/FastAPI serving 1.2M requests/day with p95 latency under 120 ms."
+          - "Cut a slow reporting query from 40 s to 3 s by adding PostgreSQL indexes and a Redis cache."
+          - "Wrote the pytest suite (85% coverage) and GitHub Actions pipeline that gates every merge."
+      devops:
+        title: "Software Engineer (Platform)"
+        bullets:
+          - "Containerized 6 services with Docker and moved deploys from manual SSH to a GitHub Actions pipeline, cutting release time from 2 hours to 15 minutes."
+          - "Provisioned AWS infrastructure (ECS, RDS, S3) with Terraform, replacing click-ops and making environments reproducible."
+          - "Added Prometheus/Grafana dashboards and alerts that reduced mean time to detect incidents from 30 to 5 minutes."
+    raw_context: >
+      Team of 5 building an internal analytics platform. Stack: Python, FastAPI,
+      PostgreSQL, Redis, Docker, Terraform, AWS (ECS, RDS, S3), GitHub Actions,
+      Prometheus, Grafana. I owned the API layer and the CI/CD pipeline. Traffic
+      averaged 1.2M requests/day. Release time dropped from 2 hours to 15
+      minutes after the pipeline rewrite.
+
+  - company: "Example Labs"
+    location: "Remote"
+    period: "Jan 2022 – May 2023"
+    framings:
+      data:
+        title: "Data Engineering Intern"
+        bullets:
+          - "Built an Airflow DAG that loaded 4 source systems into BigQuery nightly, replacing a manual CSV process."
+          - "Wrote dbt models and tests that caught schema drift before it reached dashboards."
+    raw_context: >
+      Part-time internship alongside coursework. Airflow, BigQuery, dbt, Python.
+      Nightly load of ~2 GB across 4 sources.
+
+# ── projects ────────────────────────────────────────────────────────────────
+# BUILT work, used as resume projects. For every job the pipeline scores your
+# projects against the posting's skills (no Claude call, deterministic) and
+# puts only the best 3 on that resume — so list more than 3 if you have them.
+#
+# `skills` tags use the keys in generation/skill_taxonomy.py (run
+#   python -c "from generation.skill_taxonomy import SKILLS; print(sorted(SKILLS))"
+# to list them). Put each project's strongest skills in `core`, secondary ones
+# in `supporting`, and passing mentions in `touch`. Core tags weigh the most.
+# Untagged projects can still be chosen but score poorly, so tag them.
+projects:
+  - id: "taskflow"                 # optional; derived from `name` if omitted
+    name: "TaskFlow"
+    raw_context: >
+      Self-hosted task queue and dashboard. Python workers consume jobs from
+      Redis, results land in PostgreSQL, and a small React dashboard shows
+      queue depth. Runs on Docker Compose with GitHub Actions CI. Handles
+      ~500 jobs/minute on a single 2-vCPU VM in load tests.
+    skills:
+      core: [python, docker, rest_api]
+      supporting: [sql, cicd, github_actions]
+      touch: [linux]
+    framings:
+      backend:
+        bullets:
+          - "Built a Redis-backed job queue in Python handling ~500 jobs/minute on a 2-vCPU VM."
+          - "Containerized the stack with Docker Compose and added a GitHub Actions pipeline running tests on every push."
+
+  - id: "cloudwatchdog"
+    name: "CloudWatchDog"
+    raw_context: >
+      Terraform module and Python Lambda that stops forgotten EC2 instances
+      outside business hours and posts a daily cost summary to Slack. Cut the
+      author's sandbox AWS bill by ~35%.
+    skills:
+      core: [aws, terraform, lambda_serverless]
+      supporting: [python, finops]
+      touch: []
+    framings:
+      devops:
+        bullets:
+          - "Wrote a Terraform module and Python Lambda that stops idle EC2 instances after hours, cutting sandbox AWS spend ~35%."
+
+# ── portfolio_catalog (optional) ────────────────────────────────────────────
+# Advanced: planned/aspirational projects described in markdown spec files so
+# the generator can also draw from them. Leave as [] to ignore. See README.md →
+# "Optional: portfolio catalog". Each entry is {id, name, spec: path-to-md}.
+portfolio_catalog: []
+
+# ── certifications ──────────────────────────────────────────────────────────
+# Up to 3 are chosen per resume, preferring Active ones. Copied verbatim —
+# never invent credential IDs or dates. Delete the section if you have none.
+certifications:
+  - name: "AWS Certified Cloud Practitioner"
+    issuer: "Amazon Web Services"
+    status: "Active"
+    credential_id: "ABC123XYZ"     # optional
+    issued: "03/15/2024"
+    expires: "03/15/2027"
+
+# ── training ────────────────────────────────────────────────────────────────
+# Courses / bootcamps. Shown only where relevant.
+training:
+  - "HashiCorp Terraform Associate prep course (Udemy, 2024)"
+
+# ── skills ──────────────────────────────────────────────────────────────────
+# Your master skills list, grouped however you like. The generator re-names and
+# re-orders categories per job, using only items listed here.
+skills:
+  Languages: [Python, SQL, JavaScript, Bash]
+  Cloud & DevOps: [AWS, Docker, Terraform, GitHub Actions, Linux]
+  Data & Backend: [FastAPI, PostgreSQL, Redis, Airflow, dbt]
+  Observability: [Prometheus, Grafana]
+
+# ── publications (optional) ─────────────────────────────────────────────────
+# Delete the section entirely if you have none (do not leave an empty list).
+# publications:
+#   - title: "Paper title"
+#     venue: "Conference or journal"
+#     description: "One sentence."

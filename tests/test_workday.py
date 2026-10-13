@@ -75,7 +75,7 @@ class TestWorkdayAdapter:
             "total": 25,
             "jobPostings": [
                 {"title": "Cloud Engineer", "externalPath": f"job/x_JR{i:03d}",
-                 "locationsText": "Remote", "postedOn": "2026-04-25"}
+                 "locationsText": "Remote", "postedOn": "Posted Today"}
                 for i in range(20)
             ],
         })
@@ -83,7 +83,7 @@ class TestWorkdayAdapter:
             "total": 25,
             "jobPostings": [
                 {"title": "Cloud Engineer", "externalPath": f"job/x_JR{i:03d}",
-                 "locationsText": "Remote", "postedOn": "2026-04-25"}
+                 "locationsText": "Remote", "postedOn": "Posted Today"}
                 for i in range(20, 25)
             ],
         })
@@ -109,7 +109,7 @@ class TestWorkdayAdapter:
             "total": 1,
             "jobPostings": [{
                 "title": "Cloud Engineer", "externalPath": "job/x_JR1",
-                "locationsText": "Remote", "postedOn": "2026-04-25",
+                "locationsText": "Remote", "postedOn": "Posted Today",
             }],
         })
         mock_session = MagicMock()
@@ -165,7 +165,7 @@ class TestWorkdayAdapter:
                 "title": "Cloud Engineer",
                 "externalPath": "job/Redmond-WA/Cloud-Engineer_JR12345",
                 "locationsText": "Redmond, Washington",
-                "postedOn": "2026-04-25",
+                "postedOn": "Posted Today",
             }],
         })
         mock_session = MagicMock()
@@ -269,3 +269,26 @@ class TestParseWorkdayRelative:
         # an actual ISO date isn't one of Workday's real formats and should
         # fall through to None (safe-stale), not be silently accepted.
         assert parse_workday_relative("2026-04-25") is None
+
+
+@pytest.mark.asyncio
+async def test_stale_and_undated_postings_are_dropped_at_parse_time():
+    adapter = WorkdayAdapter(companies=[COMPANY])
+    resp = _mock_resp(200, {
+        "total": 3,
+        "jobPostings": [
+            {"title": "Cloud Engineer", "externalPath": "job/x_JR1",
+             "locationsText": "Remote", "postedOn": "Posted Today"},
+            {"title": "Cloud Engineer", "externalPath": "job/x_JR2",
+             "locationsText": "Remote", "postedOn": "Posted 30+ Days Ago"},
+            {"title": "Cloud Engineer", "externalPath": "job/x_JR3",
+             "locationsText": "Remote"},
+        ],
+    })
+    mock_session = MagicMock()
+    mock_session.post = MagicMock(return_value=AsyncCM(resp))
+
+    with patch("asyncio.sleep"):
+        jobs, _ = await adapter._scrape_company(mock_session, COMPANY, ["Cloud Engineer"])
+
+    assert [j.url.rsplit("/", 1)[-1] for j in jobs] == ["x_JR1"]

@@ -37,7 +37,7 @@ def add_job(
         cover_letter_link,  # Cover Letter Link
         job.url,            # Apply Link
         angle_used,         # Angle Used
-        job.confidence,     # Screen Confidence
+        job.confidence if job.confidence is not None else "",  # Screen Confidence
         job.source,         # Source
         status,             # Status
         notes,              # Notes

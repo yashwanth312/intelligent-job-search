@@ -10,7 +10,7 @@ from generation.portfolio import (
 from generation.project_scorer import ProjectScorer, _line_weights
 from generation.skill_taxonomy import SKILLS, extract
 
-SPECS = Path(__file__).resolve().parent.parent / "docs" / "projects"
+SPECS = Path(__file__).resolve().parent.parent / "examples" / "portfolio_catalog"
 
 
 @pytest.fixture(scope="module")
@@ -24,7 +24,7 @@ def profile_path(tmp_path_factory):
     data = {
         "personal": {"name": "Test Candidate", "location": "Chicago, IL"},
         "projects": [{
-            "name": "Intelligent Job Search", "id": "intelligent-job-search",
+            "name": "Sample Pipeline Project", "id": "sample-pipeline-project",
             "raw_context": "Async job ingestion pipeline with LLM screening.",
             "framings": {"devops": {"bullets": ["Built an async ingestion pipeline."]}},
             "skills": {"core": ["python", "llm", "data_pipeline", "sql"],
@@ -110,7 +110,7 @@ class TestPortfolio:
     def test_catalog_summary_lists_only_catalog_projects(self, pool):
         summary = catalog_summary(pool)
         assert "HybridID" in summary
-        assert "DiaSense AI" not in summary
+        assert "Sample Project" not in summary
         assert len(summary.splitlines()) == 15
 
 

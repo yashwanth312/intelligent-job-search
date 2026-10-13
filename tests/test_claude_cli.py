@@ -101,6 +101,16 @@ class TestRunClaudeCliConstruction:
         assert cmd[cmd.index("--tools") + 1] == ""
         assert "--disallowedTools" not in cmd
 
+    def test_isolates_call_from_interactive_agent_context(self):
+        with patch("generation.claude_cli.subprocess.Popen") as mock_popen:
+            mock_popen.return_value = _mock_popen({"result": "ok", "is_error": False})
+            run_claude("hi", model="m", timeout=5)
+
+        cmd = mock_popen.call_args.args[0]
+        assert cmd[cmd.index("--setting-sources") + 1] == ""
+        assert "--disable-slash-commands" in cmd
+        assert "--no-session-persistence" in cmd
+
     def test_disable_thinking_sets_max_thinking_tokens_env(self):
         with patch("generation.claude_cli.subprocess.Popen") as mock_popen:
             mock_popen.return_value = _mock_popen({"result": "ok", "is_error": False})

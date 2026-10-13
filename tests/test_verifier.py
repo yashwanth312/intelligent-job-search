@@ -61,13 +61,13 @@ class TestFormatFeedback:
         vr = {
             "interview_likelihood": 62,
             "gaps": ["No evidence of Kubernetes in production"],
-            "fixes": ["Lead skills with Kubernetes + EKS, back it with the DiaSense bullet"],
+            "fixes": ["Lead skills with Kubernetes + EKS, back it with the Sample bullet"],
             "red_flags": ["Summary names the company"],
         }
         fb = format_feedback(vr)
         assert "62/100" in fb
         assert "Kubernetes in production" in fb
-        assert "DiaSense" in fb
+        assert "Sample" in fb
         assert "names the company" in fb
 
     def test_empty_sections_omitted(self):

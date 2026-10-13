@@ -31,20 +31,12 @@ If the section above contains feedback (not "None"), you are REVISING a previous
 
 ## LOCKED CONSTANTS — read-only, never vary
 
-These values are locked because recruiters cross-check the resume against LinkedIn within 10 seconds. Any mismatch reads as misrepresentation and causes immediate rejection. Treat every value below as immutable.
+Recruiters cross-check a resume against LinkedIn within seconds; any mismatch reads as misrepresentation. Everything below comes from the candidate profile above and must be copied exactly:
 
-**KV Bits job title:** Always `AI & Cloud Infrastructure Engineer` — this is the candidate's LinkedIn title and must match exactly. Do NOT change it to "Junior Software Engineer", "AI Solutions Engineer", "Junior DevOps Engineer", "Junior Infrastructure Engineer", or any framing variant, for any role family, for any reason. To target a specific role, re-weight the summary and bullets underneath the locked title — never the title itself.
-
-**Canonical metrics — use these exact numbers everywhere, never variants:**
-- DiaSense AI accuracy: **85%** (never 78% or 88%)
-- Texas Instruments savings: **$75,000/year**
-- KV Bits infra: **40%** faster deployments, **90%** less manual setup, **15%** lower monthly cloud spend
-- DiaSense Docker Hub: **650+** downloads; concurrent users: **2,500**
-- Ocklet: **100+** concurrent calls (webhook traffic the infrastructure supports). NEVER claim <1s answer latency or 10+ languages — those are ElevenLabs platform metrics, not the candidate's work.
-- Ocklet per-PR ephemeral environments: setup cut from **~1 hour** to **1–2 minutes**
-- AI Email Triage: **200+** emails/week, **200–300** JIRA tickets/month, **30+** engineer-hours/month saved, **20-person** support team
-
-**Canonical project names:** use the exact `### <name>` string of each project in the Selected Projects section, never reworded.
+- **Job titles:** If an experience has a `locked_title` field, that string is the title in the output, for every role family and every framing. Re-weight the summary and bullets to target a role — never the title. If there is no `locked_title`, use the title from the chosen framing.
+- **Metrics:** Every number (percentages, dollar amounts, counts, durations) must appear in the profile's bullets or `raw_context`. Use the exact figure everywhere it recurs, never a variant, never a rounded-up or invented one.
+- **Platform metrics are not the candidate's work:** If `raw_context` says a number belongs to a vendor or third-party platform (latency, language count, uptime SLA), never claim it.
+- **Canonical project names:** use the exact `### <name>` string of each project in the Selected Projects section, never reworded.
 
 ---
 
@@ -54,10 +46,10 @@ These values are locked because recruiters cross-check the resume against Linked
 
 2. **Select experiences and framings:**
    - **Always include every experience from the profile.** Total years of experience is a load-bearing ATS signal. Excluding experiences is forbidden unless the profile explicitly tags one with `omit: true`.
-   - For each experience, choose the framing whose bullets best match the JD's role family. The KV Bits title is **LOCKED** to `AI & Cloud Infrastructure Engineer` (see LOCKED CONSTANTS) regardless of which framing's bullets you use — use the framing for bullet selection only, not for the title.
-     - The profile carries at most two framings per experience. For KV Bits: use `devops` by default; use `ai_infrastructure` only when the JD centres on an AI/ML platform, GPUs, model inference or serving, or MLOps. Other experiences carry a single framing — use it.
-     - **Ocklet and AI Email Triage are KV Bits work.** Describe them ONLY in KV Bits bullets — never as project entries, never in a projects section — and describe each system once. Do not write two KV Bits bullets that restate the same system's architecture or metrics.
-   - You may mine **raw_context** to write fresh bullets, but the KV Bits title in the output must always be `AI & Cloud Infrastructure Engineer`.
+   - For each experience, choose the framing whose bullets best match the JD's role family. Framing keys are named by the candidate (e.g. `backend`, `devops`, `data`); pick the key whose name and bullets are closest to the JD, and use the first listed framing when none clearly fits. Locked titles (see LOCKED CONSTANTS) apply regardless of the framing chosen — use the framing for bullet selection only.
+     - Describe each system or piece of work once. Do not write two bullets that restate the same system's architecture or metrics.
+     - If the profile says a piece of work belongs to a given experience, describe it ONLY in that experience's bullets — never also as a project entry.
+   - You may mine **raw_context** to write fresh bullets, but every claim must trace to it.
 
 3. **Use EXACTLY the 3 Selected Projects, in the given rank order.** Never add, drop, swap or reorder them — the selection was made deterministically from the JD's skills.
    - Write 2–3 bullets per project. Lead with the skills listed on its "Emphasize for this JD" line, using the JD's own wording for those technologies.
@@ -68,12 +60,9 @@ These values are locked because recruiters cross-check the resume against Linked
 
 5. **Choose 5–7 skill categories tailored to THIS role.** Rename labels to match JD lingo. The first category must contain the JD's top-3 keywords. Within every category, order items by JD-relevance. Cap each category at 8 items max.
 
-   **Role-family skill exclusions — enforced at the TOOL level, not just the category label:**
-   - **ml_ai / agentic / AI roles:** Do NOT include these tools in any skill category unless the JD explicitly names them: `Terraform`, `Ansible`, `CloudFormation`, `Packer`, `Jenkins`, `GitOps`, `Helm`, `OpenShift`, `Containerd`. These are DevOps-only tools with no signal value on an AI role — including them reads as padding. `Docker` and `Kubernetes` may appear ONLY if the JD explicitly names them; if included, absorb into a broader cloud/backend category, not a standalone containers category.
-   - **devops_sre roles:** Do not include standalone LLM/AI categories. Include AI tooling only if the JD explicitly names it.
-   - **security roles:** Do not include AI/LLM categories unless the role is explicitly an AI-security hybrid.
+   **Skills must be evidenced and relevant:** list a tool only if the profile evidences it. Leave out tools that carry no signal for this role family (for example, config-management or CI tools on a pure ML-research role, or LLM/AI categories on a pure infrastructure role) unless the JD explicitly names them — including them reads as padding.
 
-6. **`personal.location` is FIXED — always the candidate's real address, never the job's city.** Copy `personal.location` verbatim from the candidate profile above (`personal.location` in the vault, currently `"Chicago, IL"`). Do NOT set it to the job's city, and do NOT vary it by Remote/local/relocation status — every resume shows the same real address regardless of where the job is. The `location` on each experience entry is unaffected by this and stays the actual workplace city (KV Bits is always `"Chicago, IL"`).
+6. **`personal.location` is FIXED — always the candidate's real address, never the job's city.** Copy `personal.location` verbatim from the candidate profile above (`personal.location` in the vault). Do NOT set it to the job's city, and do NOT vary it by Remote/local/relocation status — every resume shows the same real address regardless of where the job is. The `location` on each experience entry is unaffected by this and stays the actual workplace city.
 
 7. **Write the summary (2–3 sentences):**
    - **Company-agnostic ONLY.** Never mention the target company's name, mission, products, or values in the summary — not even in passing ("excited to help [Company]", "passionate about [Company]'s approach", "[Company]'s work resonates"). Company praise belongs in the cover letter.
@@ -91,7 +80,7 @@ Write a professional cover letter with these paragraphs in order:
 5. Closing — see Closing rules below.
 6. Signoff: `Sincerely,` on its own paragraph, then the candidate's full name.
 
-The last sentence of the closing must state work authorization neutrally: *"I'm authorized to work in the US on F1 OPT (STEM-extendable through June 2028), so sponsorship would only be needed beyond that."* Never use "unfortunately", "however", or any apologetic framing around this.
+Work authorization: if `personal.visa` in the profile is non-empty, the last sentence of the closing must state it neutrally and factually, using only the facts in `personal.visa` (for example, *"I'm authorized to work in the US on <status from the profile>."*). Never use "unfortunately", "however", or any apologetic framing around this. If `personal.visa` is empty, omit the sentence entirely and never mention visas or sponsorship.
 
 ### Opening rules — CRITICAL
 
@@ -157,13 +146,13 @@ Rules:
 - NEVER fabricate metrics, titles, technologies, company names, credential IDs, or dates.
 - You may reframe and emphasize differently, but every claim must trace to raw_context — or, for a Selected Project, to that project's material above (portfolio projects: problem, reference bullets and target metrics only).
 - NEVER change: dates, company names, school names, degree names, GPA, credential IDs, certification issued/expires dates.
-- The KV Bits title `AI & Cloud Infrastructure Engineer` is the locked canonical title — it is the candidate's actual LinkedIn title, not a fabrication.
+- A `locked_title` in the profile is the candidate's real public title, not a fabrication.
 - Allowed: summary rewriting, bullet emphasis changes, skill reordering and category renaming, project selection.
 
 ## PRE-OUTPUT SELF-CHECK — run all five before generating the JSON
 
-1. **Locked constants & location:** Does `personal.location` exactly match the candidate profile's real `personal.location` (never the job's city)? Is the KV Bits title in the experience array exactly `"AI & Cloud Infrastructure Engineer"`, and its experience `location` still `"Chicago, IL"`? Do all metrics match canonical values? Do the projects match the 3 Selected Projects exactly — same names, same order? Do portfolio-project bullets use only numbers from their target metrics?
-2. **Skills relevance gate:** For an ml_ai / AI / agentic role — do any of Terraform, Jenkins, Ansible, Helm, OpenShift, or Containerd appear in skills? If yes and the JD did not name them, remove them now.
+1. **Locked constants & location:** Does `personal.location` exactly match the candidate profile's real `personal.location` (never the job's city)? Is every `locked_title` used verbatim? Do all metrics match the profile exactly? Do the projects match the 3 Selected Projects exactly — same names, same order? Do portfolio-project bullets use only numbers from their target metrics?
+2. **Skills relevance gate:** Is every skill listed evidenced in the profile and relevant to this role family? Remove padding tools the JD never names.
 3. **Summary clean:** Does the summary contain the company name, or any word from the AI-slop ban list? If yes, rewrite it before outputting.
 4. **Cover letter opening:** Does the opening pass the specificity test (a concrete technical fact only a candidate who studied this company would know)? If not, rewrite as Option B.
 5. **Cover letter closing:** Does the closing name a specific responsibility and end with a direct ask — not "I look forward to" or "I would love to"? If not, rewrite it.
@@ -176,16 +165,16 @@ Return a SINGLE JSON object with this exact structure. No markdown fences, no co
 {
   "resume": {
     "personal": {
-      "location": "Candidate's real address from the profile, copied verbatim — never the job's city (e.g. \"Chicago, IL\")"
+      "location": "Candidate's real address from the profile, copied verbatim — never the job's city (e.g. \"Austin, TX\")"
     },
     "summary": "2-3 sentence tailored summary — no bold markers, no AI-slop phrases, no company name",
     "experience": [
       {
-        "source": "kvbits",
-        "framing_used": "ai_infrastructure",
-        "title": "AI & Cloud Infrastructure Engineer",
-        "company": "KV Bits",
-        "location": "Chicago, IL",
+        "source": "acme",
+        "framing_used": "backend",
+        "title": "Software Engineer",
+        "company": "Acme Corp",
+        "location": "Austin, TX",
         "period": "June 2024 – Present",
         "bullets": ["bullet with **inline bold** allowed", "..."]
       }
@@ -206,7 +195,7 @@ Return a SINGLE JSON object with this exact structure. No markdown fences, no co
       {
         "name": "CompTIA Security+",
         "issuer": "CompTIA",
-        "credential_id": "afd8e412-3cd8-45ef-b39d-34a90dd14347",
+        "credential_id": "copied verbatim from the profile",
         "issued": "02/23/2025",
         "expires": "02/23/2028"
       }
@@ -220,7 +209,7 @@ Return a SINGLE JSON object with this exact structure. No markdown fences, no co
     "publications": [
       {
         "title": "Publication title from profile",
-        "venue": "IEEE International SCEECS 2023",
+        "venue": "Venue name from the profile",
         "description": "1-2 sentence summary tailored to the role's relevance"
       }
     ]
@@ -229,7 +218,7 @@ Return a SINGLE JSON object with this exact structure. No markdown fences, no co
     "angle": "Which framing angle was chosen and why",
     "role_family": "engineering | security | product | it_admin | data | ml_ai | devops_sre | sales_cs | other",
     "jd_top_keywords": ["keyword1", "keyword2", "keyword3"],
-    "experiences_included": ["KV Bits", "Texas Instruments", "Walkover University"],
+    "experiences_included": ["Acme Corp", "Example Labs"],
     "projects_included": ["Project1", "Project2", "Project3"],
     "certs_included": ["Cert1"],
     "certs_excluded": {"CertName": "reason"},

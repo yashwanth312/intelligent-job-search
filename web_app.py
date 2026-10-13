@@ -20,13 +20,16 @@ from fastapi import FastAPI
 from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel
 
-from config import DB_FILE, GOOGLE_DRIVE_FOLDER_ID, SPONSORSHIP_FILTER_ENABLED, YOUR_NAME
+from config import (
+    DAILY_MIN_CONFIDENCE, DB_FILE, GOOGLE_DRIVE_FOLDER_ID,
+    SPONSORSHIP_FILTER_ENABLED, YOUR_NAME,
+)
 from db.database import Database
 from generation.drive_uploader import DriveUploader
 from generation.pdf_renderer import render_cover_letter_pdf, render_resume_pdf
 from generation.resume_engine import ResumeEngine
 from generation.verifier import keyword_coverage
-from models.job import RawJob, ScreenedJob, ScreeningVerdict
+from models.job import RawJob, ScreenedJob
 from screening.h1b_checker import H1BChecker, is_droppable_source
 from screening.stage1 import Stage1Filter
 from screening.stage2 import Stage2Screen
@@ -42,6 +45,14 @@ logging.basicConfig(level=logging.WARNING)
 
 app = FastAPI(title="Job Pipeline UI")
 _executor = ThreadPoolExecutor(max_workers=2)
+
+
+def _ui_outcome(job: ScreenedJob) -> str:
+    """Badge for this UI's apply/maybe/skip styling, derived from the Daily
+    cutoff — Stage 2 itself no longer returns verdicts."""
+    if job.confidence is None:
+        return "maybe"
+    return "apply" if job.confidence >= DAILY_MIN_CONFIDENCE else "skip"
 
 
 def _sse(payload: dict) -> str:
@@ -153,7 +164,7 @@ async def screen_job(job_input: JobInput):
                 )
                 outcome = "dropped" if droppable else "warn"
             else:
-                detail, outcome = "Check unavailable (curated source or network error)", "skipped"
+                detail, outcome = "Check unavailable (network error)", "skipped"
         except Exception as exc:
             detail, outcome = f"H1B check error: {exc}", "skipped"
         yield _sse({"type": "stage_result", "stage": "h1b", "outcome": outcome, "detail": detail})
@@ -188,16 +199,13 @@ async def screen_job(job_input: JobInput):
         yield _sse({
             "type": "stage_result",
             "stage": "stage2",
-            "outcome": (
-                "apply" if screened.verdict == ScreeningVerdict.APPLY else
-                "maybe" if screened.verdict == ScreeningVerdict.MAYBE else "skip"
-            ),
-            "verdict": screened.verdict.value,
+            "outcome": _ui_outcome(screened),
+            "verdict": _ui_outcome(screened).upper(),
             "confidence": screened.confidence,
         })
         yield _sse({
             "type": "screening_done",
-            "verdict": screened.verdict.value,
+            "verdict": _ui_outcome(screened).upper(),
             "confidence": screened.confidence,
             "reasoning": screened.reasoning,
             "match_signals": screened.match_signals,
@@ -331,7 +339,7 @@ async def generate_materials(inp: GenerateInput):
                 description=inp.description[:500] if inp.description else None,
                 url=inp.url or "https://example.com", source=inp.source,
                 h1b_sponsor_verified=inp.h1b_sponsor_verified,
-                verdict=ScreeningVerdict.APPLY, confidence=inp.confidence,
+                confidence=inp.confidence,
                 reasoning=inp.reasoning, suggested_angle=inp.suggested_angle,
             )
             sheets = SheetsClient()

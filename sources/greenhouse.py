@@ -8,14 +8,13 @@ with sales/marketing/legal roles.
 from __future__ import annotations
 
 import logging
-import re
 from datetime import datetime
 
 import aiohttp
 from bs4 import BeautifulSoup
 
-from config import EXCLUDE_TITLE_KEYWORDS, TITLE_DOMAIN_KEYWORDS
 from models.job import RawJob
+from screening.stage1 import title_passes
 from sources._dates import parse_iso
 from sources.base import SourceAdapter, SourceResult, scrape_boards
 
@@ -30,18 +29,13 @@ def _title_is_relevant(title: str) -> bool:
     Shared by the Greenhouse, Lever and Ashby adapters, all of which return a
     company's entire board and have to filter client-side.
 
-    Applies BOTH halves of Stage 1's title gate — the domain allow-list and the
-    exclusion list. Skipping exclusions here let "Senior ...", "... Intern" and
-    industrial titles ("Automation Technician") into the pipeline just to be
-    rejected a phase later.
+    Delegates to Stage 1's own title gate. This used to be a hand copy of it
+    that drifted: it never learned the IT/identity family (so "IAM Engineer"
+    or "VMware Administrator" were dropped at the only source that carries
+    them) and matched exclusions as substrings ("intern" killed
+    "Infrastructure Engineer, Internal Tools").
     """
-    title_lower = title.lower()
-    if any(kw in title_lower for kw in EXCLUDE_TITLE_KEYWORDS):
-        return False
-    return any(
-        re.search(r'\b' + re.escape(kw) + r'\b', title_lower)
-        for kw in TITLE_DOMAIN_KEYWORDS
-    )
+    return title_passes(title)
 
 
 class GreenhouseAdapter(SourceAdapter):
