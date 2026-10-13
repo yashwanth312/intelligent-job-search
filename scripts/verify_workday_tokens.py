@@ -76,7 +76,7 @@ async def main(args: list[str]) -> None:
                 await check_company(session, entry)
         else:
             # Validate all existing workday: entries in target_companies.yaml
-            data = yaml.safe_load(Path("target_companies.yaml").read_text()) or {}
+            data = yaml.safe_load(Path("target_companies.yaml").read_text(encoding="utf-8")) or {}
             companies = data.get("workday", [])
             if not companies:
                 print("No workday: entries found in target_companies.yaml")

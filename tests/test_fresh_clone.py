@@ -59,6 +59,31 @@ def test_no_personal_identifiers_in_tracked_files():
         p = ROOT / rel
         if not p.is_file():
             continue
-        text = p.read_text(encoding="utf-8", errors="ignore").lower()
+        # The public repo's own clone URL is the one legitimate mention.
+        text = p.read_text(encoding="utf-8", errors="ignore").lower().replace("yashwanth312", "")
         hits += [f"{rel}: {b}" for b in banned if b.lower() in text]
     assert not hits, "personal identifiers found:\n" + "\n".join(hits)
+
+
+def test_check_setup_survives_a_cp1252_console(tmp_path):
+    """Windows consoles default to cp1252; the script prints non-ASCII text."""
+    import os
+    env = {**os.environ, "PYTHONIOENCODING": "cp1252"}
+    out = subprocess.run([sys.executable, str(ROOT / "scripts" / "check_setup.py")], cwd=tmp_path,
+                         env=env, capture_output=True, text=True, encoding="utf-8", errors="replace")
+    assert "Traceback" not in out.stderr, out.stderr
+    assert out.returncode in (0, 1)
+
+
+def test_text_files_are_opened_as_utf8():
+    """open()/read_text() without an encoding use cp1252 on Windows and break
+    on the em dashes and arrows that profiles and templates contain."""
+    import re
+    offenders = []
+    pattern = re.compile(r"""(?<![\w.])open\((?![^)]*encoding)[^)]*\)|\.read_text\(\s*\)""")
+    for path in _tracked_python_files():
+        for n, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+            code = line.split("#", 1)[0]
+            if pattern.search(code) and '"rb"' not in code and '"wb"' not in code:
+                offenders.append(f"{path.relative_to(ROOT)}:{n}: {line.strip()}")
+    assert not offenders, "\n".join(offenders)

@@ -108,7 +108,7 @@ def load_idf(path: Path = IDF_PATH) -> dict[str, float]:
     """Skill -> inverse document frequency. Missing file => every skill 1.0."""
     if not path.exists():
         return {}
-    data = json.loads(path.read_text())
+    data = json.loads(path.read_text(encoding="utf-8"))
     n = data["n_docs"]
     return {k: max(IDF_FLOOR, math.log(n / (1 + df))) for k, df in data["df"].items()}
 

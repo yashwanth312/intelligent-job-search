@@ -17,6 +17,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
+# Windows consoles default to cp1252; never crash on a non-ASCII character.
+for _stream in (sys.stdout, sys.stderr):
+    if hasattr(_stream, "reconfigure"):
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+
 PLACEHOLDER_MARKERS = ("jane doe", "example.com", "acme corp", "example labs")
 
 _results: list[tuple[str, str, str]] = []
@@ -163,7 +168,7 @@ def check_weasyprint() -> None:
         record("PASS", "WeasyPrint (PDF rendering)")
     except Exception:
         record("WARN", "WeasyPrint (PDF rendering)",
-               "native libraries missing — resumes fall back to .html (print to PDF in a browser). See README → Troubleshooting")
+               "native libraries missing — resumes fall back to .html (print to PDF in a browser). See README, section Troubleshooting")
 
 
 def check_h1b() -> None:
@@ -186,7 +191,7 @@ def check_config() -> None:
            f"daily cutoff confidence >= {config.DAILY_MIN_CONFIDENCE}")
     if config.TARGET_TITLES == ["Software Engineer", "Backend Engineer", "Full Stack Engineer",
                                 "Data Engineer", "DevOps Engineer", "Cloud Engineer"]:
-        record("WARN", "Title gate", "config.py still has the neutral default titles — see README → 'Tune the title gate'")
+        record("WARN", "Title gate", "config.py still has the neutral default titles — see README, section 'Tune the title gate'")
 
 
 def check_online() -> None:

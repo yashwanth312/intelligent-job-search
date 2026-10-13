@@ -113,7 +113,7 @@ def render_resume_pdf(resume_data: dict, output_path: Path) -> bool:
     """Render resume dict to PDF. Returns True on PDF success, False on any failure
     (HTML fallback is still written when WeasyPrint is unavailable)."""
     try:
-        template = TEMPLATE_PATH.read_text()
+        template = TEMPLATE_PATH.read_text(encoding="utf-8")
         html = _fill_template(template, resume_data)
     except Exception as e:
         logger.error(f"Resume template load/fill failed: {e}")

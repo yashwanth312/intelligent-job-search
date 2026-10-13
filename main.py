@@ -70,7 +70,7 @@ def load_target_companies() -> dict:
     path = Path("target_companies.yaml")
     if not path.exists():
         return {"greenhouse": [], "lever": [], "ashby": []}
-    with open(path) as f:
+    with open(path, encoding="utf-8") as f:
         return yaml.safe_load(f) or {}
 
 
