@@ -311,7 +311,7 @@ CORE_TITLE_KEYWORDS = [
     "software", "backend", "back-end", "frontend", "front-end",
     "full stack", "full-stack", "fullstack", "web", "api",
     "data", "cloud", "devops", "platform", "infrastructure",
-    "reliability", "sre", "systems", "developer", "engineer",
+    "reliability", "sre", "systems", "developer",
 ]
 
 # A second bucket for a specialty you want to keep separately tunable (for
